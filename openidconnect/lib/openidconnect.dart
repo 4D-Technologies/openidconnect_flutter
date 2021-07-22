@@ -69,22 +69,44 @@ class OpenIdConnect {
   }) async {
     late String responseUrl;
 
+    final uri = Uri.parse(request.configuration.authorizationEndpoint).replace(
+      queryParameters: {
+        "client_id": request.clientId,
+        "redirect_uri": request.redirectUrl,
+        "response_type": "code",
+        "scope": request.scopes.join(" "),
+        "code_challenge_method": "S256",
+        "code_challenge": request.codeChallenge,
+      },
+    );
+
     //These are special cases for the various different platforms because of limitations in pubspec.yaml
     if (!kIsWeb && (Platform.isIOS || Platform.isAndroid)) {
       responseUrl = await OpenIdConnectAndroidiOS.authorizeInteractive(
         context: context,
         title: title,
-        request: request,
+        authorizationUrl: uri.toString(),
+        redirectUrl: request.redirectUrl!,
+        popupHeight: request.popupHeight,
+        popupWidth: request.popupWidth,
       );
     } else if (!kIsWeb && Platform.isWindows) {
       responseUrl = await OpenIdConnectWindows.authorizeInteractive(
         context: context,
         title: title,
-        request: request,
+        authorizationUrl: uri.toString(),
+        redirectUrl: request.redirectUrl!,
+        popupHeight: request.popupHeight,
+        popupWidth: request.popupWidth,
       );
     } else {
       responseUrl = await _platform.authorizeInteractive(
-          context: context, title: title, request: request);
+        title: title,
+        authorizationUrl: uri.toString(),
+        redirectUrl: request.redirectUrl!,
+        popupHeight: request.popupHeight,
+        popupWidth: request.popupWidth,
+      );
     }
 
     return await _completeCodeExchange(request: request, url: responseUrl);

@@ -41,8 +41,11 @@ abstract class OpenIdConnectPlatform extends PlatformInterface {
     _instance = instance;
   }
 
-  Future<String> authorizeInteractive(
-      {required BuildContext context,
-      required String title,
-      required InteractiveAuthorizationPlatformRequest request});
+  Future<String> authorizeInteractive({
+    required String title,
+    required String authorizationUrl,
+    required String redirectUrl,
+    required int popupWidth,
+    required int popupHeight,
+  });
 }

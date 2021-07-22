@@ -1,10 +1,11 @@
 part of openidconnect_platform_interface;
 
 class InteractiveAuthorizationPlatformRequest extends TokenRequest {
-  final int webPopupWidth;
-  final int webPopupHeight;
+  final int popupWidth;
+  final int popupHeight;
   final String codeVerifier;
   final String codeChallenge;
+  final bool useWebPopup;
 
   InteractiveAuthorizationPlatformRequest({
     required String clientId,
@@ -18,8 +19,9 @@ class InteractiveAuthorizationPlatformRequest extends TokenRequest {
     String? loginHint,
     Iterable<String>? prompts,
     Map<String, String>? additionalParameters,
-    this.webPopupWidth = 640,
-    this.webPopupHeight = 480,
+    this.popupWidth = 640,
+    this.popupHeight = 480,
+    this.useWebPopup = true,
   }) : super(
           configuration: configuration,
           clientId: clientId,

@@ -4,7 +4,10 @@ class OpenIdConnectWindows {
   static Future<String> authorizeInteractive({
     required BuildContext context,
     required String title,
-    required InteractiveAuthorizationPlatformRequest request,
+    required String authorizationUrl,
+    required String redirectUrl,
+    required int popupWidth,
+    required int popupHeight,
   }) async {
     final _controller = windowsWebView.WebviewController();
 
@@ -14,11 +17,11 @@ class OpenIdConnectWindows {
       builder: (dialogContext) {
         _controller.url.asBroadcastStream().listen((url) {
           //Handle the URL until we get to the redirect
-          if (url.startsWith(request.redirectUrl!)) {
+          if (url.startsWith(redirectUrl)) {
             Navigator.pop(dialogContext, url);
           }
         });
-        _controller.loadUrl(request.configuration.authorizationEndpoint);
+        _controller.loadUrl(authorizationUrl);
         return AlertDialog(
           actions: [
             IconButton(

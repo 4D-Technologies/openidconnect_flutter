@@ -15,8 +15,8 @@ class InteractiveAuthorizationRequest
     String? loginHint,
     Iterable<String>? prompts,
     Map<String, String>? additionalParameters,
-    int webPopupWidth = 640,
-    int webPopupHeight = 480,
+    int popupWidth = 640,
+    int popupHeight = 480,
   }) {
     final codeVerifier = List.generate(
         128, (i) => _charset[Random.secure().nextInt(_charset.length)]).join();
@@ -37,8 +37,8 @@ class InteractiveAuthorizationRequest
       clientSecret: clientSecret,
       loginHint: loginHint,
       prompts: prompts,
-      webPopupHeight: webPopupHeight,
-      webPopupWidth: webPopupWidth,
+      webPopupHeight: popupHeight,
+      webPopupWidth: popupWidth,
     );
   }
 
@@ -68,7 +68,7 @@ class InteractiveAuthorizationRequest
           codeVerifier: codeVerifier,
           additionalParameters: additionalParameters,
           loginHint: loginHint,
-          webPopupHeight: webPopupHeight,
-          webPopupWidth: webPopupWidth,
+          popupHeight: webPopupHeight,
+          popupWidth: webPopupWidth,
         );
 }
