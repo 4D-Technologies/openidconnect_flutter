@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project version="4">
+  <component name="ProjectModuleManager">
+    <modules>
+      <module fileurl="file://$PROJECT_DIR$/openidconnect_web.iml" filepath="$PROJECT_DIR$/openidconnect_web.iml" />
+      <module fileurl="file://$PROJECT_DIR$/android/openidconnect_web_android.iml" filepath="$PROJECT_DIR$/android/openidconnect_web_android.iml" />
+      <module fileurl="file://$PROJECT_DIR$/example/android/openidconnect_web_example_android.iml" filepath="$PROJECT_DIR$/example/android/openidconnect_web_example_android.iml" />
+    </modules>
+  </component>
+</project>

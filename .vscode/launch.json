@@ -1,0 +1,61 @@
+{
+  // Use IntelliSense to learn about possible attributes.
+  // Hover to view descriptions of existing attributes.
+  // For more information, visit: https://go.microsoft.com/fwlink/?linkid=830387
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "name": "example",
+      "cwd": "example",
+      "request": "launch",
+      "type": "dart",
+      "args": ["--web-enable-expression-evaluation", "--web-port", "50335"]
+    },
+    {
+      "name": "example (profile mode)",
+      "cwd": "example",
+      "request": "launch",
+      "type": "dart",
+      "flutterMode": "profile"
+    },
+    {
+      "name": "openidconnect",
+      "cwd": "openidconnect",
+      "request": "launch",
+      "type": "dart"
+    },
+    {
+      "name": "openidconnect (profile mode)",
+      "cwd": "openidconnect",
+      "request": "launch",
+      "type": "dart",
+      "flutterMode": "profile"
+    },
+    {
+      "name": "openidconnect_platform_interface",
+      "cwd": "openidconnect_platform_interface",
+      "request": "launch",
+      "type": "dart"
+    },
+    {
+      "name": "openidconnect_platform_interface (profile mode)",
+      "cwd": "openidconnect_platform_interface",
+      "request": "launch",
+      "type": "dart",
+      "flutterMode": "profile"
+    },
+    {
+      "name": "openidconnect_web",
+      "cwd": "openidconnect_web",
+      "request": "launch",
+      "type": "dart"
+    },
+    {
+      "name": "openidconnect_web (profile mode)",
+      "cwd": "openidconnect_web",
+      "request": "launch",
+      "type": "dart",
+      "flutterMode": "profile"
+    }
+  ]
+}

@@ -1,0 +1,19 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <script>
+        window.onload = function () {
+            if (window.opener && window.opener !== window) {
+                debugger;
+                var parent = window.opener ?? window.parent;
+                parent.postMessage(location.href, "*");
+            }
+        }
+    </script>
+</head>
+
+<body>
+</body>
+
+</html>

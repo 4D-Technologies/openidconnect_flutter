@@ -1,0 +1,41 @@
+name: openidconnect
+description: OpenIdConnect library for flutter.
+version: 1.0.1
+homepage: www.staccat.io
+publish_to: "none"
+
+environment:
+  sdk: ">=2.12.0 <3.0.0"
+  flutter: ">=1.17.0"
+
+dependencies:
+  flutter:
+    sdk: flutter
+  flutter_web_plugins:
+    sdk: flutter
+
+  openidconnect_platform_interface:
+    path: ../openidconnect_platform_interface
+
+  flutter_secure_storage: ^4.2.0
+  shared_preferences: ^2.0.6
+
+  crypto: ^3.0.1
+  url_launcher: 6.0.9
+  http: ^0.13.3
+  retry: ^3.1.0
+
+  # TODO Remove these once native implementations can be added. Refactor so that the native implementations don't need to do the full cycle through.
+  webview_flutter: ^2.0.10
+  webview_windows: ^0.0.7
+
+dev_dependencies:
+  pedantic: ^1.10.0
+  flutter_test:
+    sdk: flutter
+
+# For information on the generic Dart part of this file, see the
+# following page: https://dart.dev/tools/pub/pubspec
+
+# The following section is specific to Flutter.
+flutter:
