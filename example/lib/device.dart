@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:openidconnect/openidconnect.dart';
-import 'package:openidconnect_example/identity_view.dart';
+import 'identity_view.dart';
 import 'package:openidconnect_platform_interface/openidconnect_platform_interface.dart';
 
 import 'main.dart';

@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
-import 'package:openidconnect_example/device.dart';
-import 'package:openidconnect_example/interactive.dart';
-import 'package:openidconnect_example/password.dart';
+import 'device.dart';
+import 'interactive.dart';
+import 'password.dart';
 
 class ChoosePage extends StatelessWidget {
   @override

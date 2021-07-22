@@ -55,7 +55,7 @@ class OpenIdConnectClient {
 
   bool get isLoggedIn => _identity != null;
 
-  Future<bool> loginWithPassword(
+  Future<OpenIdIdentity> loginWithPassword(
       {required String userName,
       required String password,
       Iterable<String>? prompts,
@@ -87,7 +87,7 @@ class OpenIdConnectClient {
 
       _eventStreamController.add(AuthEvent(AuthEventTypes.Success));
 
-      return true;
+      return _identity!;
     } on Exception catch (e) {
       if (this._identity != null) {
         await this._identity!.clear();
@@ -95,11 +95,11 @@ class OpenIdConnectClient {
       }
       _eventStreamController
           .add(AuthEvent(AuthEventTypes.Error, message: e.toString()));
-      return false;
+      throw AuthenticationFailedException(e.toString());
     }
   }
 
-  Future<void> loginWithDeviceCode() async {
+  Future<OpenIdIdentity> loginWithDeviceCode() async {
     if (_autoRenewTimer != null) _autoRenewTimer = null;
 
     //Make sure we have the discovery information
@@ -121,6 +121,7 @@ class OpenIdConnectClient {
       if (autoRefresh) _setupAutoRenew();
 
       _eventStreamController.add(AuthEvent(AuthEventTypes.Success));
+      return _identity!;
     } on Exception catch (e) {
       if (this._identity != null) {
         await this._identity!.clear();
@@ -129,10 +130,12 @@ class OpenIdConnectClient {
 
       _eventStreamController
           .add(AuthEvent(AuthEventTypes.Error, message: e.toString()));
+
+      throw AuthenticationFailedException(e.toString());
     }
   }
 
-  Future<void> loginInteractive({
+  Future<OpenIdIdentity> loginInteractive({
     required BuildContext context,
     required String title,
     String? userNameHint,
@@ -167,6 +170,8 @@ class OpenIdConnectClient {
       if (autoRefresh) _setupAutoRenew();
 
       _eventStreamController.add(AuthEvent(AuthEventTypes.Success));
+
+      return _identity!;
     } on Exception catch (e) {
       if (this._identity != null) {
         await this._identity!.clear();
@@ -175,6 +180,8 @@ class OpenIdConnectClient {
 
       _eventStreamController
           .add(AuthEvent(AuthEventTypes.Error, message: e.toString()));
+
+      throw AuthenticationFailedException(e.toString());
     }
   }
 
