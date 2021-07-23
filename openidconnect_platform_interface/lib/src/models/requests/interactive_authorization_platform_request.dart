@@ -6,11 +6,12 @@ class InteractiveAuthorizationPlatformRequest extends TokenRequest {
   final String codeVerifier;
   final String codeChallenge;
   final bool useWebPopup;
+  final String redirectUrl;
 
   InteractiveAuthorizationPlatformRequest({
     required String clientId,
     String? clientSecret,
-    required String redirectUrl,
+    required this.redirectUrl,
     required Iterable<String> scopes,
     required OpenIdConfiguration configuration,
     required bool autoRefresh,
@@ -27,11 +28,10 @@ class InteractiveAuthorizationPlatformRequest extends TokenRequest {
           clientId: clientId,
           clientSecret: clientSecret,
           grantType: "code",
-          redirectUrl: redirectUrl,
           scopes: scopes,
           prompts: prompts,
-          autoRefresh: autoRefresh,
           additionalParameters: {
+            "redirect_url": redirectUrl,
             "login_hint": loginHint ?? "",
             "response_type": "code",
             "code_challenge_method": "S256",

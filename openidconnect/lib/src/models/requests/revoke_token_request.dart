@@ -7,7 +7,7 @@ class RevokeTokenRequest {
   final String token;
   final TokenType tokenType;
 
-  RevokeTokenRequest({
+  const RevokeTokenRequest({
     required this.configuration,
     required this.token,
     required this.tokenType,

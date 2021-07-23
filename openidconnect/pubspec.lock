@@ -107,12 +107,19 @@ packages:
     source: hosted
     version: "3.0.1"
   crypto:
-    dependency: "direct main"
+    dependency: transitive
     description:
       name: crypto
       url: "https://pub.dartlang.org"
     source: hosted
     version: "3.0.1"
+  cryptography:
+    dependency: "direct main"
+    description:
+      name: cryptography
+      url: "https://pub.dartlang.org"
+    source: hosted
+    version: "2.0.2"
   dart_style:
     dependency: transitive
     description:
@@ -476,13 +483,6 @@ packages:
       url: "https://pub.dartlang.org"
     source: hosted
     version: "2.0.10"
-  webview_windows:
-    dependency: "direct main"
-    description:
-      name: webview_windows
-      url: "https://pub.dartlang.org"
-    source: hosted
-    version: "0.0.7"
   win32:
     dependency: transitive
     description:

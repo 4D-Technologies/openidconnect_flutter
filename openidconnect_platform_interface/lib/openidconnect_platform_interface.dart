@@ -16,8 +16,12 @@ part 'src/models/responses/authorization_response.dart';
 
 part './src/method_channel_openidconnect.dart';
 
-part './src/exceptions/authentication_failed_exception.dart';
+part './src/exceptions/openidconnect_exception.dart';
+part './src/exceptions/authentication_exception.dart';
 part './src/exceptions/http_response_exception.dart';
+part 'src/exceptions/user_info_exception.dart';
+part './src/exceptions/revoke_exception.dart';
+part './src/exceptions/logout_exception.dart';
 
 const String AUTHORIZE_ERROR_MESSAGE_FORMAT =
     "Failed to authorize: [error: %1, description: %2]";

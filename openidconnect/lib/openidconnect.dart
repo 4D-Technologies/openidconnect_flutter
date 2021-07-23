@@ -4,23 +4,22 @@ import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
 import 'dart:math';
-import 'package:crypto/crypto.dart';
+
 import 'package:flutter/material.dart';
 import 'package:flutter/widgets.dart';
 import 'package:http/http.dart' as http;
+import 'package:cryptography/cryptography.dart' as crypto;
 import 'package:openidconnect/src/models/responses/device_code_response.dart';
 import 'package:openidconnect_platform_interface/openidconnect_platform_interface.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:retry/retry.dart';
 import 'package:webview_flutter/webview_flutter.dart' as flutterWebView;
-import 'package:webview_windows/webview_windows.dart' as windowsWebView;
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 part './src/openidconnect_client.dart';
 part './src/android_ios.dart';
-part './src/windows.dart';
 part './src/helpers.dart';
 
 part './src/models/identity.dart';
@@ -32,6 +31,7 @@ part 'src/models/requests/refresh_request.dart';
 part 'src/models/requests/logout_request.dart';
 part 'src/models/requests/revoke_token_request.dart';
 part 'src/models/requests/device_authorization_request.dart';
+part 'src/models/requests/user_info_request.dart';
 
 final _platform = OpenIdConnectPlatform.instance;
 
@@ -86,24 +86,27 @@ class OpenIdConnect {
         context: context,
         title: title,
         authorizationUrl: uri.toString(),
-        redirectUrl: request.redirectUrl!,
+        redirectUrl: request.redirectUrl,
         popupHeight: request.popupHeight,
         popupWidth: request.popupWidth,
       );
-    } else if (!kIsWeb && Platform.isWindows) {
-      responseUrl = await OpenIdConnectWindows.authorizeInteractive(
-        context: context,
-        title: title,
-        authorizationUrl: uri.toString(),
-        redirectUrl: request.redirectUrl!,
-        popupHeight: request.popupHeight,
-        popupWidth: request.popupWidth,
+    } else if (!kIsWeb) {
+      //TODO add other implementations as they become available. For now, all desktop uses device code flow instead of authorization code flow
+      return await OpenIdConnect.authorizeDevice(
+        request: DeviceAuthorizationRequest(
+          audience: null,
+          clientId: request.clientId,
+          clientSecret: request.clientSecret,
+          configuration: request.configuration,
+          scopes: request.scopes,
+          additionalParameters: request.additionalParameters,
+        ),
       );
     } else {
       responseUrl = await _platform.authorizeInteractive(
         title: title,
         authorizationUrl: uri.toString(),
-        redirectUrl: request.redirectUrl!,
+        redirectUrl: request.redirectUrl,
         popupHeight: request.popupHeight,
         popupWidth: request.popupWidth,
       );
@@ -129,7 +132,7 @@ class OpenIdConnect {
 
     var authCode = resultUri.queryParameters['code'];
     if (authCode == null || authCode.isEmpty)
-      throw AuthenticationFailedException(ERROR_INVALID_RESPONSE);
+      throw AuthenticationException(ERROR_INVALID_RESPONSE);
 
     var state = resultUri.queryParameters['state'] ??
         resultUri.queryParameters['session_state'];
@@ -169,8 +172,7 @@ class OpenIdConnect {
       ),
     );
 
-    if (response == null)
-      throw AuthenticationFailedException(ERROR_INVALID_RESPONSE);
+    if (response == null) throw AuthenticationException(ERROR_INVALID_RESPONSE);
 
     final codeResponse = DeviceCodeResponse.fromJson(response);
 
@@ -211,13 +213,12 @@ class OpenIdConnect {
       //Check the error message
       final error = json["error"]?.toString();
       if (error == null || error == "expired_token" || error == "access_denied")
-        throw AuthenticationFailedException(
-            json["error_description"].toString());
+        throw AuthenticationException(json["error_description"].toString());
 
       if (error == "slow_down") pollingInterval += 2;
 
       if (DateTime.now().isAfter(codeResponse.expiresAt))
-        throw AuthenticationFailedException(ERROR_USER_CLOSED);
+        throw AuthenticationException(ERROR_USER_CLOSED);
     }
 
     return authorizationResponse;
@@ -240,7 +241,7 @@ class OpenIdConnect {
 
     var authCode = resultUri.queryParameters['code'];
     if (authCode == null || authCode.isEmpty)
-      throw AuthenticationFailedException(ERROR_INVALID_RESPONSE);
+      throw AuthenticationException(ERROR_INVALID_RESPONSE);
 
     final body = {
       "client_id": request.clientId,
@@ -261,7 +262,7 @@ class OpenIdConnect {
     );
 
     if (response == null) if (response == null)
-      throw AuthenticationFailedException(ERROR_INVALID_RESPONSE);
+      throw AuthenticationException(ERROR_INVALID_RESPONSE);
 
     return AuthorizationResponse.fromJson(response);
   }
@@ -275,14 +276,13 @@ class OpenIdConnect {
       ),
     );
 
-    if (response == null)
-      throw AuthenticationFailedException(ERROR_INVALID_RESPONSE);
+    if (response == null) throw AuthenticationException(ERROR_INVALID_RESPONSE);
 
     return AuthorizationResponse.fromJson(response);
   }
 
-  static Future<bool> logout({required LogoutRequest request}) async {
-    if (request.configuration.endSessionEndpoint == null) return true;
+  static Future<void> logout({required LogoutRequest request}) async {
+    if (request.configuration.endSessionEndpoint == null) return;
 
     final url = Uri.parse(request.configuration.endSessionEndpoint!)
         .replace(queryParameters: request.toMap());
@@ -291,16 +291,13 @@ class OpenIdConnect {
       await httpRetry(
         () => http.get(url),
       );
-
-      return true;
     } on HttpResponseException catch (e) {
-      print(e.toString());
-      return false;
+      throw LogoutException(e.toString());
     }
   }
 
-  static Future<bool> revokeToken({required RevokeTokenRequest request}) async {
-    if (request.configuration.endSessionEndpoint == null) return false;
+  static Future<void> revokeToken({required RevokeTokenRequest request}) async {
+    if (request.configuration.endSessionEndpoint == null) return;
 
     try {
       await httpRetry(
@@ -312,10 +309,28 @@ class OpenIdConnect {
           },
         ),
       );
-      return true;
     } on HttpResponseException catch (e) {
-      print(e.toString());
-      return false;
+      throw RevokeException(e.toString());
+    }
+  }
+
+  static Future<Map<String, dynamic>> getUserInfo(
+      {required UserInfoRequest request}) async {
+    try {
+      final response = await httpRetry(
+        () => http.get(
+          Uri.parse(request.configuration.userInfoEndpoint),
+          headers: {
+            "Authorization": "${request.tokenType} ${request.accessToken}"
+          },
+        ),
+      );
+
+      if (response == null) throw UserInfoException(ERROR_INVALID_RESPONSE);
+
+      return response;
+    } on Exception catch (e) {
+      throw UserInfoException(e.toString());
     }
   }
 }

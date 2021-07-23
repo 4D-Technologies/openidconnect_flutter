@@ -16,10 +16,8 @@ class PasswordAuthorizationRequest extends TokenRequest {
             clientId: clientId,
             clientSecret: clientSecret,
             grantType: "password",
-            redirectUrl: null,
             scopes: scopes,
             prompts: prompts,
-            autoRefresh: autoRefresh,
             additionalParameters: {
               "username": userName,
               "password": password,

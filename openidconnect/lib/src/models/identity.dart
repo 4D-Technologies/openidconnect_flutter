@@ -30,7 +30,7 @@ class OpenIdIdentity extends AuthorizationResponse {
     if (idParts.length != 3) throw Exception("invalid_token");
 
     this.claims = jsonDecode(
-      _decodeBase64(idParts[1]),
+      utf8.decode(base64Decode(idParts[1])),
     ) as Map<String, dynamic>;
 
     this.sub = claims["sub"].toString();
@@ -48,17 +48,22 @@ class OpenIdIdentity extends AuthorizationResponse {
       );
 
   static Future<OpenIdIdentity> load() async {
-    if (kIsWeb) {
+    if (kIsWeb || !(Platform.isIOS || Platform.isAndroid)) {
       final storage = await SharedPreferences.getInstance();
       return OpenIdIdentity(
-        accessToken: storage.getString(_AUTHENTICATION_TOKEN_KEY)!,
+        accessToken:
+            await _decryptString(storage.getString(_AUTHENTICATION_TOKEN_KEY)!),
         expiresAt: DateTime.fromMillisecondsSinceEpoch(
-          storage.getInt(_EXPIRES_ON_KEY) ?? 0,
+          int.parse(await _decryptString(storage.getString(_EXPIRES_ON_KEY)!)),
         ),
-        idToken: storage.getString(_ID_TOKEN_KEY)!,
-        refreshToken: storage.getString(_REFRESH_TOKEN_KEY),
-        tokenType: storage.getString(_TOKEN_TYPE_KEY) ?? "Bearer",
-        state: storage.getString(_STATE_KEY),
+        idToken: await _decryptString(storage.getString(_ID_TOKEN_KEY)!),
+        refreshToken: storage.getString(_REFRESH_TOKEN_KEY) == null
+            ? null
+            : await _decryptString(storage.getString(_REFRESH_TOKEN_KEY)!),
+        tokenType: await _decryptString(storage.getString(_TOKEN_TYPE_KEY)!),
+        state: storage.getString(_STATE_KEY) == null
+            ? null
+            : await _decryptString(storage.getString(_STATE_KEY)!),
       );
     } else {
       final storage = FlutterSecureStorage();
@@ -76,21 +81,53 @@ class OpenIdIdentity extends AuthorizationResponse {
     }
   }
 
+  static final _cryptoSecret =
+      crypto.SecretKey(utf8.encode("asdfasdlkjlkjasdfasd"));
+  static final _cryptoNonce = base64Decode('EQsBDQcMBQEWBAsaFBkUEQ==');
+  static final _aes =
+      crypto.AesGcm.with256bits(nonceLength: _cryptoNonce.length);
+
+  static Future<String> _encryptString(String value) async =>
+      base64Encode((await _aes.encrypt(utf8.encode(value),
+              secretKey: _cryptoSecret, nonce: _cryptoNonce))
+          .cipherText);
+
+  static Future<String> _decryptString(String value) async {
+    final val = base64Decode(value);
+
+    return utf8.decode(
+      await _aes.decrypt(
+          crypto.SecretBox(
+            val,
+            nonce: _cryptoNonce,
+            mac: await crypto.AesGcm.aesGcmMac
+                .calculateMac(val, secretKey: _cryptoSecret),
+          ),
+          secretKey: await _cryptoSecret),
+    );
+  }
+
   Future<void> save() async {
-    if (kIsWeb) {
+    if (kIsWeb || !(Platform.isIOS || Platform.isAndroid)) {
       final storage = await SharedPreferences.getInstance();
-      await storage.setString(_AUTHENTICATION_TOKEN_KEY, this.accessToken);
-      await storage.setString(_ID_TOKEN_KEY, this.idToken);
-      await storage.setString(_TOKEN_TYPE_KEY, this.tokenType);
+      await storage.setString(
+          _AUTHENTICATION_TOKEN_KEY, await _encryptString(this.accessToken));
+      await storage.setString(
+          _ID_TOKEN_KEY, await _encryptString(this.idToken));
+      await storage.setString(
+          _TOKEN_TYPE_KEY, await _encryptString(this.tokenType));
       if (this.refreshToken != null) {
-        await storage.setString(_REFRESH_TOKEN_KEY, this.refreshToken!);
+        await storage.setString(
+            _REFRESH_TOKEN_KEY, await _encryptString(this.refreshToken!));
       } else {
         await storage.remove(_REFRESH_TOKEN_KEY);
       }
-      await storage.setInt(
-          _EXPIRES_ON_KEY, this.expiresAt.millisecondsSinceEpoch);
+      await storage.setString(
+          _EXPIRES_ON_KEY,
+          await _encryptString(
+              this.expiresAt.millisecondsSinceEpoch.toString()));
       if (this.state != null) {
-        await storage.setString(_STATE_KEY, this.state!);
+        await storage.setString(_STATE_KEY, await _encryptString(this.state!));
       } else {
         await storage.remove(_STATE_KEY);
       }
@@ -155,24 +192,4 @@ class OpenIdIdentity extends AuthorizationResponse {
       (state?.hashCode ?? 0) ^
       tokenType.hashCode ^
       claims.hashCode;
-
-  static String _decodeBase64(String str) {
-    //'-', '+' 62nd char of encoding,  '_', '/' 63rd char of encoding
-    String output = str.replaceAll('-', '+').replaceAll('_', '/');
-    switch (output.length % 4) {
-      // Pad with trailing '='
-      case 0: // No pad chars in this case
-        break;
-      case 2: // Two pad chars
-        output += '==';
-        break;
-      case 3: // One pad char
-        output += '=';
-        break;
-      default:
-        throw Exception('Illegal base64url string!"');
-    }
-
-    return utf8.decode(base64Url.decode(output));
-  }
 }

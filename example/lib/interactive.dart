@@ -79,7 +79,7 @@ class _InteractivePageState extends State<InteractivePage> {
                       final response = await OpenIdConnect.authorizeInteractive(
                         context: context,
                         title: "Login",
-                        request: InteractiveAuthorizationRequest(
+                        request: await InteractiveAuthorizationRequest.create(
                           clientId: defaultClientId,
                           clientSecret: defaultClientSecret,
                           redirectUrl: defaultRedirectUrl,

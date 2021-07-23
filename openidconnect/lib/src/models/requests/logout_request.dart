@@ -6,7 +6,7 @@ class LogoutRequest {
   final String? state;
   final OpenIdConfiguration configuration;
 
-  LogoutRequest({
+  const LogoutRequest({
     required this.idToken,
     this.postLogoutRedirectUrl,
     this.state,

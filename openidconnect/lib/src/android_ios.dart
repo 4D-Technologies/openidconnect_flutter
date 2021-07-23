@@ -42,7 +42,7 @@ class OpenIdConnectAndroidiOS {
       },
     );
 
-    if (result == null) throw AuthenticationFailedException(ERROR_USER_CLOSED);
+    if (result == null) throw AuthenticationException(ERROR_USER_CLOSED);
 
     return result;
   }

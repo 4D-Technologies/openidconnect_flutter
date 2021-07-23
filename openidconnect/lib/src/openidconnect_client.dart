@@ -1,11 +1,11 @@
 part of openidconnect;
 
 class OpenIdConnectClient {
+  static const OFFLINE_ACCESS_SCOPE = "offline_access";
   static const DEFAULT_SCOPES = [
     "openid",
     "profile",
     "email",
-    "offline_access"
   ];
 
   final _eventStreamController = StreamController<AuthEvent>();
@@ -69,7 +69,7 @@ class OpenIdConnectClient {
       final request = PasswordAuthorizationRequest(
         configuration: configuration!,
         password: password,
-        scopes: scopes,
+        scopes: _getScopes(scopes),
         clientId: clientId,
         userName: userName,
         clientSecret: clientSecret,
@@ -95,7 +95,7 @@ class OpenIdConnectClient {
       }
       _eventStreamController
           .add(AuthEvent(AuthEventTypes.Error, message: e.toString()));
-      throw AuthenticationFailedException(e.toString());
+      throw AuthenticationException(e.toString());
     }
   }
 
@@ -110,7 +110,7 @@ class OpenIdConnectClient {
       final response = await OpenIdConnect.authorizeDevice(
         request: DeviceAuthorizationRequest(
           clientId: clientId,
-          scopes: scopes,
+          scopes: _getScopes(scopes),
           audience: audiences != null ? audiences!.join(" ") : null,
           configuration: configuration!,
         ),
@@ -131,7 +131,7 @@ class OpenIdConnectClient {
       _eventStreamController
           .add(AuthEvent(AuthEventTypes.Error, message: e.toString()));
 
-      throw AuthenticationFailedException(e.toString());
+      throw AuthenticationException(e.toString());
     }
   }
 
@@ -152,18 +152,19 @@ class OpenIdConnectClient {
       final response = await OpenIdConnect.authorizeInteractive(
         context: context,
         title: title,
-        request: InteractiveAuthorizationRequest(
+        request: await InteractiveAuthorizationRequest.create(
           configuration: configuration!,
           clientId: clientId,
           redirectUrl: this.redirectUrl,
           clientSecret: this.clientSecret,
           loginHint: userNameHint,
           additionalParameters: additionalParameters,
-          scopes: scopes,
+          scopes: _getScopes(scopes),
           autoRefresh: autoRefresh,
           prompts: prompts,
         ),
       );
+
       //Load the idToken here
       await _completeLogin(response);
 
@@ -181,19 +182,19 @@ class OpenIdConnectClient {
       _eventStreamController
           .add(AuthEvent(AuthEventTypes.Error, message: e.toString()));
 
-      throw AuthenticationFailedException(e.toString());
+      throw AuthenticationException(e.toString());
     }
   }
 
-  Future<bool> logout() async {
+  Future<void> logout() async {
     if (_autoRenewTimer != null) _autoRenewTimer = null;
 
-    if (_identity == null) return true;
+    if (_identity == null) return;
 
     //Make sure we have the discovery information
     await _verifyDiscoveryDocument();
 
-    return await OpenIdConnect.logout(
+    await OpenIdConnect.logout(
       request: LogoutRequest(
         configuration: configuration!,
         idToken: _identity!.idToken,
@@ -226,10 +227,9 @@ class OpenIdConnectClient {
         request: RefreshRequest(
           clientId: clientId,
           redirectUrl: redirectUrl,
-          scopes: scopes,
+          scopes: _getScopes(scopes),
           refreshToken: _identity!.refreshToken!,
           configuration: configuration!,
-          autoRefresh: autoRefresh,
         ),
       );
 
@@ -288,5 +288,12 @@ class OpenIdConnectClient {
     configuration = await OpenIdConnect.getConfiguration(
       this.discoveryDocumentUrl,
     );
+  }
+
+  ///Gets the proper scopes and adds offline access if the user has it specified in the configuration for the client.
+  Iterable<String> _getScopes(Iterable<String> scopes) {
+    if (autoRefresh && !scopes.contains(OFFLINE_ACCESS_SCOPE))
+      return [OFFLINE_ACCESS_SCOPE, ...scopes];
+    return scopes;
   }
 }

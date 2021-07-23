@@ -4,7 +4,6 @@
 
 list(APPEND FLUTTER_PLUGIN_LIST
   url_launcher_windows
-  webview_windows
 )
 
 set(PLUGIN_BUNDLED_LIBRARIES)

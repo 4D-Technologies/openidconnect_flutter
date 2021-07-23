@@ -19,8 +19,6 @@ dependencies:
   openidconnect_platform_interface:
     path: ../openidconnect_platform_interface
 
-  webview_windows: ^0.0.7
-
   cupertino_icons: ^1.0.2
 
 dev_dependencies:

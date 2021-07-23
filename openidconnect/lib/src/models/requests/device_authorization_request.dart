@@ -8,7 +8,7 @@ class DeviceAuthorizationRequest {
   final String? audience;
   final Map<String, String>? additionalParameters;
 
-  DeviceAuthorizationRequest({
+  const DeviceAuthorizationRequest({
     required this.clientId,
     required this.scopes,
     required this.audience,

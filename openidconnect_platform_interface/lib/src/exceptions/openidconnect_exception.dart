@@ -1,8 +1,8 @@
 part of openidconnect_platform_interface;
 
-class AuthenticationFailedException implements Exception {
+abstract class OpenIdConnectException implements Exception {
   final String? errorMessage;
-  AuthenticationFailedException([this.errorMessage]);
+  OpenIdConnectException([this.errorMessage]);
 
   @override
   String toString() => errorMessage ?? "Unknown";

@@ -87,7 +87,7 @@ class _PasswordPageState extends State<PasswordPage> {
                 child: Column(
                   children: [
                     TextFormField(
-                      textInputAction: TextInputAction.done,
+                      textInputAction: TextInputAction.next,
                       decoration: InputDecoration(labelText: "User Name"),
                       keyboardType: TextInputType.emailAddress,
                       initialValue: userName,
@@ -100,7 +100,7 @@ class _PasswordPageState extends State<PasswordPage> {
                       },
                     ),
                     TextFormField(
-                      textInputAction: TextInputAction.done,
+                      textInputAction: TextInputAction.go,
                       decoration: InputDecoration(labelText: "Password"),
                       keyboardType: TextInputType.visiblePassword,
                       initialValue: password,
