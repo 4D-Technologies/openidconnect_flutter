@@ -173,6 +173,9 @@ class OpenIdIdentity extends AuthorizationResponse {
 
   String? get familyName => claims["family_name"]?.toString();
   String? get givenName => claims["given_name"]?.toString();
+  String? get fullName =>
+      claims["name"]?.toString() ??
+      (givenName == null ? familyName : "${givenName} ${familyName}");
   String? get userName =>
       claims["preferred_username"]?.toString() ?? claims["sub"]?.toString();
   String? get email => claims["email"]?.toString();
