@@ -1,6 +1,6 @@
 name: openidconnect
 description: OpenIdConnect library for flutter.
-version: 1.0.1
+version: 1.0.2
 homepage: www.staccat.io
 publish_to: "none"
 
