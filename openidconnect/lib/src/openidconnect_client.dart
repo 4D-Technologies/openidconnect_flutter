@@ -203,6 +203,14 @@ class OpenIdConnectClient {
     );
   }
 
+  FutureOr<String?> getRefreshToken() async {
+    if (_identity == null) return null;
+
+    if (isTokenAboutToExpire && !await refresh(raiseEvents: true)) return null;
+
+    return _identity!.refreshToken;
+  }
+
   Future<bool> refresh({bool raiseEvents = true}) async {
     if (!webUseRefreshTokens) {
       //Web has a special case where it will use a hidden iframe. This just returns true because the iframe does it.
