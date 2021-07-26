@@ -53,8 +53,6 @@ class OpenIdConnectClient {
     return refreshTime.isNegative;
   }
 
-  bool get isLoggedIn => _identity != null;
-
   Future<OpenIdIdentity> loginWithPassword(
       {required String userName,
       required String password,
@@ -201,6 +199,16 @@ class OpenIdConnectClient {
         state: _identity!.state,
       ),
     );
+  }
+
+  FutureOr<bool> isLoggedIn() async {
+    if (_identity == null) return false;
+
+    if (!isTokenAboutToExpire) return true;
+
+    if (this.autoRefresh) await refresh();
+
+    return hasTokenExpired;
   }
 
   Future<void> sendRequests<T>(Iterable<Future<T>> Function() requests) async {
