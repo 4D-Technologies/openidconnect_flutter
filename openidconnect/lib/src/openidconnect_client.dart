@@ -211,6 +211,9 @@ class OpenIdConnectClient {
     return hasTokenExpired;
   }
 
+  void reportError(String errorMessage) => _eventStreamController
+      .add(AuthEvent(AuthEventTypes.Error, message: errorMessage));
+
   Future<void> sendRequests<T>(Iterable<Future<T>> Function() requests) async {
     if ((_identity == null || isTokenAboutToExpire) &&
         (!this.autoRefresh || !await refresh(raiseEvents: true)))
