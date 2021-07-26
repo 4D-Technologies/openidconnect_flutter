@@ -14,8 +14,12 @@ dependencies:
   flutter_web_plugins:
     sdk: flutter
 
+  # openidconnect_platform_interface:
+  #   path: ../openidconnect_platform_interface
   openidconnect_platform_interface:
-    path: ../openidconnect_platform_interface
+    git:
+      url: https://github.com/Concerti-IO/openidconnect_flutter.git
+      path: openidconnect_platform_interface
 
   flutter_secure_storage: ^4.2.0
   shared_preferences: ^2.0.6

@@ -163,20 +163,6 @@ packages:
       url: "https://pub.dartlang.org"
     source: hosted
     version: "2.0.1"
-  http:
-    dependency: transitive
-    description:
-      name: http
-      url: "https://pub.dartlang.org"
-    source: hosted
-    version: "0.13.3"
-  http_parser:
-    dependency: transitive
-    description:
-      name: http_parser
-      url: "https://pub.dartlang.org"
-    source: hosted
-    version: "4.0.0"
   js:
     dependency: transitive
     description:
@@ -215,9 +201,11 @@ packages:
   openidconnect_platform_interface:
     dependency: "direct main"
     description:
-      path: "../openidconnect_platform_interface"
-      relative: true
-    source: path
+      path: openidconnect_platform_interface
+      ref: HEAD
+      resolved-ref: "37e2fff6f21135be0c27f1b13ed0ddc9ae105c23"
+      url: "https://github.com/Concerti-IO/openidconnect_flutter.git"
+    source: git
     version: "0.0.1"
   package_config:
     dependency: transitive
@@ -254,13 +242,6 @@ packages:
       url: "https://pub.dartlang.org"
     source: hosted
     version: "2.0.0"
-  retry:
-    dependency: transitive
-    description:
-      name: retry
-      url: "https://pub.dartlang.org"
-    source: hosted
-    version: "3.1.0"
   sky_engine:
     dependency: transitive
     description: flutter

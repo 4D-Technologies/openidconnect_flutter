@@ -13,7 +13,9 @@ dependencies:
   flutter_web_plugins:
     sdk: flutter
   openidconnect_platform_interface:
-    path: ../openidconnect_platform_interface
+    git:
+      url: https://github.com/Concerti-IO/openidconnect_flutter.git
+      path: openidconnect_platform_interface
 
 dev_dependencies:
   pedantic: ^1.10.0

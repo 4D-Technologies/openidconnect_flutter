@@ -9,6 +9,7 @@ class RefreshRequest extends TokenRequest {
     required String refreshToken,
     required OpenIdConfiguration configuration,
     Map<String, String>? additionalParameters,
+    bool autoRefresh = true,
   }) : super(
             configuration: configuration,
             clientId: clientId,

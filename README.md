@@ -28,7 +28,7 @@ Currently supports:
 
 **Important**
 
-These implementations, as of right now use a hard coded encryption key that is in the source code for Windows, MacOs and Web. This may or may not be an issue for you. Until the below items for at least secure storage are complete, don't assume that your access tokens etc. are secure on these platforms.
+As of right now Windows, MacOs and Web use a hard coded encryption key that is in the source code. This may or may not be an issue for you. Until the below items for secure storage are complete, don't assume that your access tokens etc. are secure on these platforms.
 
 For Linux, Windows and macOS currently your IdP MUST support device code flow to function properly with interactive login. Otherwise you must use password flow. This is because webView is not yet supported on these environments.
 
