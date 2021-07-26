@@ -203,6 +203,14 @@ class OpenIdConnectClient {
     );
   }
 
+  Future<void> sendRequests<T>(Iterable<Future<T>> Function() requests) async {
+    if ((_identity == null || isTokenAboutToExpire) &&
+        (!this.autoRefresh || !await refresh(raiseEvents: true)))
+      throw AuthenticationException();
+
+    await Future.wait(requests());
+  }
+
   FutureOr<String?> getRefreshToken() async {
     if (_identity == null) return null;
 
