@@ -1,7 +1,8 @@
 name: openidconnect_web
 description: A new flutter plugin project.
-version: 0.0.1
-publish_to: "none"
+version: 1.0.7
+homepage: https://github.com/Concerti-IO/openidconnect_flutter/tree/main/openidconnect_web
+publish_to: https://pub.dev/openidconnect_web
 
 environment:
   sdk: ">=2.12.0 <3.0.0"
@@ -12,10 +13,7 @@ dependencies:
     sdk: flutter
   flutter_web_plugins:
     sdk: flutter
-  openidconnect_platform_interface:
-    git:
-      url: https://github.com/Concerti-IO/openidconnect_flutter.git
-      path: openidconnect_platform_interface
+  openidconnect_platform_interface: ^1.0.0
 
 dev_dependencies:
   pedantic: ^1.10.0

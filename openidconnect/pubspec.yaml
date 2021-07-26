@@ -1,8 +1,8 @@
 name: openidconnect
 description: OpenIdConnect library for flutter.
-version: 1.0.6
-homepage: www.staccat.io
-publish_to: "none"
+version: 1.0.7+1
+homepage: https://github.com/Concerti-IO/openidconnect_flutter
+publish_to: https://pub.dev/openidconnect
 
 environment:
   sdk: ">=2.12.0 <3.0.0"
@@ -13,21 +13,14 @@ dependencies:
     sdk: flutter
   flutter_web_plugins:
     sdk: flutter
-
-  # openidconnect_platform_interface:
-  #   path: ../openidconnect_platform_interface
-  openidconnect_platform_interface:
-    git:
-      url: https://github.com/Concerti-IO/openidconnect_flutter.git
-      path: openidconnect_platform_interface
-
+  openidconnect_platform_interface: ^1.0.0
   flutter_secure_storage: ^4.2.0
   shared_preferences: ^2.0.6
 
   #crypto: ^3.0.1 #TODO: Switch back to this once all platforms support secure storage
   cryptography: ^2.0.2
 
-  url_launcher: 6.0.9
+  url_launcher: ^6.0.9
   http: ^0.13.3
   retry: ^3.1.0
 

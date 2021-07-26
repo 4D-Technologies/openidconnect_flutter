@@ -24,6 +24,8 @@ class OpenIdConnectClient {
   OpenIdIdentity? _identity = null;
   bool _refreshing = false;
 
+  AuthEvent? currentEvent;
+
   OpenIdConnectClient({
     required this.discoveryDocumentUrl,
     required this.clientId,
@@ -83,7 +85,7 @@ class OpenIdConnectClient {
 
       if (autoRefresh) _setupAutoRenew();
 
-      _eventStreamController.add(AuthEvent(AuthEventTypes.Success));
+      _raiseEvent(AuthEvent(AuthEventTypes.Success));
 
       return _identity!;
     } on Exception catch (e) {
@@ -91,8 +93,7 @@ class OpenIdConnectClient {
         await this._identity!.clear();
         this._identity = null;
       }
-      _eventStreamController
-          .add(AuthEvent(AuthEventTypes.Error, message: e.toString()));
+      _raiseEvent(AuthEvent(AuthEventTypes.Error, message: e.toString()));
       throw AuthenticationException(e.toString());
     }
   }
@@ -118,7 +119,7 @@ class OpenIdConnectClient {
 
       if (autoRefresh) _setupAutoRenew();
 
-      _eventStreamController.add(AuthEvent(AuthEventTypes.Success));
+      _raiseEvent(AuthEvent(AuthEventTypes.Success));
       return _identity!;
     } on Exception catch (e) {
       if (this._identity != null) {
@@ -126,8 +127,7 @@ class OpenIdConnectClient {
         this._identity = null;
       }
 
-      _eventStreamController
-          .add(AuthEvent(AuthEventTypes.Error, message: e.toString()));
+      _raiseEvent(AuthEvent(AuthEventTypes.Error, message: e.toString()));
 
       throw AuthenticationException(e.toString());
     }
@@ -168,7 +168,7 @@ class OpenIdConnectClient {
 
       if (autoRefresh) _setupAutoRenew();
 
-      _eventStreamController.add(AuthEvent(AuthEventTypes.Success));
+      _raiseEvent(AuthEvent(AuthEventTypes.Success));
 
       return _identity!;
     } on Exception catch (e) {
@@ -177,8 +177,7 @@ class OpenIdConnectClient {
         this._identity = null;
       }
 
-      _eventStreamController
-          .add(AuthEvent(AuthEventTypes.Error, message: e.toString()));
+      _raiseEvent(AuthEvent(AuthEventTypes.Error, message: e.toString()));
 
       throw AuthenticationException(e.toString());
     }
@@ -211,8 +210,16 @@ class OpenIdConnectClient {
     return hasTokenExpired;
   }
 
-  void reportError(String errorMessage) => _eventStreamController
-      .add(AuthEvent(AuthEventTypes.Error, message: errorMessage));
+  void reportError(String errorMessage) {
+    currentEvent = AuthEvent(
+      AuthEventTypes.Error,
+      message: errorMessage,
+    );
+
+    _eventStreamController.add(
+      currentEvent!,
+    );
+  }
 
   Future<void> sendRequests<T>(Iterable<Future<T>> Function() requests) async {
     if ((_identity == null || isTokenAboutToExpire) &&
@@ -269,8 +276,7 @@ class OpenIdConnectClient {
         _autoRenewTimer = Future.delayed(refreshTime, refresh);
       }
 
-      if (raiseEvents)
-        _eventStreamController.add(AuthEvent(AuthEventTypes.Refresh));
+      if (raiseEvents) _raiseEvent(AuthEvent(AuthEventTypes.Refresh));
 
       return true;
     } on Exception catch (e) {
@@ -278,13 +284,17 @@ class OpenIdConnectClient {
         await this._identity!.clear();
         this._identity = null;
 
-        _eventStreamController
-            .add(AuthEvent(AuthEventTypes.Error, message: e.toString()));
+        _raiseEvent(AuthEvent(AuthEventTypes.Error, message: e.toString()));
       }
       return false;
     } finally {
       _refreshing = false;
     }
+  }
+
+  void _raiseEvent(AuthEvent evt) {
+    currentEvent = evt;
+    _eventStreamController.sink.add(evt);
   }
 
   Future<void> _completeLogin(AuthorizationResponse response) async {

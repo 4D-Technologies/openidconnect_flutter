@@ -201,12 +201,10 @@ packages:
   openidconnect_platform_interface:
     dependency: "direct main"
     description:
-      path: openidconnect_platform_interface
-      ref: HEAD
-      resolved-ref: "37e2fff6f21135be0c27f1b13ed0ddc9ae105c23"
-      url: "https://github.com/Concerti-IO/openidconnect_flutter.git"
-    source: git
-    version: "0.0.1"
+      name: openidconnect_platform_interface
+      url: "https://pub.dartlang.org"
+    source: hosted
+    version: "1.0.0"
   package_config:
     dependency: transitive
     description:
