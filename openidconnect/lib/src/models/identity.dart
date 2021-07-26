@@ -171,6 +171,18 @@ class OpenIdIdentity extends AuthorizationResponse {
     }
   }
 
+  String? get familyName => claims["family_name"]?.toString();
+  String? get givenName => claims["given_name"]?.toString();
+  String? get userName =>
+      claims["preferred_username"]?.toString() ?? claims["sub"]?.toString();
+  String? get email => claims["email"]?.toString();
+  String? get act => claims["act"]?.toString();
+  List<String> get roles => claims["role"] == null
+      ? List<String>.empty()
+      : claims["role"] is String
+          ? <String>[claims["role"].toString()]
+          : List<String>.from(claims["role"] as Iterable<dynamic>);
+
   @override
   operator ==(Object o) {
     if (identical(this, o)) return true;
