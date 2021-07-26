@@ -9,7 +9,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter/widgets.dart';
 import 'package:http/http.dart' as http;
 import 'package:cryptography/cryptography.dart' as crypto;
-import 'package:openidconnect/src/models/responses/device_code_response.dart';
 import 'package:openidconnect_platform_interface/openidconnect_platform_interface.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
@@ -25,6 +24,15 @@ part './src/helpers.dart';
 part './src/models/identity.dart';
 part './src/models/event.dart';
 
+part 'src/config/openidconfiguration.dart';
+
+part './src/exceptions/openidconnect_exception.dart';
+part './src/exceptions/authentication_exception.dart';
+part './src/exceptions/http_response_exception.dart';
+part './src/exceptions/user_info_exception.dart';
+part './src/exceptions/revoke_exception.dart';
+part './src/exceptions/logout_exception.dart';
+
 part 'src/models/requests/interactive_authorization_request.dart';
 part 'src/models/requests/password_authorization_request.dart';
 part 'src/models/requests/refresh_request.dart';
@@ -32,6 +40,11 @@ part 'src/models/requests/logout_request.dart';
 part 'src/models/requests/revoke_token_request.dart';
 part 'src/models/requests/device_authorization_request.dart';
 part 'src/models/requests/user_info_request.dart';
+part 'src/models/requests/token_request.dart';
+
+part 'src/models/responses/token_response.dart';
+part 'src/models/responses/device_code_response.dart';
+part 'src/models/responses/authorization_response.dart';
 
 final _platform = OpenIdConnectPlatform.instance;
 
@@ -116,7 +129,7 @@ class OpenIdConnect {
   }
 
   static Future<AuthorizationResponse> _completeCodeExchange({
-    required InteractiveAuthorizationPlatformRequest request,
+    required InteractiveAuthorizationRequest request,
     required String url,
   }) async {
     final resultUri = Uri.parse(url);

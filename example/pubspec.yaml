@@ -16,8 +16,6 @@ dependencies:
     path: ../openidconnect
   openidconnect_web:
     path: ../openidconnect_web
-  openidconnect_platform_interface:
-    path: ../openidconnect_platform_interface
 
   cupertino_icons: ^1.0.2
 

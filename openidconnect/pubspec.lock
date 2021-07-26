@@ -238,7 +238,7 @@ packages:
     description:
       path: openidconnect_platform_interface
       ref: HEAD
-      resolved-ref: "37e2fff6f21135be0c27f1b13ed0ddc9ae105c23"
+      resolved-ref: bd1dfd11cd101459aefda402f7ca3647f7e38414
       url: "https://github.com/Concerti-IO/openidconnect_flutter.git"
     source: git
     version: "0.0.1"

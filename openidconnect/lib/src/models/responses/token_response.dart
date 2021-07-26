@@ -1,4 +1,4 @@
-part of openidconnect_platform_interface;
+part of openidconnect;
 
 class TokenResponse {
   final String tokenType;

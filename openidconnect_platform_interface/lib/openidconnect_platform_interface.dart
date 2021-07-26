@@ -3,25 +3,9 @@ library openidconnect_platform_interface;
 import 'dart:async';
 
 import 'package:flutter/services.dart';
-import 'package:flutter/widgets.dart';
 import 'package:plugin_platform_interface/plugin_platform_interface.dart';
 
-part 'src/config/openidconfiguration.dart';
-
-part 'src/models/requests/token_request.dart';
-part 'src/models/requests/interactive_authorization_platform_request.dart';
-
-part 'src/models/responses/token_response.dart';
-part 'src/models/responses/authorization_response.dart';
-
 part './src/method_channel_openidconnect.dart';
-
-part './src/exceptions/openidconnect_exception.dart';
-part './src/exceptions/authentication_exception.dart';
-part './src/exceptions/http_response_exception.dart';
-part 'src/exceptions/user_info_exception.dart';
-part './src/exceptions/revoke_exception.dart';
-part './src/exceptions/logout_exception.dart';
 
 const String AUTHORIZE_ERROR_MESSAGE_FORMAT =
     "Failed to authorize: [error: %1, description: %2]";

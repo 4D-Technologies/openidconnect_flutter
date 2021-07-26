@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:openidconnect_platform_interface/openidconnect_platform_interface.dart';
+import 'package:openidconnect/openidconnect.dart';
 
 class IdentityView extends StatelessWidget {
   final AuthorizationResponse identity;

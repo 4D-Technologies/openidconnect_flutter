@@ -1,3 +1,5 @@
+part of openidconnect;
+
 class DeviceCodeResponse {
   final String deviceCode;
   final String userCode;

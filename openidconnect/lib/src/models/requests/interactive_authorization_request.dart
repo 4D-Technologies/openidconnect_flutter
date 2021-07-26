@@ -1,9 +1,15 @@
 part of openidconnect;
 
-class InteractiveAuthorizationRequest
-    extends InteractiveAuthorizationPlatformRequest {
+class InteractiveAuthorizationRequest extends TokenRequest {
   static const String _charset =
       'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-._~';
+
+  final int popupWidth;
+  final int popupHeight;
+  final String codeVerifier;
+  final String codeChallenge;
+  final bool useWebPopup;
+  final String redirectUrl;
 
   static Future<InteractiveAuthorizationRequest> create({
     required String clientId,
@@ -40,8 +46,8 @@ class InteractiveAuthorizationRequest
       clientSecret: clientSecret,
       loginHint: loginHint,
       prompts: prompts,
-      webPopupHeight: popupHeight,
-      webPopupWidth: popupWidth,
+      popupHeight: popupHeight,
+      popupWidth: popupWidth,
       useWebPopup: useWebPopup,
     );
   }
@@ -49,32 +55,32 @@ class InteractiveAuthorizationRequest
   InteractiveAuthorizationRequest._({
     required String clientId,
     String? clientSecret,
-    required String redirectUrl,
+    required this.redirectUrl,
     required Iterable<String> scopes,
     required OpenIdConfiguration configuration,
     required bool autoRefresh,
-    required String codeVerifier,
-    required String codeChallenge,
+    required this.codeVerifier,
+    required this.codeChallenge,
     String? loginHint,
     Iterable<String>? prompts,
     Map<String, String>? additionalParameters,
-    int webPopupWidth = 640,
-    int webPopupHeight = 480,
-    bool useWebPopup = true,
+    this.popupWidth = 640,
+    this.popupHeight = 480,
+    this.useWebPopup = true,
   }) : super(
           configuration: configuration,
           clientId: clientId,
           clientSecret: clientSecret,
-          redirectUrl: redirectUrl,
+          grantType: "code",
           scopes: scopes,
           prompts: prompts,
-          autoRefresh: autoRefresh,
-          codeChallenge: codeChallenge,
-          codeVerifier: codeVerifier,
-          additionalParameters: additionalParameters,
-          loginHint: loginHint,
-          popupHeight: webPopupHeight,
-          popupWidth: webPopupWidth,
-          useWebPopup: useWebPopup,
+          additionalParameters: {
+            "redirect_url": redirectUrl,
+            "login_hint": loginHint ?? "",
+            "response_type": "code",
+            "code_challenge_method": "S256",
+            "code_challenge": codeChallenge,
+            ...(additionalParameters ?? {})
+          },
         );
 }

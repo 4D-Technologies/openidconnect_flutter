@@ -248,11 +248,13 @@ packages:
     source: path
     version: "1.0.1"
   openidconnect_platform_interface:
-    dependency: "direct main"
+    dependency: transitive
     description:
-      path: "../openidconnect_platform_interface"
-      relative: true
-    source: path
+      path: openidconnect_platform_interface
+      ref: HEAD
+      resolved-ref: bd1dfd11cd101459aefda402f7ca3647f7e38414
+      url: "https://github.com/Concerti-IO/openidconnect_flutter.git"
+    source: git
     version: "0.0.1"
   openidconnect_web:
     dependency: "direct main"
