@@ -38,9 +38,16 @@ For Linux, Windows and macOS currently your IdP MUST support device code flow to
 2. Import openidconnect: import 'package:openidconnect/openidconnect.dart';
 3. Call the various methods: on OpenIdConnect OR use OpenIdConnectClient and subscribe to the events
 4. Review the example project for details.
-5. For web support add openidconnect_web to your project and copy the callback.html file from openidconnect_web (in this repo) into the web folder of your app.
+5. For web support add openidconnect_web to your project and copy the callback.html file from openidconnect_web (in this repo) into the web folder of your app. Make sure that your Idp has the proper redirect path https://{your_url_to_app/callback.html} as one of the accepted urls.
+6. For Android, and iOS see the section below on custom urls below to setup your application for redirects. (Coming soon, right now you can use the same redirect url as above for web.)
 
 **(more detailed instructions coming soon)**
+
+## Web
+
+OpenIdConnect web has 2 separate interactive login flows as a result of security restrictions in the browser. (Password and device flows are identical for all platforms) In most cases you'll want to use the default popup window to handle authentication as this keeps everything in process and doesn't require a reload of your flutter application. However, if you have to initiate interactive login outside of clicking a button on the page, your browser will block the popup and put a prompt up asking the user to allow it. This is a bad thing of course. Thus you can set useWebPopup = false on interactiveAuthorization when you need to initialize your authorization outside of a button click. This will result in a redirect in the same page and then the login page on your IdP will redirect back to /callback.html (see notes). This will then be processed using the OpenIdConnect.processStartup or by the OpenIdConnectClient on .create() and then your app will resume as normal including the url that it left off.
+
+**Note:** It is VERY important to make sure you test on Firefox with the web, as it's behavior for blocking popups is _significantly_ more restrictive than Chromium browsers.
 
 ## TODO
 
