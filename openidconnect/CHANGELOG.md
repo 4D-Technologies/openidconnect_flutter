@@ -1,3 +1,8 @@
+# 1.0.11
+
+- Fix bug on authorizeInteractive where additionalProperties were ignored.
+- Removes duplicate static method for completing code exchange.
+
 # 1.0.10+1
 
 - Added testing for OpenIdentity save/load with encryption
