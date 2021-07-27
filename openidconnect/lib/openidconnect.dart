@@ -49,6 +49,9 @@ part 'src/models/responses/authorization_response.dart';
 final _platform = OpenIdConnectPlatform.instance;
 
 class OpenIdConnect {
+  static const CODE_VERIFIER_STORAGE_KEY = "openidconnect_code_verifier";
+  static const CODE_CHALLENGE_STORAGE_KEY = "openidconnect_code_challenge";
+
   static Future<OpenIdConfiguration> getConfiguration(
       String discoveryDocumentUri) async {
     final response =
@@ -75,12 +78,12 @@ class OpenIdConnect {
     return AuthorizationResponse.fromJson(response);
   }
 
-  static Future<AuthorizationResponse> authorizeInteractive({
+  static Future<AuthorizationResponse?> authorizeInteractive({
     required BuildContext context,
     required String title,
     required InteractiveAuthorizationRequest request,
   }) async {
-    late String responseUrl;
+    late String? responseUrl;
 
     final uri = Uri.parse(request.configuration.authorizationEndpoint).replace(
       queryParameters: {
@@ -116,13 +119,24 @@ class OpenIdConnect {
         ),
       );
     } else {
+      //TODO: This should be converted to secure storage.
+      final storage = await SharedPreferences.getInstance();
+      storage.setString(CODE_VERIFIER_STORAGE_KEY, request.codeVerifier);
+      storage.setString(CODE_CHALLENGE_STORAGE_KEY, request.codeChallenge);
+
       responseUrl = await _platform.authorizeInteractive(
         title: title,
         authorizationUrl: uri.toString(),
         redirectUrl: request.redirectUrl,
         popupHeight: request.popupHeight,
         popupWidth: request.popupWidth,
+        useWebRedirectLoop: !request.useWebPopup,
       );
+
+      if (responseUrl == null) return null;
+
+      storage.remove(CODE_VERIFIER_STORAGE_KEY);
+      storage.remove(CODE_CHALLENGE_STORAGE_KEY);
     }
 
     return await _completeCodeExchange(request: request, url: responseUrl);
@@ -307,6 +321,42 @@ class OpenIdConnect {
     } on HttpResponseException catch (e) {
       throw LogoutException(e.toString());
     }
+  }
+
+  static Future<AuthorizationResponse?> processStartup({
+    required String clientId,
+    String? clientSecret,
+    required String redirectUrl,
+    required Iterable<String> scopes,
+    required OpenIdConfiguration configuration,
+    bool autoRefresh = true,
+  }) async {
+    final response = await _platform.processStartup();
+
+    if (response == null) return null;
+
+    final storage = await SharedPreferences.getInstance();
+    final codeVerifier = storage.getString(CODE_VERIFIER_STORAGE_KEY)!;
+    final codeChallenge = storage.getString(CODE_CHALLENGE_STORAGE_KEY)!;
+
+    storage.remove(CODE_VERIFIER_STORAGE_KEY);
+    storage.remove(CODE_CHALLENGE_STORAGE_KEY);
+
+    final result = await _completeCodeExchange(
+      request: InteractiveAuthorizationRequest._(
+        clientId: clientId,
+        clientSecret: clientSecret,
+        redirectUrl: redirectUrl,
+        scopes: scopes,
+        configuration: configuration,
+        autoRefresh: autoRefresh,
+        codeVerifier: codeVerifier,
+        codeChallenge: codeChallenge,
+      ),
+      url: response,
+    );
+
+    return result;
   }
 
   static Future<void> revokeToken({required RevokeTokenRequest request}) async {

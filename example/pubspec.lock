@@ -21,7 +21,7 @@ packages:
       name: args
       url: "https://pub.dartlang.org"
     source: hosted
-    version: "2.1.1"
+    version: "2.2.0"
   async:
     dependency: transitive
     description:
@@ -91,7 +91,7 @@ packages:
       name: code_builder
       url: "https://pub.dartlang.org"
     source: hosted
-    version: "4.0.0"
+    version: "4.1.0"
   collection:
     dependency: transitive
     description:
@@ -133,7 +133,7 @@ packages:
       name: dart_style
       url: "https://pub.dartlang.org"
     source: hosted
-    version: "2.0.2"
+    version: "2.0.3"
   fake_async:
     dependency: transitive
     description:
@@ -239,30 +239,28 @@ packages:
       name: mockito
       url: "https://pub.dartlang.org"
     source: hosted
-    version: "5.0.11"
+    version: "5.0.12"
   openidconnect:
     dependency: "direct main"
     description:
       path: "../openidconnect"
       relative: true
     source: path
-    version: "1.0.1"
+    version: "1.0.8"
   openidconnect_platform_interface:
     dependency: transitive
     description:
-      path: openidconnect_platform_interface
-      ref: HEAD
-      resolved-ref: bd1dfd11cd101459aefda402f7ca3647f7e38414
-      url: "https://github.com/Concerti-IO/openidconnect_flutter.git"
-    source: git
-    version: "0.0.1"
+      name: openidconnect_platform_interface
+      url: "https://pub.dartlang.org"
+    source: hosted
+    version: "1.0.2"
   openidconnect_web:
     dependency: "direct main"
     description:
       path: "../openidconnect_web"
       relative: true
     source: path
-    version: "0.0.1"
+    version: "1.0.8"
   package_config:
     dependency: transitive
     description:
@@ -325,7 +323,7 @@ packages:
       name: process
       url: "https://pub.dartlang.org"
     source: hosted
-    version: "4.2.1"
+    version: "4.2.3"
   pub_semver:
     dependency: transitive
     description:

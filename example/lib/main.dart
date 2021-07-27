@@ -1,20 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:openidconnect_example/choose.dart';
 
-final defaultDiscoveryUrl =
-    "https://yourdomain.com/.well-known/openid-configuration";
-final defaultClientId = "ClientId";
-final defaultClientSecret = "ClientSecret";
-final defaultAudience = "api";
-final defaultRedirectUrl = "http://localhost:50335/callback.html";
-final defaultscopes = [
-  "openid",
-  "profile",
-  "email",
-  "address",
-  "offline_access"
-];
-
 void main() {
   runApp(MyApp());
 }

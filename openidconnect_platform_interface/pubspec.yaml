@@ -1,6 +1,6 @@
 name: openidconnect_platform_interface
-description: A new Flutter package project.
-version: 1.0.0+1
+description: Platform interface for OpenIdConnect.
+version: 1.0.2
 homepage: https://github.com/Concerti-IO/openidconnect_flutter/tree/main/openidconnect_platform_interface
 publish_to: https://pub.dev/openidconnect_platform_interface
 

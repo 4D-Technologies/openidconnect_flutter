@@ -12,7 +12,7 @@
                 parent.postMessage(location.href, "*");
             } else { //Used for redirect loop functionality.                
                 //Get the original page destination                
-                const destination = sessionStorage.getItem(AUTH_DESTINATION_KEY) || "/";
+                const destination = sessionStorage.getItem(AUTH_DESTINATION_KEY || "/");
                 sessionStorage.removeItem(AUTH_DESTINATION_KEY);
                 //Store the current window location that will be used to get the information for authentication
                 sessionStorage.setItem(AUTH_RESPONSE_KEY, window.location);

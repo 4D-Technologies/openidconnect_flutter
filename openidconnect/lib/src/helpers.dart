@@ -34,12 +34,16 @@ Future<Map<String, dynamic>?> httpRetry<T extends http.Response>(
         as Map<String, dynamic>?;
 
     if (result.statusCode < 200 || result.statusCode >= 300) {
-      print(jsonResponse!["error"].toString());
-      throw HttpResponseException(ERROR_MESSAGE_FORMAT.replaceAll(
-          "%2",
-          jsonResponse["error"]?.toString() ??
-              result.reasonPhrase ??
-              "Unknown Error"));
+      if (jsonResponse!["error"] != null) {
+        var error = jsonResponse["error"].toString();
+        if (jsonResponse["error_description"] != null)
+          error += ": ${jsonResponse["error_description"]}";
+        throw HttpResponseException(
+            ERROR_MESSAGE_FORMAT.replaceAll("%2", error));
+      } else {
+        throw HttpResponseException(
+            ERROR_MESSAGE_FORMAT.replaceAll("%2", "unknown_error"));
+      }
     }
 
     return result.body.isEmpty ? null : jsonResponse;

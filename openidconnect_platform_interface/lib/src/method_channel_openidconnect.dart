@@ -5,24 +5,24 @@ const MethodChannel _channel =
 
 class MethodChannelOpenIdConnect extends OpenIdConnectPlatform {
   @override
-  Future<String> authorizeInteractive({
+  Future<String?> authorizeInteractive({
     required String title,
     required String authorizationUrl,
     required String redirectUrl,
     required int popupWidth,
     required int popupHeight,
-  }) async {
-    final response =
-        await _channel.invokeMethod<String>('authorizeInteractive', {
-      "title": "title",
-      "authorizationUrl": authorizationUrl,
-      "redirectUrl": redirectUrl,
-      "popupWidth": popupWidth,
-      "popupHeight": popupHeight,
-    });
+    bool useWebRedirectLoop = false,
+  }) =>
+      _channel.invokeMethod<String>('authorizeInteractive', {
+        "title": "title",
+        "authorizationUrl": authorizationUrl,
+        "redirectUrl": redirectUrl,
+        "popupWidth": popupWidth,
+        "popupHeight": popupHeight,
+        "useWebRedirectLoop": useWebRedirectLoop,
+      });
 
-    if (response == null) throw UnsupportedError('The response was null.');
-
-    return response;
-  }
+  @override
+  Future<String?> processStartup() =>
+      _channel.invokeMethod<String>("processStartup");
 }

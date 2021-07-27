@@ -13,7 +13,7 @@ class OpenIdConnectClient {
   final String discoveryDocumentUrl;
   final String clientId;
   final String? clientSecret;
-  final String redirectUrl;
+  final String? redirectUrl;
   final bool autoRefresh;
   final bool webUseRefreshTokens;
   final List<String> scopes;
@@ -23,19 +23,85 @@ class OpenIdConnectClient {
   Future<bool>? _autoRenewTimer = null;
   OpenIdIdentity? _identity = null;
   bool _refreshing = false;
+  bool _isInitializationComplete = false;
 
   AuthEvent? currentEvent;
 
-  OpenIdConnectClient({
+  OpenIdConnectClient._({
     required this.discoveryDocumentUrl,
     required this.clientId,
-    required this.redirectUrl,
+    this.redirectUrl,
     this.clientSecret,
     this.autoRefresh = true,
     this.webUseRefreshTokens = true,
     this.scopes = DEFAULT_SCOPES,
     this.audiences,
   });
+
+  @mustCallSuper
+  static Future<OpenIdConnectClient> create({
+    required String discoveryDocumentUrl,
+    required String clientId,
+    String? redirectUrl,
+    String? clientSecret,
+    bool autoRefresh = true,
+    bool webUseRefreshTokens = true,
+    scopes = DEFAULT_SCOPES,
+    List<String>? audiences,
+  }) async {
+    final client = OpenIdConnectClient._(
+      discoveryDocumentUrl: discoveryDocumentUrl,
+      clientId: clientId,
+      clientSecret: clientSecret,
+      redirectUrl: redirectUrl,
+      scopes: scopes,
+      webUseRefreshTokens: webUseRefreshTokens,
+      autoRefresh: autoRefresh,
+      audiences: audiences,
+    );
+
+    await client._processStartup();
+
+    return client;
+  }
+
+  Future<void> _processStartup() async {
+    if (redirectUrl != null) {
+      await _verifyDiscoveryDocument();
+      final response = await OpenIdConnect.processStartup(
+        clientId: clientId,
+        clientSecret: clientSecret,
+        configuration: configuration!,
+        redirectUrl: redirectUrl!,
+        scopes: scopes,
+        autoRefresh: autoRefresh,
+      );
+
+      if (response != null)
+        _identity = OpenIdIdentity.fromAuthorizationResponse(response);
+    }
+
+    if (_identity == null) _identity = await OpenIdIdentity.load();
+    _isInitializationComplete = true;
+
+    if (identity != null) {
+      if (autoRefresh && !await _setupAutoRenew()) {
+        _raiseEvent(AuthEvent(AuthEventTypes.NotLoggedIn));
+        return;
+      } else if (hasTokenExpired) {
+        _raiseEvent(AuthEvent(AuthEventTypes.NotLoggedIn));
+        return;
+      } else {
+        if (isTokenAboutToExpire && !await refresh(raiseEvents: false)) {
+          _raiseEvent(AuthEvent(AuthEventTypes.NotLoggedIn));
+          return;
+        }
+        _raiseEvent(AuthEvent(AuthEventTypes.Success));
+      }
+    } else {
+      _raiseEvent(AuthEvent(AuthEventTypes.NotLoggedIn));
+    }
+  }
 
   void dispose() {
     _eventStreamController.close();
@@ -45,6 +111,8 @@ class OpenIdConnectClient {
       _eventStreamController.stream.asBroadcastStream();
 
   OpenIdIdentity? get identity => _identity;
+
+  bool get initializationComplete => _isInitializationComplete;
 
   bool get hasTokenExpired =>
       _identity!.expiresAt.difference(DateTime.now().toUtc()).isNegative;
@@ -140,6 +208,10 @@ class OpenIdConnectClient {
     Map<String, String>? additionalParameters,
     Iterable<String>? prompts,
   }) async {
+    if (this.redirectUrl == null)
+      throw StateError(
+          "When using login interactive, you must create the client with a redirect url.");
+
     if (_autoRenewTimer != null) _autoRenewTimer = null;
 
     //Make sure we have the discovery information
@@ -153,7 +225,7 @@ class OpenIdConnectClient {
         request: await InteractiveAuthorizationRequest.create(
           configuration: configuration!,
           clientId: clientId,
-          redirectUrl: this.redirectUrl,
+          redirectUrl: this.redirectUrl!,
           clientSecret: this.clientSecret,
           loginHint: userNameHint,
           additionalParameters: additionalParameters,
@@ -162,6 +234,8 @@ class OpenIdConnectClient {
           prompts: prompts,
         ),
       );
+
+      if (response == null) throw StateError(ERROR_USER_CLOSED);
 
       //Load the idToken here
       await _completeLogin(response);
@@ -201,6 +275,10 @@ class OpenIdConnectClient {
   }
 
   FutureOr<bool> isLoggedIn() async {
+    if (!_isInitializationComplete)
+      throw StateError(
+          'You must call processStartupAuthentication before using this library.');
+
     if (_identity == null) return false;
 
     if (!isTokenAboutToExpire) return true;
@@ -260,7 +338,6 @@ class OpenIdConnectClient {
       final response = await OpenIdConnect.refreshToken(
         request: RefreshRequest(
           clientId: clientId,
-          redirectUrl: redirectUrl,
           scopes: _getScopes(scopes),
           refreshToken: _identity!.refreshToken!,
           configuration: configuration!,

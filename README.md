@@ -38,6 +38,7 @@ For Linux, Windows and macOS currently your IdP MUST support device code flow to
 2. Import openidconnect: import 'package:openidconnect/openidconnect.dart';
 3. Call the various methods: on OpenIdConnect OR use OpenIdConnectClient and subscribe to the events
 4. Review the example project for details.
+5. For web support add openidconnect_web to your project and copy the callback.html file from openidconnect_web (in this repo) into the web folder of your app.
 
 **(more detailed instructions coming soon)**
 
@@ -49,6 +50,7 @@ Because of the ever changing nature of desktop support on flutter and incomplete
 2. Use Secure authentication popup on windows (requires work from Tim Sneath on integration with Project Reunion on Windows and Dart)
 3. Switch macOs, and Linux to WebView and/or use secure authentication popup at least on macOs.
 4. Integrate and switch entirely to flutter_secure_storage for storage of tokens etc. in the OpenIdConnect Client when available.
+5. More documentation!
 
 Secure storage is almost ready with a PR that integrates all platforms already available. Flutter WebView is under active development to add macOS, Windows and Linux support.
 

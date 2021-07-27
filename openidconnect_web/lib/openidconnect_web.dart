@@ -14,13 +14,22 @@ class OpenIdConnectWeb extends OpenIdConnectPlatform {
   }
 
   @override
-  Future<String> authorizeInteractive({
+  Future<String?> authorizeInteractive({
     required String title,
     required String authorizationUrl,
     required String redirectUrl,
     required int popupWidth,
     required int popupHeight,
-  }) async {
+    bool useWebRedirectLoop = false,
+  }) {
+    if (useWebRedirectLoop) {
+      const AUTH_DESTINATION_KEY = "openidconnect_auth_destination_url";
+      html.window.sessionStorage[AUTH_DESTINATION_KEY] =
+          html.window.location.toString();
+      html.window.location.assign(authorizationUrl);
+      return Future<String?>.value(null);
+    }
+
     final top = (html.window.outerHeight - popupHeight) / 2 +
         (html.window.screen?.available.top ?? 0);
     final left = (html.window.outerWidth - popupWidth) / 2 +
@@ -42,6 +51,16 @@ class OpenIdConnectWeb extends OpenIdConnectPlatform {
       child.close();
     });
 
-    return await c.future;
+    return c.future;
+  }
+
+  @override
+  Future<String?> processStartup() async {
+    const AUTH_RESPONSE_KEY = "openidconnect_auth_response_info";
+
+    final url = html.window.sessionStorage[AUTH_RESPONSE_KEY];
+    html.window.sessionStorage.remove(AUTH_RESPONSE_KEY);
+
+    return url;
   }
 }

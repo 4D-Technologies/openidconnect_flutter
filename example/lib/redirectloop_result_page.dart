@@ -1,30 +1,26 @@
-import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:openidconnect/openidconnect.dart';
-import 'credentials.dart';
 
 import 'identity_view.dart';
+import 'credentials.dart';
 
-class InteractivePage extends StatefulWidget {
+class RedirectLoopResultPage extends StatefulWidget {
   @override
-  _InteractivePageState createState() => _InteractivePageState();
+  _RedirectLoopResultPageState createState() => _RedirectLoopResultPageState();
 }
 
-class _InteractivePageState extends State<InteractivePage> {
+class _RedirectLoopResultPageState extends State<RedirectLoopResultPage> {
   final _formKey = GlobalKey<FormState>();
-
   String discoveryUrl = defaultDiscoveryUrl;
   OpenIdConfiguration? discoveryDocument;
   AuthorizationResponse? identity;
-  bool usePopup = true;
-
   String? errorMessage = null;
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('OpenIdConnect Code Flow with PKCE Example'),
+        title: const Text('Complete startup'),
       ),
       body: Center(
         child: Form(
@@ -55,7 +51,6 @@ class _InteractivePageState extends State<InteractivePage> {
                 onPressed: () async {
                   _formKey.currentState!.save();
                   if (!_formKey.currentState!.validate()) return;
-
                   try {
                     final configuration =
                         await OpenIdConnect.getConfiguration(discoveryUrl);
@@ -74,33 +69,16 @@ class _InteractivePageState extends State<InteractivePage> {
                 label: Text("Lookup OpenId Connect Configuration"),
               ),
               Visibility(
-                child: SwitchListTile.adaptive(
-                  value: usePopup,
-                  title: Text("Use Web Popup"),
-                  onChanged: (value) {
-                    setState(() {
-                      usePopup = value;
-                    });
-                  },
-                ),
-                visible: kIsWeb,
-              ),
-              Visibility(
                 child: TextButton.icon(
                   onPressed: () async {
                     try {
-                      final response = await OpenIdConnect.authorizeInteractive(
-                        context: context,
-                        title: "Login",
-                        request: await InteractiveAuthorizationRequest.create(
-                          clientId: defaultClientId,
-                          clientSecret: defaultClientSecret,
-                          redirectUrl: defaultRedirectUrl,
-                          scopes: defaultscopes,
-                          configuration: discoveryDocument!,
-                          autoRefresh: false,
-                          useWebPopup: usePopup,
-                        ),
+                      final response = await OpenIdConnect.processStartup(
+                        clientId: defaultClientId,
+                        clientSecret: defaultClientSecret,
+                        scopes: defaultscopes,
+                        configuration: discoveryDocument!,
+                        redirectUrl: defaultRedirectUrl,
+                        autoRefresh: true,
                       );
                       setState(() {
                         identity = response;
@@ -113,31 +91,13 @@ class _InteractivePageState extends State<InteractivePage> {
                       });
                     }
                   },
-                  icon: Icon(Icons.login),
-                  label: Text("Login"),
+                  icon: Icon(Icons.loop),
+                  label: Text("Process Startup loop"),
                 ),
                 visible: discoveryDocument != null,
               ),
               Visibility(
                 child: identity == null ? Container() : IdentityView(identity!),
-                visible: identity != null,
-              ),
-              Visibility(
-                child: TextButton.icon(
-                  onPressed: () async {
-                    OpenIdConnect.logout(
-                      request: LogoutRequest(
-                        idToken: identity!.idToken,
-                        configuration: discoveryDocument!,
-                      ),
-                    );
-                    setState(() {
-                      identity = null;
-                    });
-                  },
-                  icon: Icon(Icons.logout),
-                  label: Text("Logout"),
-                ),
                 visible: identity != null,
               ),
             ],

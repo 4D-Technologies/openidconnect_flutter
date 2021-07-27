@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:openidconnect/openidconnect.dart';
 
 import 'identity_view.dart';
-import 'main.dart';
+import 'credentials.dart';
 
 class PasswordPage extends StatefulWidget {
   @override
