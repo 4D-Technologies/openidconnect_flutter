@@ -87,14 +87,7 @@ class OpenIdConnect {
     late String? responseUrl;
 
     final uri = Uri.parse(request.configuration.authorizationEndpoint).replace(
-      queryParameters: {
-        "client_id": request.clientId,
-        "redirect_uri": request.redirectUrl,
-        "response_type": "code",
-        "scope": request.scopes.join(" "),
-        "code_challenge_method": "S256",
-        "code_challenge": request.codeChallenge,
-      },
+      queryParameters: request.toMap(),
     );
 
     //These are special cases for the various different platforms because of limitations in pubspec.yaml
@@ -250,49 +243,6 @@ class OpenIdConnect {
     }
 
     return authorizationResponse;
-  }
-
-  static Future<AuthorizationResponse> completeAuthorizeInteractive({
-    required InteractiveAuthorizationRequest request,
-    required String resultUrl,
-  }) async {
-    final resultUri = Uri.parse(resultUrl);
-
-    final error = resultUri.queryParameters['error'];
-
-    if (error != null && error.isNotEmpty)
-      throw ArgumentError(
-        AUTHORIZE_ERROR_MESSAGE_FORMAT
-            .replaceAll("%1", AUTHORIZE_ERROR_CODE)
-            .replaceAll("%2", error),
-      );
-
-    var authCode = resultUri.queryParameters['code'];
-    if (authCode == null || authCode.isEmpty)
-      throw AuthenticationException(ERROR_INVALID_RESPONSE);
-
-    final body = {
-      "client_id": request.clientId,
-      "redirect_uri": request.redirectUrl,
-      "grant_type": "authorization_code",
-      "code_verifier": request.codeVerifier,
-      "code": authCode
-    };
-
-    if (request.clientSecret != null)
-      body.addAll({"client_secret": request.clientSecret!});
-
-    final response = await httpRetry(
-      () => http.post(
-        Uri.parse(request.configuration.tokenEndpoint),
-        body: body,
-      ),
-    );
-
-    if (response == null) if (response == null)
-      throw AuthenticationException(ERROR_INVALID_RESPONSE);
-
-    return AuthorizationResponse.fromJson(response);
   }
 
   static Future<AuthorizationResponse> refreshToken(

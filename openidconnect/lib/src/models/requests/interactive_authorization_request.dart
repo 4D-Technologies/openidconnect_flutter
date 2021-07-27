@@ -75,7 +75,7 @@ class InteractiveAuthorizationRequest extends TokenRequest {
           scopes: scopes,
           prompts: prompts,
           additionalParameters: {
-            "redirect_url": redirectUrl,
+            "redirect_uri": redirectUrl,
             "login_hint": loginHint ?? "",
             "response_type": "code",
             "code_challenge_method": "S256",
