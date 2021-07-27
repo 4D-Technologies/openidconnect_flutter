@@ -212,6 +212,13 @@ packages:
       url: "https://pub.dartlang.org"
     source: hosted
     version: "0.6.3"
+  jwt_decoder:
+    dependency: transitive
+    description:
+      name: jwt_decoder
+      url: "https://pub.dartlang.org"
+    source: hosted
+    version: "2.0.1"
   logging:
     dependency: transitive
     description:
@@ -246,7 +253,7 @@ packages:
       path: "../openidconnect"
       relative: true
     source: path
-    version: "1.0.8"
+    version: "1.0.10"
   openidconnect_platform_interface:
     dependency: transitive
     description:
@@ -260,7 +267,7 @@ packages:
       path: "../openidconnect_web"
       relative: true
     source: path
-    version: "1.0.8"
+    version: "1.0.9"
   package_config:
     dependency: transitive
     description:

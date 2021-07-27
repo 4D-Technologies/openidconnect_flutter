@@ -19,43 +19,11 @@
       "flutterMode": "profile"
     },
     {
-      "name": "openidconnect",
-      "cwd": "openidconnect",
-      "request": "launch",
-      "type": "dart"
-    },
-    {
-      "name": "openidconnect (profile mode)",
-      "cwd": "openidconnect",
-      "request": "launch",
+      "name": "Dart: Run all package Tests",
       "type": "dart",
-      "flutterMode": "profile"
-    },
-    {
-      "name": "openidconnect_platform_interface",
-      "cwd": "openidconnect_platform_interface",
       "request": "launch",
-      "type": "dart"
-    },
-    {
-      "name": "openidconnect_platform_interface (profile mode)",
-      "cwd": "openidconnect_platform_interface",
-      "request": "launch",
-      "type": "dart",
-      "flutterMode": "profile"
-    },
-    {
-      "name": "openidconnect_web",
-      "cwd": "openidconnect_web",
-      "request": "launch",
-      "type": "dart"
-    },
-    {
-      "name": "openidconnect_web (profile mode)",
-      "cwd": "openidconnect_web",
-      "request": "launch",
-      "type": "dart",
-      "flutterMode": "profile"
+      "program": "./openidconnect/test/",
+      "flutterMode": "debug"
     }
   ]
 }

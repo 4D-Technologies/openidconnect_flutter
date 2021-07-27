@@ -84,7 +84,7 @@ class OpenIdConnectClient {
     if (_identity == null) _identity = await OpenIdIdentity.load();
     _isInitializationComplete = true;
 
-    if (identity != null) {
+    if (_identity != null) {
       if (autoRefresh && !await _setupAutoRenew()) {
         _raiseEvent(AuthEvent(AuthEventTypes.NotLoggedIn));
         return;
@@ -158,7 +158,7 @@ class OpenIdConnectClient {
       return _identity!;
     } on Exception catch (e) {
       if (this._identity != null) {
-        await this._identity!.clear();
+        await OpenIdIdentity.clear();
         this._identity = null;
       }
       _raiseEvent(AuthEvent(AuthEventTypes.Error, message: e.toString()));
@@ -191,7 +191,7 @@ class OpenIdConnectClient {
       return _identity!;
     } on Exception catch (e) {
       if (this._identity != null) {
-        await this._identity!.clear();
+        await OpenIdIdentity.clear();
         this._identity = null;
       }
 
@@ -247,7 +247,7 @@ class OpenIdConnectClient {
       return _identity!;
     } on Exception catch (e) {
       if (this._identity != null) {
-        await this._identity!.clear();
+        await OpenIdIdentity.clear();
         this._identity = null;
       }
 
@@ -358,7 +358,7 @@ class OpenIdConnectClient {
       return true;
     } on Exception catch (e) {
       if (this._identity != null) {
-        await this._identity!.clear();
+        await OpenIdIdentity.clear();
         this._identity = null;
 
         _raiseEvent(AuthEvent(AuthEventTypes.Error, message: e.toString()));

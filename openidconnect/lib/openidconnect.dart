@@ -9,6 +9,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/widgets.dart';
 import 'package:http/http.dart' as http;
 import 'package:cryptography/cryptography.dart' as crypto;
+import 'package:jwt_decoder/jwt_decoder.dart';
 import 'package:openidconnect_platform_interface/openidconnect_platform_interface.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
@@ -331,6 +332,9 @@ class OpenIdConnect {
     required OpenIdConfiguration configuration,
     bool autoRefresh = true,
   }) async {
+    if (!kIsWeb)
+      return null; //TODO: Change this to not bypass if other platforms need these.
+
     final response = await _platform.processStartup();
 
     if (response == null) return null;
