@@ -207,6 +207,9 @@ class OpenIdConnectClient {
     String? userNameHint,
     Map<String, String>? additionalParameters,
     Iterable<String>? prompts,
+    bool useWebPopup = true,
+    int popupWidth = 640,
+    int popupHeight = 600,
   }) async {
     if (this.redirectUrl == null)
       throw StateError(
@@ -232,6 +235,9 @@ class OpenIdConnectClient {
           scopes: _getScopes(scopes),
           autoRefresh: autoRefresh,
           prompts: prompts,
+          useWebPopup: useWebPopup,
+          popupHeight: popupHeight,
+          popupWidth: popupWidth,
         ),
       );
 
@@ -262,16 +268,20 @@ class OpenIdConnectClient {
 
     if (_identity == null) return;
 
-    //Make sure we have the discovery information
-    await _verifyDiscoveryDocument();
+    try {
+      //Make sure we have the discovery information
+      await _verifyDiscoveryDocument();
 
-    await OpenIdConnect.logout(
-      request: LogoutRequest(
-        configuration: configuration!,
-        idToken: _identity!.idToken,
-        state: _identity!.state,
-      ),
-    );
+      await OpenIdConnect.logout(
+        request: LogoutRequest(
+          configuration: configuration!,
+          idToken: _identity!.idToken,
+          state: _identity!.state,
+        ),
+      );
+    } on Exception {}
+
+    _raiseEvent(AuthEvent(AuthEventTypes.NotLoggedIn));
   }
 
   FutureOr<bool> isLoggedIn() async {
@@ -307,12 +317,12 @@ class OpenIdConnectClient {
     await Future.wait(requests());
   }
 
-  FutureOr<String?> getRefreshToken() async {
-    if (_identity == null) return null;
+  FutureOr<bool> verifyToken() async {
+    if (_identity == null) return false;
 
-    if (isTokenAboutToExpire && !await refresh(raiseEvents: true)) return null;
+    if (isTokenAboutToExpire && !await refresh(raiseEvents: true)) return false;
 
-    return _identity!.refreshToken;
+    return true;
   }
 
   Future<bool> refresh({bool raiseEvents = true}) async {

@@ -22,7 +22,7 @@ class InteractiveAuthorizationRequest extends TokenRequest {
     Iterable<String>? prompts,
     Map<String, String>? additionalParameters,
     int popupWidth = 640,
-    int popupHeight = 480,
+    int popupHeight = 600,
     bool useWebPopup = true,
   }) async {
     final codeVerifier = List.generate(

@@ -1,3 +1,13 @@
+# 1.0.13
+
+- Fix client logout() didn ot raise the NotLoggedInEvent
+- chnaged getRefreshToken to verifyToken and made it return a bool if the token is valid. This will automatically refresh if the access token is expired and it can refresh, otherwise will return true if the token is valid and false if it isn't. This allows you to create a guard easily for all calls to your api for instance.
+
+# 1.0.12
+
+- Add Web popup option to control if it uses redirect flow or popup on loginInteractive in client
+- Add popup sizing override options on loginInteractive in client
+
 # 1.0.11
 
 - Fix bug on authorizeInteractive where additionalProperties were ignored.
