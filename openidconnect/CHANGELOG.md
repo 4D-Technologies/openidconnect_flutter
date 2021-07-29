@@ -1,3 +1,7 @@
+#1.0.14
+
+- Make plugin federated so that the sub implementations don't need to be referenced in a project's pubspec.yaml
+
 # 1.0.13
 
 - Fix client logout() didn ot raise the NotLoggedInEvent

@@ -250,10 +250,10 @@ packages:
   openidconnect:
     dependency: "direct main"
     description:
-      path: "../openidconnect"
+      path: ".."
       relative: true
     source: path
-    version: "1.0.10"
+    version: "1.0.14"
   openidconnect_platform_interface:
     dependency: transitive
     description:
@@ -262,11 +262,11 @@ packages:
     source: hosted
     version: "1.0.2"
   openidconnect_web:
-    dependency: "direct main"
+    dependency: transitive
     description:
-      path: "../openidconnect_web"
-      relative: true
-    source: path
+      name: openidconnect_web
+      url: "https://pub.dartlang.org"
+    source: hosted
     version: "1.0.9"
   package_config:
     dependency: transitive

@@ -13,9 +13,7 @@ dependencies:
     sdk: flutter
 
   openidconnect:
-    path: ../openidconnect
-  openidconnect_web:
-    path: ../openidconnect_web
+    path: ../
 
   cupertino_icons: ^1.0.2
 
