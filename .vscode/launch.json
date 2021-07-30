@@ -6,24 +6,18 @@
   "configurations": [
     {
       "name": "example",
-      "cwd": "example",
+      "cwd": "openidconnect\\example",
       "request": "launch",
       "type": "dart",
-      "args": ["--web-enable-expression-evaluation", "--web-port", "50335"]
+      "args": ["--web-enable-expression-evaluation", "--web-port", "62568"]
     },
     {
       "name": "example (profile mode)",
-      "cwd": "example",
+      "cwd": "openidconnect\\example",
       "request": "launch",
       "type": "dart",
-      "flutterMode": "profile"
-    },
-    {
-      "name": "Dart: Run all package Tests",
-      "type": "dart",
-      "request": "launch",
-      "program": "./openidconnect/test/",
-      "flutterMode": "debug"
+      "flutterMode": "profile",
+      "args": ["--web-enable-expression-evaluation", "--web-port", "62568"]
     }
   ]
 }

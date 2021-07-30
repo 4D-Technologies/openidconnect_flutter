@@ -1,3 +1,7 @@
+# 1.0.16-beta.1 - July 30 201
+
+- Update to use flutter_secure_storage 5.0.0-beta1 which removes all of the custom crypto functionality ensuring security and implementation for all platforms.
+
 # 1.0.15 - July 30 2021
 
 - Update the web endorsement to correct an issue with web cross compability.

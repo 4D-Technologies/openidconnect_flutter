@@ -44,48 +44,24 @@ class OpenIdIdentity extends AuthorizationResponse {
 
   static Future<OpenIdIdentity?> load() async {
     try {
-      if (kIsWeb || !(Platform.isIOS || Platform.isAndroid)) {
-        final storage = await SharedPreferences.getInstance();
+      final storage = FlutterSecureStorage();
 
-        if (!storage.containsKey(_AUTHENTICATION_TOKEN_KEY) ||
-            !storage.containsKey(_EXPIRES_ON_KEY) ||
-            !storage.containsKey(_ID_TOKEN_KEY)) return null;
+      if (!await storage.containsKey(key: _AUTHENTICATION_TOKEN_KEY) ||
+          !await storage.containsKey(key: _EXPIRES_ON_KEY) ||
+          !await storage.containsKey(key: _ID_TOKEN_KEY)) return null;
 
-        return OpenIdIdentity(
-          accessToken: await _decryptString(
-              storage.getString(_AUTHENTICATION_TOKEN_KEY)!),
-          expiresAt: DateTime.fromMillisecondsSinceEpoch(
-            int.parse(
-                await _decryptString(storage.getString(_EXPIRES_ON_KEY)!)),
-          ),
-          idToken: await _decryptString(storage.getString(_ID_TOKEN_KEY)!),
-          refreshToken: storage.getString(_REFRESH_TOKEN_KEY) == null
-              ? null
-              : await _decryptString(storage.getString(_REFRESH_TOKEN_KEY)!),
-          tokenType: await _decryptString(storage.getString(_TOKEN_TYPE_KEY)!),
-          state: storage.getString(_STATE_KEY) == null
-              ? null
-              : await _decryptString(storage.getString(_STATE_KEY)!),
-        );
-      } else {
-        final storage = FlutterSecureStorage();
-
-        if (!await storage.containsKey(key: _AUTHENTICATION_TOKEN_KEY) ||
-            !await storage.containsKey(key: _EXPIRES_ON_KEY) ||
-            !await storage.containsKey(key: _ID_TOKEN_KEY)) return null;
-
-        return OpenIdIdentity(
-          accessToken: (await storage.read(key: _AUTHENTICATION_TOKEN_KEY))!,
-          expiresAt: DateTime.fromMillisecondsSinceEpoch(
-            int.parse((await storage.read(key: _EXPIRES_ON_KEY)) ?? "0"),
-          ),
-          idToken: (await storage.read(key: _ID_TOKEN_KEY))!,
-          tokenType: await storage.read(key: _TOKEN_TYPE_KEY) ?? "Bearer",
-          refreshToken: await storage.read(key: _REFRESH_TOKEN_KEY),
-          state: await storage.read(key: _STATE_KEY),
-        );
-      }
-    } on Exception {
+      return OpenIdIdentity(
+        accessToken: (await storage.read(key: _AUTHENTICATION_TOKEN_KEY))!,
+        expiresAt: DateTime.fromMillisecondsSinceEpoch(
+          int.parse((await storage.read(key: _EXPIRES_ON_KEY)) ?? "0"),
+        ),
+        idToken: (await storage.read(key: _ID_TOKEN_KEY))!,
+        tokenType: await storage.read(key: _TOKEN_TYPE_KEY) ?? "Bearer",
+        refreshToken: await storage.read(key: _REFRESH_TOKEN_KEY),
+        state: await storage.read(key: _STATE_KEY),
+      );
+    } on Exception catch (e) {
+      print(e.toString());
       try {
         clear();
       } on Exception {}
@@ -93,93 +69,34 @@ class OpenIdIdentity extends AuthorizationResponse {
     }
   }
 
-  static final _cryptoSecret =
-      crypto.SecretKey(utf8.encode("asdfasdlkjlkjasdjkdfifdopdawefrg"));
-  static final _cryptoNonce = base64Decode('EQsBDQcMBQEWBAsaFBkUEQ==');
-  static final _aes =
-      crypto.AesCtr.with256bits(macAlgorithm: crypto.Hmac.sha256());
-
-  static Future<String> _encryptString(String value) async {
-    final secretBox = await _aes.encrypt(utf8.encode(value),
-        secretKey: _cryptoSecret, nonce: _cryptoNonce);
-
-    return base64Encode(secretBox.concatenation());
-  }
-
-  static Future<String> _decryptString(String value) async {
-    final concatenation = base64Decode(value);
-
-    final secretBox = crypto.SecretBox.fromConcatenation(concatenation,
-        nonceLength: _cryptoNonce.length,
-        macLength: crypto.Hmac.sha256().macLength);
-
-    return utf8.decode(
-      await _aes.decrypt(secretBox, secretKey: await _cryptoSecret),
-    );
-  }
-
   Future<void> save() async {
-    if (kIsWeb || !(Platform.isIOS || Platform.isAndroid)) {
-      final storage = await SharedPreferences.getInstance();
-      await storage.setString(
-          _AUTHENTICATION_TOKEN_KEY, await _encryptString(this.accessToken));
-      await storage.setString(
-          _ID_TOKEN_KEY, await _encryptString(this.idToken));
-      await storage.setString(
-          _TOKEN_TYPE_KEY, await _encryptString(this.tokenType));
-      if (this.refreshToken != null) {
-        await storage.setString(
-            _REFRESH_TOKEN_KEY, await _encryptString(this.refreshToken!));
-      } else {
-        await storage.remove(_REFRESH_TOKEN_KEY);
-      }
-      await storage.setString(
-          _EXPIRES_ON_KEY,
-          await _encryptString(
-              this.expiresAt.millisecondsSinceEpoch.toString()));
-      if (this.state != null) {
-        await storage.setString(_STATE_KEY, await _encryptString(this.state!));
-      } else {
-        await storage.remove(_STATE_KEY);
-      }
-    } else {
-      final storage = FlutterSecureStorage();
-      await Future.wait([
-        storage.write(key: _AUTHENTICATION_TOKEN_KEY, value: this.accessToken),
-        storage.write(key: _ID_TOKEN_KEY, value: this.idToken),
-        this.refreshToken == null
-            ? storage.delete(key: _REFRESH_TOKEN_KEY)
-            : storage.write(key: _REFRESH_TOKEN_KEY, value: this.refreshToken),
-        storage.write(key: _TOKEN_TYPE_KEY, value: this.tokenType),
-        storage.write(
-            key: _EXPIRES_ON_KEY,
-            value: this.expiresAt.millisecondsSinceEpoch.toString()),
-        this.state == null
-            ? storage.delete(key: _STATE_KEY)
-            : storage.write(key: _STATE_KEY, value: this.state)
-      ]);
-    }
+    final storage = FlutterSecureStorage();
+    await Future.wait([
+      storage.write(key: _AUTHENTICATION_TOKEN_KEY, value: this.accessToken),
+      storage.write(key: _ID_TOKEN_KEY, value: this.idToken),
+      this.refreshToken == null
+          ? storage.delete(key: _REFRESH_TOKEN_KEY)
+          : storage.write(key: _REFRESH_TOKEN_KEY, value: this.refreshToken),
+      storage.write(key: _TOKEN_TYPE_KEY, value: this.tokenType),
+      storage.write(
+          key: _EXPIRES_ON_KEY,
+          value: this.expiresAt.millisecondsSinceEpoch.toString()),
+      this.state == null
+          ? storage.delete(key: _STATE_KEY)
+          : storage.write(key: _STATE_KEY, value: this.state)
+    ]);
   }
 
   static Future<void> clear() async {
-    if (kIsWeb) {
-      final storage = await SharedPreferences.getInstance();
-      await storage.remove(_AUTHENTICATION_TOKEN_KEY);
-      await storage.remove(_ID_TOKEN_KEY);
-      await storage.remove(_TOKEN_TYPE_KEY);
-      await storage.remove(_EXPIRES_ON_KEY);
-      await storage.remove(_STATE_KEY);
-    } else {
-      final storage = FlutterSecureStorage();
-      await Future.wait([
-        storage.delete(key: _AUTHENTICATION_TOKEN_KEY),
-        storage.delete(key: _ID_TOKEN_KEY),
-        storage.delete(key: _REFRESH_TOKEN_KEY),
-        storage.delete(key: _TOKEN_TYPE_KEY),
-        storage.delete(key: _EXPIRES_ON_KEY),
-        storage.delete(key: _STATE_KEY)
-      ]);
-    }
+    final storage = FlutterSecureStorage();
+    await Future.wait([
+      storage.delete(key: _AUTHENTICATION_TOKEN_KEY),
+      storage.delete(key: _ID_TOKEN_KEY),
+      storage.delete(key: _REFRESH_TOKEN_KEY),
+      storage.delete(key: _TOKEN_TYPE_KEY),
+      storage.delete(key: _EXPIRES_ON_KEY),
+      storage.delete(key: _STATE_KEY)
+    ]);
   }
 
   String? get familyName => claims["family_name"]?.toString();

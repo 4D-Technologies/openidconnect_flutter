@@ -15,7 +15,6 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:retry/retry.dart';
 import 'package:webview_flutter/webview_flutter.dart' as flutterWebView;
-import 'package:shared_preferences/shared_preferences.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 part './src/openidconnect_client.dart';
@@ -113,10 +112,11 @@ class OpenIdConnect {
         ),
       );
     } else {
-      //TODO: This should be converted to secure storage.
-      final storage = await SharedPreferences.getInstance();
-      storage.setString(CODE_VERIFIER_STORAGE_KEY, request.codeVerifier);
-      storage.setString(CODE_CHALLENGE_STORAGE_KEY, request.codeChallenge);
+      final storage = FlutterSecureStorage();
+      await storage.write(
+          key: CODE_VERIFIER_STORAGE_KEY, value: request.codeVerifier);
+      await storage.write(
+          key: CODE_CHALLENGE_STORAGE_KEY, value: request.codeChallenge);
 
       responseUrl = await _platform.authorizeInteractive(
         title: title,
@@ -129,8 +129,8 @@ class OpenIdConnect {
 
       if (responseUrl == null) return null;
 
-      storage.remove(CODE_VERIFIER_STORAGE_KEY);
-      storage.remove(CODE_CHALLENGE_STORAGE_KEY);
+      await storage.delete(key: CODE_VERIFIER_STORAGE_KEY);
+      await storage.delete(key: CODE_CHALLENGE_STORAGE_KEY);
     }
 
     return await _completeCodeExchange(request: request, url: responseUrl);
@@ -289,12 +289,12 @@ class OpenIdConnect {
 
     if (response == null) return null;
 
-    final storage = await SharedPreferences.getInstance();
-    final codeVerifier = storage.getString(CODE_VERIFIER_STORAGE_KEY)!;
-    final codeChallenge = storage.getString(CODE_CHALLENGE_STORAGE_KEY)!;
+    final storage = new FlutterSecureStorage();
+    final codeVerifier = await storage.read(key: CODE_VERIFIER_STORAGE_KEY);
+    final codeChallenge = await storage.read(key: CODE_CHALLENGE_STORAGE_KEY);
 
-    storage.remove(CODE_VERIFIER_STORAGE_KEY);
-    storage.remove(CODE_CHALLENGE_STORAGE_KEY);
+    await storage.delete(key: CODE_VERIFIER_STORAGE_KEY);
+    await storage.delete(key: CODE_CHALLENGE_STORAGE_KEY);
 
     final result = await _completeCodeExchange(
       request: InteractiveAuthorizationRequest._(
@@ -304,8 +304,8 @@ class OpenIdConnect {
         scopes: scopes,
         configuration: configuration,
         autoRefresh: autoRefresh,
-        codeVerifier: codeVerifier,
-        codeChallenge: codeChallenge,
+        codeVerifier: codeVerifier!,
+        codeChallenge: codeChallenge!,
       ),
       url: response,
     );

@@ -22,13 +22,11 @@ Currently supports:
 1. iOS
 2. Android
 3. Web
-4. Windows - Password and Device Code Flows only (interactive will use device code)
-5. MacOs - Password and Device Code flows only (interactive will use device code)
-6. Linux - Password and Device Code flows only (interactive will use device code)
+4. Windows
+5. MacOs
+6. Linux
 
 **Important**
-
-As of right now Windows, MacOs and Web use a hard coded encryption key that is in the source code. This may or may not be an issue for you. Until the below items for secure storage are complete, don't assume that your access tokens etc. are secure on these platforms.
 
 For Linux, Windows and macOS currently your IdP MUST support device code flow to function properly with interactive login. Otherwise you must use password flow. This is because webView is not yet supported on these environments.
 
@@ -56,10 +54,7 @@ Because of the ever changing nature of desktop support on flutter and incomplete
 1. Use custom tabs and secure authentication popup on Android and IOS instead of WebView
 2. Use Secure authentication popup on windows (requires work from Tim Sneath on integration with Project Reunion on Windows and Dart)
 3. Switch macOs, and Linux to WebView and/or use secure authentication popup at least on macOs.
-4. Integrate and switch entirely to flutter_secure_storage for storage of tokens etc. in the OpenIdConnect Client when available.
-5. More documentation!
-
-Secure storage is almost ready with a PR that integrates all platforms already available. Flutter WebView is under active development to add macOS, Windows and Linux support.
+4. More documentation!
 
 ## Contributing
 
