@@ -46,19 +46,41 @@ class OpenIdIdentity extends AuthorizationResponse {
     try {
       final storage = FlutterSecureStorage();
 
-      if (!await storage.containsKey(key: _AUTHENTICATION_TOKEN_KEY) ||
-          !await storage.containsKey(key: _EXPIRES_ON_KEY) ||
-          !await storage.containsKey(key: _ID_TOKEN_KEY)) return null;
+      late String? accessToken;
+      late String? refreshToken;
+      late String expiresOn;
+      late String tokenType;
+      late String? idToken;
+      late String? state;
+
+      Future.wait([
+        storage
+            .read(key: _AUTHENTICATION_TOKEN_KEY)
+            .then((value) => accessToken = value),
+        storage
+            .read(key: _EXPIRES_ON_KEY)
+            .then((value) => expiresOn = value ?? "0"),
+        storage.read(key: _ID_TOKEN_KEY).then((value) => idToken = value),
+        storage
+            .read(key: _TOKEN_TYPE_KEY)
+            .then((value) => tokenType = value ?? "bearer"),
+        storage
+            .read(key: _REFRESH_TOKEN_KEY)
+            .then((value) => refreshToken = value),
+        storage.read(key: _STATE_KEY).then((value) => state = value),
+      ]);
+
+      if (accessToken == null || idToken == null) return null;
 
       return OpenIdIdentity(
-        accessToken: (await storage.read(key: _AUTHENTICATION_TOKEN_KEY))!,
+        accessToken: accessToken!,
         expiresAt: DateTime.fromMillisecondsSinceEpoch(
-          int.parse((await storage.read(key: _EXPIRES_ON_KEY)) ?? "0"),
+          int.parse(expiresOn),
         ),
-        idToken: (await storage.read(key: _ID_TOKEN_KEY))!,
-        tokenType: await storage.read(key: _TOKEN_TYPE_KEY) ?? "Bearer",
-        refreshToken: await storage.read(key: _REFRESH_TOKEN_KEY),
-        state: await storage.read(key: _STATE_KEY),
+        idToken: idToken!,
+        tokenType: tokenType,
+        refreshToken: refreshToken,
+        state: state,
       );
     } on Exception catch (e) {
       print(e.toString());
