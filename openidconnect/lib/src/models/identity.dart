@@ -53,7 +53,7 @@ class OpenIdIdentity extends AuthorizationResponse {
       late String? idToken;
       late String? state;
 
-      Future.wait([
+      await Future.wait([
         storage
             .read(key: _AUTHENTICATION_TOKEN_KEY)
             .then((value) => accessToken = value),
