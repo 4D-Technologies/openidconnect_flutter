@@ -1,4 +1,8 @@
-#1.0.14
+# 1.0.15 - July 30 2021
+
+- Update the web endorsement to correct an issue with web cross compability.
+
+# 1.0.14
 
 - Make plugin federated so that the sub implementations don't need to be referenced in a project's pubspec.yaml
 
