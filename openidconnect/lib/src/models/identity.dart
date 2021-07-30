@@ -93,20 +93,21 @@ class OpenIdIdentity extends AuthorizationResponse {
 
   Future<void> save() async {
     final storage = FlutterSecureStorage();
-    await Future.wait([
-      storage.write(key: _AUTHENTICATION_TOKEN_KEY, value: this.accessToken),
-      storage.write(key: _ID_TOKEN_KEY, value: this.idToken),
-      this.refreshToken == null
-          ? storage.delete(key: _REFRESH_TOKEN_KEY)
-          : storage.write(key: _REFRESH_TOKEN_KEY, value: this.refreshToken),
-      storage.write(key: _TOKEN_TYPE_KEY, value: this.tokenType),
-      storage.write(
-          key: _EXPIRES_ON_KEY,
-          value: this.expiresAt.millisecondsSinceEpoch.toString()),
-      this.state == null
-          ? storage.delete(key: _STATE_KEY)
-          : storage.write(key: _STATE_KEY, value: this.state)
-    ]);
+    await storage.write(
+        key: _AUTHENTICATION_TOKEN_KEY, value: this.accessToken);
+
+    await storage.write(key: _ID_TOKEN_KEY, value: this.idToken);
+    await this.refreshToken == null
+        ? storage.delete(key: _REFRESH_TOKEN_KEY)
+        : storage.write(key: _REFRESH_TOKEN_KEY, value: this.refreshToken);
+
+    await storage.write(key: _TOKEN_TYPE_KEY, value: this.tokenType);
+    await storage.write(
+        key: _EXPIRES_ON_KEY,
+        value: this.expiresAt.millisecondsSinceEpoch.toString());
+    await this.state == null
+        ? storage.delete(key: _STATE_KEY)
+        : storage.write(key: _STATE_KEY, value: this.state);
   }
 
   static Future<void> clear() async {
