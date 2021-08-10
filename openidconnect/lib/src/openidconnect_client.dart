@@ -357,8 +357,8 @@ class OpenIdConnectClient {
       await _completeLogin(response);
 
       if (autoRefresh) {
-        final refreshTime = _identity!.expiresAt
-            .difference(DateTime.now().subtract(Duration(minutes: 1)));
+        var refreshTime = _identity!.expiresAt.difference(DateTime.now().toUtc());
+        refreshTime -= Duration(minutes: 1);
 
         _autoRenewTimer = Future.delayed(refreshTime, refresh);
       }
