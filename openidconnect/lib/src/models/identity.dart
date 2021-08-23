@@ -42,10 +42,14 @@ class OpenIdIdentity extends AuthorizationResponse {
         state: response.state,
       );
 
+  static final _storage = FlutterSecureStorage(
+    aOptions: AndroidOptions(
+      encryptedSharedPreferences: true,
+    ),
+  );
+
   static Future<OpenIdIdentity?> load() async {
     try {
-      final storage = FlutterSecureStorage();
-
       late String? accessToken;
       late String? refreshToken;
       late String expiresOn;
@@ -54,20 +58,20 @@ class OpenIdIdentity extends AuthorizationResponse {
       late String? state;
 
       await Future.wait([
-        storage
+        _storage
             .read(key: _AUTHENTICATION_TOKEN_KEY)
             .then((value) => accessToken = value),
-        storage
+        _storage
             .read(key: _EXPIRES_ON_KEY)
             .then((value) => expiresOn = value ?? "0"),
-        storage.read(key: _ID_TOKEN_KEY).then((value) => idToken = value),
-        storage
+        _storage.read(key: _ID_TOKEN_KEY).then((value) => idToken = value),
+        _storage
             .read(key: _TOKEN_TYPE_KEY)
             .then((value) => tokenType = value ?? "bearer"),
-        storage
+        _storage
             .read(key: _REFRESH_TOKEN_KEY)
             .then((value) => refreshToken = value),
-        storage.read(key: _STATE_KEY).then((value) => state = value),
+        _storage.read(key: _STATE_KEY).then((value) => state = value),
       ]);
 
       if (accessToken == null || idToken == null) return null;
@@ -92,33 +96,31 @@ class OpenIdIdentity extends AuthorizationResponse {
   }
 
   Future<void> save() async {
-    final storage = FlutterSecureStorage();
-    await storage.write(
+    await _storage.write(
         key: _AUTHENTICATION_TOKEN_KEY, value: this.accessToken);
 
-    await storage.write(key: _ID_TOKEN_KEY, value: this.idToken);
+    await _storage.write(key: _ID_TOKEN_KEY, value: this.idToken);
     await this.refreshToken == null
-        ? storage.delete(key: _REFRESH_TOKEN_KEY)
-        : storage.write(key: _REFRESH_TOKEN_KEY, value: this.refreshToken);
+        ? _storage.delete(key: _REFRESH_TOKEN_KEY)
+        : _storage.write(key: _REFRESH_TOKEN_KEY, value: this.refreshToken);
 
-    await storage.write(key: _TOKEN_TYPE_KEY, value: this.tokenType);
-    await storage.write(
+    await _storage.write(key: _TOKEN_TYPE_KEY, value: this.tokenType);
+    await _storage.write(
         key: _EXPIRES_ON_KEY,
         value: this.expiresAt.millisecondsSinceEpoch.toString());
     await this.state == null
-        ? storage.delete(key: _STATE_KEY)
-        : storage.write(key: _STATE_KEY, value: this.state);
+        ? _storage.delete(key: _STATE_KEY)
+        : _storage.write(key: _STATE_KEY, value: this.state);
   }
 
   static Future<void> clear() async {
-    final storage = FlutterSecureStorage();
     await Future.wait([
-      storage.delete(key: _AUTHENTICATION_TOKEN_KEY),
-      storage.delete(key: _ID_TOKEN_KEY),
-      storage.delete(key: _REFRESH_TOKEN_KEY),
-      storage.delete(key: _TOKEN_TYPE_KEY),
-      storage.delete(key: _EXPIRES_ON_KEY),
-      storage.delete(key: _STATE_KEY)
+      _storage.delete(key: _AUTHENTICATION_TOKEN_KEY),
+      _storage.delete(key: _ID_TOKEN_KEY),
+      _storage.delete(key: _REFRESH_TOKEN_KEY),
+      _storage.delete(key: _TOKEN_TYPE_KEY),
+      _storage.delete(key: _EXPIRES_ON_KEY),
+      _storage.delete(key: _STATE_KEY)
     ]);
   }
 
