@@ -348,6 +348,7 @@ class OpenIdConnectClient {
       final response = await OpenIdConnect.refreshToken(
         request: RefreshRequest(
           clientId: clientId,
+          clientSecret: clientSecret,
           scopes: _getScopes(scopes),
           refreshToken: _identity!.refreshToken!,
           configuration: configuration!,

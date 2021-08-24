@@ -1,3 +1,7 @@
+# [1.0.17-Beta.3] - August 24, 2021
+
+- Fix issue with refresh() on OpenIdConnectClient.
+
 # [1.0.17-Beta.2] - August 23, 2021
 
 - Update Flutter Storage to 5.0.0 Beta-4 bug fixes.

@@ -281,7 +281,7 @@ packages:
       path: ".."
       relative: true
     source: path
-    version: "1.0.17-Beta.2"
+    version: "1.0.17-Beta.3"
   openidconnect_platform_interface:
     dependency: transitive
     description:
