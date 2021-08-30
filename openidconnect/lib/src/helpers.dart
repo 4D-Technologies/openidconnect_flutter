@@ -22,16 +22,27 @@ Future<Map<String, dynamic>?> httpRetry<T extends http.Response>(
         retryIf: retryIf ?? (e) => e is IOException || e is TimeoutException,
         onRetry: onRetry);
 
-    if (result.statusCode == 503 || result.statusCode == 502) {
+    if (result.statusCode == 503 ||
+        result.statusCode == 502 ||
+        result.statusCode == 504) {
       if (attempt >= maxAttempts) {
         throw HttpException(
             "The server could not be reached. Please try again later.");
       }
       await Future<void>.delayed(options.delay(attempt));
       attempt++;
+      continue;
     }
-    final jsonResponse = jsonDecode(result.body.isEmpty ? "{}" : result.body)
-        as Map<String, dynamic>?;
+
+    final body = result.body.isEmpty
+        ? "{}"
+        : result.body.startsWith("{")
+            ? result.body
+            : result.body.startsWith("<html")
+                ? "{}"
+                : "\{\"error\": \"${result.body.replaceAll("\"", "'")}\"\}";
+
+    final jsonResponse = jsonDecode(body) as Map<String, dynamic>?;
 
     if (result.statusCode < 200 || result.statusCode >= 300) {
       if (jsonResponse!["error"] != null) {

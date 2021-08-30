@@ -75,10 +75,14 @@ class OpenIdConfiguration {
         grantTypesSupported: json["grant_types_supported"] == null
             ? null
             : List<String>.from(json["grant_types_supported"] as List<dynamic>),
-        responseTypesSupported: List<String>.from(
-            json["response_types_supported"] as List<dynamic>),
-        responseModesSupported: List<String>.from(
-            json["response_modes_supported"] as List<dynamic>),
+        responseTypesSupported: json["response_types_supported"] == null
+            ? List<String>.empty()
+            : List<String>.from(
+                json["response_types_supported"] as List<dynamic>),
+        responseModesSupported: json["response_modes_supported"] == null
+            ? List<String>.empty()
+            : List<String>.from(
+                json["response_modes_supported"] as List<dynamic>),
         apiEndpoints: json["api_endpoint"] == null
             ? null
             : json["api_endpoint"] is List<dynamic>

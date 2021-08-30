@@ -1,3 +1,9 @@
+# [1.0.18-Beta.5] - August 30, 2021
+
+- Fix issue with retry logic in the case of time outs of 502,503,504 errors.
+- Additional Handlers for device code flow.
+- Handle parsing open id connect metadata in cases where no code flow is accepted by the server.
+
 # [1.0.17-Beta.3] - August 24, 2021
 
 - Fix issue with refresh() on OpenIdConnectClient.

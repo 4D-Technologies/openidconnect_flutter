@@ -233,7 +233,10 @@ class OpenIdConnect {
 
       //Check the error message
       final error = json["error"]?.toString();
-      if (error == null || error == "expired_token" || error == "access_denied")
+      if (error == null ||
+          error == "invalid_token" ||
+          error == "expired_token" ||
+          error == "access_denied")
         throw AuthenticationException(json["error_description"].toString());
 
       if (error == "slow_down") pollingInterval += 2;
