@@ -24,6 +24,8 @@ dependencies:
   http: ^0.13.3
   retry: ^3.1.0
 
+  flutter_appauth: ^1.1.0
+
   # TODO Remove these once native implementations can be added. Refactor so that the native implementations don't need to do the full cycle through.
   webview_flutter: ^2.0.10
 

@@ -223,7 +223,6 @@ class OpenIdConnectClient {
     //Get the token information and prompt for login if necessary.
     try {
       final response = await OpenIdConnect.authorizeInteractive(
-        context: context,
         title: title,
         request: await InteractiveAuthorizationRequest.create(
           configuration: configuration!,

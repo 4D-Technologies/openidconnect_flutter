@@ -5,48 +5,45 @@ import 'dart:convert';
 import 'dart:io';
 import 'dart:math';
 
+import 'package:cryptography/cryptography.dart' as crypto;
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/widgets.dart';
+import 'package:flutter_appauth/flutter_appauth.dart';
+import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:http/http.dart' as http;
-import 'package:cryptography/cryptography.dart' as crypto;
 import 'package:jwt_decoder/jwt_decoder.dart';
 import 'package:openidconnect_platform_interface/openidconnect_platform_interface.dart';
-import 'package:flutter/foundation.dart';
-import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:retry/retry.dart';
-import 'package:webview_flutter/webview_flutter.dart' as flutterWebView;
 import 'package:url_launcher/url_launcher.dart';
+import 'package:webview_flutter/webview_flutter.dart' as flutterWebView;
 
-part './src/openidconnect_client.dart';
 part './src/android_ios.dart';
-part './src/helpers.dart';
-
-part './src/models/identity.dart';
-part './src/models/event.dart';
-
-part 'src/config/openidconfiguration.dart';
-
-part './src/exceptions/openidconnect_exception.dart';
 part './src/exceptions/authentication_exception.dart';
 part './src/exceptions/http_response_exception.dart';
-part './src/exceptions/user_info_exception.dart';
-part './src/exceptions/revoke_exception.dart';
 part './src/exceptions/logout_exception.dart';
-
+part './src/exceptions/openidconnect_exception.dart';
+part './src/exceptions/revoke_exception.dart';
+part './src/exceptions/user_info_exception.dart';
+part './src/helpers.dart';
+part './src/models/event.dart';
+part './src/models/identity.dart';
+part './src/openidconnect_client.dart';
+part 'src/config/openidconfiguration.dart';
+part 'src/models/requests/device_authorization_request.dart';
 part 'src/models/requests/interactive_authorization_request.dart';
+part 'src/models/requests/logout_request.dart';
 part 'src/models/requests/password_authorization_request.dart';
 part 'src/models/requests/refresh_request.dart';
-part 'src/models/requests/logout_request.dart';
 part 'src/models/requests/revoke_token_request.dart';
-part 'src/models/requests/device_authorization_request.dart';
-part 'src/models/requests/user_info_request.dart';
 part 'src/models/requests/token_request.dart';
-
-part 'src/models/responses/token_response.dart';
-part 'src/models/responses/device_code_response.dart';
+part 'src/models/requests/user_info_request.dart';
 part 'src/models/responses/authorization_response.dart';
+part 'src/models/responses/device_code_response.dart';
+part 'src/models/responses/token_response.dart';
 
 final _platform = OpenIdConnectPlatform.instance;
+final FlutterAppAuth appAuth = FlutterAppAuth();
 
 class OpenIdConnect {
   static const CODE_VERIFIER_STORAGE_KEY = "openidconnect_code_verifier";
@@ -79,7 +76,6 @@ class OpenIdConnect {
   }
 
   static Future<AuthorizationResponse?> authorizeInteractive({
-    required BuildContext context,
     required String title,
     required InteractiveAuthorizationRequest request,
   }) async {
@@ -91,21 +87,30 @@ class OpenIdConnect {
 
     //These are special cases for the various different platforms because of limitations in pubspec.yaml
     if (!kIsWeb && (Platform.isIOS || Platform.isAndroid)) {
-      responseUrl = await OpenIdConnectAndroidiOS.authorizeInteractive(
-        context: context,
-        title: title,
-        authorizationUrl: uri.toString(),
-        redirectUrl: request.redirectUrl,
-        popupHeight: request.popupHeight,
-        popupWidth: request.popupWidth,
+      final result = await appAuth.authorizeAndExchangeCode(
+        AuthorizationTokenRequest(
+          request.clientId,
+          request.redirectUrl,
+          discoveryUrl:
+              '${request.configuration.issuer}/.well-known/openid-configuration',
+          scopes: request.scopes.toList(),
+        ),
       );
+      if (result != null) {
+        return AuthorizationResponse(
+          accessToken: result.accessToken ?? '',
+          idToken: result.idToken ?? '',
+          tokenType: result.tokenType ?? '',
+          expiresAt: result.accessTokenExpirationDateTime ?? DateTime.now(),
+        );
+      }
     } else if (!kIsWeb) {
       //TODO add other implementations as they become available. For now, all desktop uses device code flow instead of authorization code flow
       return await OpenIdConnect.authorizeDevice(
         request: DeviceAuthorizationRequest(
           audience: null,
           clientId: request.clientId,
-          clientSecret: request.clientSecret,
+          //clientSecret: request.clientSecret,
           configuration: request.configuration,
           scopes: request.scopes,
           additionalParameters: request.additionalParameters,
@@ -133,7 +138,7 @@ class OpenIdConnect {
       await storage.delete(key: CODE_CHALLENGE_STORAGE_KEY);
     }
 
-    return await _completeCodeExchange(request: request, url: responseUrl);
+    return await _completeCodeExchange(request: request, url: responseUrl!);
   }
 
   static Future<AuthorizationResponse> _completeCodeExchange({
