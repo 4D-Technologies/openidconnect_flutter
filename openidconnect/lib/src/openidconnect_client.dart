@@ -46,7 +46,7 @@ class OpenIdConnectClient {
     String? clientSecret,
     bool autoRefresh = true,
     bool webUseRefreshTokens = true,
-    scopes = DEFAULT_SCOPES,
+    List<String> scopes = DEFAULT_SCOPES,
     List<String>? audiences,
   }) async {
     final client = OpenIdConnectClient._(

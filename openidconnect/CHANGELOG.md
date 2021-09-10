@@ -1,3 +1,13 @@
+# [10.18-Beta.7] - September 10, 2021
+
+- Update to Dart 2.14
+- Add linting
+- Fix various issues surfaced by linting
+
+# [10.18-Beta.6] - September 1, 2021
+
+- Update to Flutter Secure Storage Beta 5 which fixes various issues in linux.
+
 # [1.0.18-Beta.5] - August 30, 2021
 
 - Fix issue with retry logic in the case of time outs of 502,503,504 errors.

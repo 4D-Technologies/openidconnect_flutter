@@ -8,7 +8,6 @@ class OpenIdIdentity extends AuthorizationResponse {
   static const String _EXPIRES_ON_KEY = "EXPIRES_ON";
   static const String _STATE_KEY = "STATE";
 
-  final String? state;
   late Map<String, dynamic> claims;
   late String sub;
 
@@ -18,13 +17,14 @@ class OpenIdIdentity extends AuthorizationResponse {
     required String idToken,
     required String tokenType,
     String? refreshToken,
-    this.state,
+    String? state,
   }) : super(
           expiresAt: expiresAt,
           tokenType: tokenType,
           accessToken: accessToken,
           idToken: idToken,
           refreshToken: refreshToken,
+          state: state,
         ) {
     this.claims = JwtDecoder.decode(idToken);
 

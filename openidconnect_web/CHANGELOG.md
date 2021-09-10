@@ -1,4 +1,9 @@
-## 1.0.10
+## [1.0.11] - September 10, 2021
+
+- Updated to Dart 2.14
+- Added linting
+
+## [1.0.10]
 
 - Add the endorsement directive in the pubspec.yaml
 

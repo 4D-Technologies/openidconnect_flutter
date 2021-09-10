@@ -198,9 +198,13 @@ class OpenIdConnect {
     final codeResponse = DeviceCodeResponse.fromJson(response);
 
     await launch(
-      Uri.parse(codeResponse.verificationUrlComplete).replace(
-        queryParameters: {"user_code": codeResponse.userCode},
-      ).toString(),
+      Uri.parse(codeResponse.verificationUrlComplete)
+          .replace(
+            queryParameters:
+                // ignore: unnecessary_cast
+                {"user_code": codeResponse.userCode} as Map<String, dynamic>,
+          )
+          .toString(),
       enableJavaScript: true,
     );
 
@@ -219,11 +223,11 @@ class OpenIdConnect {
     var pollingInterval = codeResponse.pollingInterval;
 
     while (true) {
-      await Future.delayed(Duration(seconds: pollingInterval));
+      await Future<void>.delayed(Duration(seconds: pollingInterval));
 
       final pollingResponse = await http.post(pollingUri, body: pollingBody);
 
-      final json = jsonDecode(pollingResponse.body);
+      final json = jsonDecode(pollingResponse.body) as Map<String, dynamic>;
 
       if (pollingResponse.statusCode >= 200 &&
           pollingResponse.statusCode < 300) {

@@ -17,7 +17,7 @@ class ChoosePage extends StatelessWidget {
           children: [
             TextButton(
               onPressed: () => Navigator.of(context).push(
-                MaterialPageRoute(
+                MaterialPageRoute<void>(
                   builder: (context) => InteractivePage(),
                 ),
               ),
@@ -25,7 +25,7 @@ class ChoosePage extends StatelessWidget {
             ),
             TextButton(
               onPressed: () => Navigator.of(context).push(
-                MaterialPageRoute(
+                MaterialPageRoute<void>(
                   builder: (context) => DeviceCodePage(),
                 ),
               ),
@@ -33,7 +33,7 @@ class ChoosePage extends StatelessWidget {
             ),
             TextButton(
               onPressed: () => Navigator.of(context).push(
-                MaterialPageRoute(
+                MaterialPageRoute<void>(
                   builder: (context) => PasswordPage(),
                 ),
               ),
@@ -41,7 +41,7 @@ class ChoosePage extends StatelessWidget {
             ),
             TextButton(
               onPressed: () => Navigator.of(context).push(
-                MaterialPageRoute(
+                MaterialPageRoute<void>(
                   builder: (context) => ClientPage(),
                 ),
               ),
@@ -49,7 +49,7 @@ class ChoosePage extends StatelessWidget {
             ),
             TextButton(
               onPressed: () => Navigator.of(context).push(
-                MaterialPageRoute(
+                MaterialPageRoute<void>(
                   builder: (context) => RedirectLoopResultPage(),
                 ),
               ),
