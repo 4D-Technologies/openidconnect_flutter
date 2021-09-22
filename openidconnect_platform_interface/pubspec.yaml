@@ -2,11 +2,10 @@ name: openidconnect_platform_interface
 description: Platform interface for OpenIdConnect.
 version: 1.0.3
 homepage: https://github.com/Concerti-IO/openidconnect_flutter/tree/main/openidconnect_platform_interface
-publish_to: https://pub.dev/openidconnect_platform_interface
 
 environment:
   sdk: ">=2.14.0 <3.0.0"
-  flutter: ">=2.2.0"
+  flutter: ">=2.5.0"
 
 dependencies:
   flutter:
