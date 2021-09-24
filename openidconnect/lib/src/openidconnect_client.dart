@@ -79,6 +79,8 @@ class OpenIdConnectClient {
 
       if (response != null)
         _identity = OpenIdIdentity.fromAuthorizationResponse(response);
+
+      if (_identity != null) await _identity!.save();
     }
 
     if (_identity == null) _identity = await OpenIdIdentity.load();
