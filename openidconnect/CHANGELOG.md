@@ -1,10 +1,15 @@
-# [10.18-Beta.7] - September 10, 2021
+# [1.0.21] - December 10, 2021
+
+- Update to Dart 2.15
+- Attempt to use updated Dart functionality for pure dart plugins.
+
+# [1.18-Beta.7] - September 10, 2021
 
 - Update to Dart 2.14
 - Add linting
 - Fix various issues surfaced by linting
 
-# [10.18-Beta.6] - September 1, 2021
+# [1.18-Beta.6] - September 1, 2021
 
 - Update to Flutter Secure Storage Beta 5 which fixes various issues in linux.
 
