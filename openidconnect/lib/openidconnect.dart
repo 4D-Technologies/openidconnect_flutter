@@ -6,7 +6,6 @@ import 'dart:io';
 import 'dart:math';
 
 import 'package:flutter/material.dart';
-import 'package:flutter/widgets.dart';
 import 'package:http/http.dart' as http;
 import 'package:cryptography/cryptography.dart' as crypto;
 import 'package:jwt_decoder/jwt_decoder.dart';
@@ -25,13 +24,6 @@ part './src/models/identity.dart';
 part './src/models/event.dart';
 
 part 'src/config/openidconfiguration.dart';
-
-part './src/exceptions/openidconnect_exception.dart';
-part './src/exceptions/authentication_exception.dart';
-part './src/exceptions/http_response_exception.dart';
-part './src/exceptions/user_info_exception.dart';
-part './src/exceptions/revoke_exception.dart';
-part './src/exceptions/logout_exception.dart';
 
 part 'src/models/requests/interactive_authorization_request.dart';
 part 'src/models/requests/password_authorization_request.dart';
@@ -99,19 +91,7 @@ class OpenIdConnect {
         popupHeight: request.popupHeight,
         popupWidth: request.popupWidth,
       );
-    } else if (!kIsWeb) {
-      //TODO add other implementations as they become available. For now, all desktop uses device code flow instead of authorization code flow
-      return await OpenIdConnect.authorizeDevice(
-        request: DeviceAuthorizationRequest(
-          audience: null,
-          clientId: request.clientId,
-          clientSecret: request.clientSecret,
-          configuration: request.configuration,
-          scopes: request.scopes,
-          additionalParameters: request.additionalParameters,
-        ),
-      );
-    } else {
+    } else if (kIsWeb) {
       final storage = FlutterSecureStorage();
       await storage.write(
           key: CODE_VERIFIER_STORAGE_KEY, value: request.codeVerifier);
@@ -119,6 +99,7 @@ class OpenIdConnect {
           key: CODE_CHALLENGE_STORAGE_KEY, value: request.codeChallenge);
 
       responseUrl = await _platform.authorizeInteractive(
+        context: context,
         title: title,
         authorizationUrl: uri.toString(),
         redirectUrl: request.redirectUrl,
@@ -131,6 +112,18 @@ class OpenIdConnect {
 
       await storage.delete(key: CODE_VERIFIER_STORAGE_KEY);
       await storage.delete(key: CODE_CHALLENGE_STORAGE_KEY);
+    } else {
+      //TODO add other implementations as they become available. For now, all desktop uses device code flow instead of authorization code flow
+      return await OpenIdConnect.authorizeDevice(
+        request: DeviceAuthorizationRequest(
+          audience: null,
+          clientId: request.clientId,
+          clientSecret: request.clientSecret,
+          configuration: request.configuration,
+          scopes: request.scopes,
+          additionalParameters: request.additionalParameters,
+        ),
+      );
     }
 
     return await _completeCodeExchange(request: request, url: responseUrl);

@@ -28,7 +28,7 @@ Currently supports:
 
 **Important**
 
-For Linux, Windows and macOS currently your IdP MUST support device code flow to function properly with interactive login. Otherwise you must use password flow. This is because webView is not yet supported on these environments.
+For Linux and macOS currently your IdP MUST support device code flow to function properly with interactive login. Otherwise you must use password flow. This is because webView is not yet supported on these environments.
 
 ## Getting Started
 

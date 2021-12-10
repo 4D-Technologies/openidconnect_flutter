@@ -3,9 +3,16 @@ library openidconnect_platform_interface;
 import 'dart:async';
 
 import 'package:flutter/services.dart';
+import 'package:flutter/widgets.dart';
 import 'package:plugin_platform_interface/plugin_platform_interface.dart';
 
 part './src/method_channel_openidconnect.dart';
+part './src/exceptions/authentication_exception.dart';
+part './src/exceptions/http_response_exception.dart';
+part './src/exceptions/logout_exception.dart';
+part './src/exceptions/openidconnect_exception.dart';
+part './src/exceptions/revoke_exception.dart';
+part './src/exceptions/user_info_exception.dart';
 
 const String AUTHORIZE_ERROR_MESSAGE_FORMAT =
     "Failed to authorize: [error: %1, description: %2]";
@@ -30,6 +37,7 @@ abstract class OpenIdConnectPlatform extends PlatformInterface {
   }
 
   Future<String?> authorizeInteractive({
+    required BuildContext context,
     required String title,
     required String authorizationUrl,
     required String redirectUrl,
