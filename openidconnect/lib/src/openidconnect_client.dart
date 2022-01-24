@@ -157,10 +157,7 @@ class OpenIdConnectClient {
 
       return _identity!;
     } on Exception catch (e) {
-      if (this._identity != null) {
-        await OpenIdIdentity.clear();
-        this._identity = null;
-      }
+      clearIdentity();
       _raiseEvent(AuthEvent(AuthEventTypes.Error, message: e.toString()));
       throw AuthenticationException(e.toString());
     }
@@ -190,13 +187,8 @@ class OpenIdConnectClient {
       _raiseEvent(AuthEvent(AuthEventTypes.Success));
       return _identity!;
     } on Exception catch (e) {
-      if (this._identity != null) {
-        await OpenIdIdentity.clear();
-        this._identity = null;
-      }
-
+      clearIdentity();
       _raiseEvent(AuthEvent(AuthEventTypes.Error, message: e.toString()));
-
       throw AuthenticationException(e.toString());
     }
   }
@@ -252,13 +244,8 @@ class OpenIdConnectClient {
 
       return _identity!;
     } on Exception catch (e) {
-      if (this._identity != null) {
-        await OpenIdIdentity.clear();
-        this._identity = null;
-      }
-
+      clearIdentity();
       _raiseEvent(AuthEvent(AuthEventTypes.Error, message: e.toString()));
-
       throw AuthenticationException(e.toString());
     }
   }
@@ -281,6 +268,56 @@ class OpenIdConnectClient {
       );
     } on Exception {}
 
+    _raiseEvent(AuthEvent(AuthEventTypes.NotLoggedIn));
+  }
+
+  Future<void> revokeToken() async {
+    if (_autoRenewTimer != null) _autoRenewTimer = null;
+
+    if (_identity == null) return;
+
+    try {
+      //Make sure we have the discovery information
+      await _verifyDiscoveryDocument();
+
+      await OpenIdConnect.revokeToken(
+        request: RevokeTokenRequest(
+          clientId: clientId,
+          clientSecret: clientSecret,
+          configuration: configuration!,
+          token: _identity!.accessToken,
+          tokenType: TokenType.accessToken,
+        ),
+      );
+    } on Exception catch (e) {
+      _raiseEvent(AuthEvent(AuthEventTypes.Error, message: e.toString()));
+    }
+  }
+
+  /// Keycloak compatible logout
+  /// see https://www.keycloak.org/docs/latest/securing_apps/#logout-endpoint
+  Future<void> logoutToken() async {
+    if (_autoRenewTimer != null) _autoRenewTimer = null;
+
+    if (_identity == null) return;
+
+    try {
+      //Make sure we have the discovery information
+      await _verifyDiscoveryDocument();
+
+      await OpenIdConnect.logoutToken(
+        request: LogoutTokenRequest(
+          clientId: clientId,
+          clientSecret: clientSecret,
+          refreshToken: identity!.refreshToken!,
+          configuration: configuration!,
+        ),
+      );
+    } on Exception catch (e) {
+      _raiseEvent(AuthEvent(AuthEventTypes.Error, message: e.toString()));
+    }
+
+    clearIdentity();
     _raiseEvent(AuthEvent(AuthEventTypes.NotLoggedIn));
   }
 
@@ -368,15 +405,18 @@ class OpenIdConnectClient {
 
       return true;
     } on Exception catch (e) {
-      if (this._identity != null) {
-        await OpenIdIdentity.clear();
-        this._identity = null;
-
-        _raiseEvent(AuthEvent(AuthEventTypes.Error, message: e.toString()));
-      }
+      clearIdentity();
+      _raiseEvent(AuthEvent(AuthEventTypes.Error, message: e.toString()));
       return false;
     } finally {
       _refreshing = false;
+    }
+  }
+
+  void clearIdentity() async {
+    if (this._identity != null) {
+      await OpenIdIdentity.clear();
+      this._identity = null;
     }
   }
 
