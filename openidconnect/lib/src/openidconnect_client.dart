@@ -271,6 +271,33 @@ class OpenIdConnectClient {
     _raiseEvent(AuthEvent(AuthEventTypes.NotLoggedIn));
   }
 
+  /// Keycloak compatible logout
+  /// see https://www.keycloak.org/docs/latest/securing_apps/#logout-endpoint
+  Future<void> logoutToken() async {
+    if (_autoRenewTimer != null) _autoRenewTimer = null;
+
+    if (_identity == null) return;
+
+    try {
+      //Make sure we have the discovery information
+      await _verifyDiscoveryDocument();
+
+      await OpenIdConnect.logoutToken(
+        request: LogoutTokenRequest(
+          clientId: clientId,
+          clientSecret: clientSecret,
+          refreshToken: identity!.refreshToken!,
+          configuration: configuration!,
+        ),
+      );
+    } on Exception catch (e) {
+      _raiseEvent(AuthEvent(AuthEventTypes.Error, message: e.toString()));
+    }
+
+    clearIdentity();
+    _raiseEvent(AuthEvent(AuthEventTypes.NotLoggedIn));
+  }
+
   FutureOr<bool> isLoggedIn() async {
     if (!_isInitializationComplete)
       throw StateError(
