@@ -271,6 +271,29 @@ class OpenIdConnectClient {
     _raiseEvent(AuthEvent(AuthEventTypes.NotLoggedIn));
   }
 
+  Future<void> revokeToken() async {
+    if (_autoRenewTimer != null) _autoRenewTimer = null;
+
+    if (_identity == null) return;
+
+    try {
+      //Make sure we have the discovery information
+      await _verifyDiscoveryDocument();
+
+      await OpenIdConnect.revokeToken(
+        request: RevokeTokenRequest(
+          clientId: clientId,
+          clientSecret: clientSecret,
+          configuration: configuration!,
+          token: _identity!.accessToken,
+          tokenType: TokenType.accessToken,
+        ),
+      );
+    } on Exception catch (e) {
+      _raiseEvent(AuthEvent(AuthEventTypes.Error, message: e.toString()));
+    }
+  }
+
   /// Keycloak compatible logout
   /// see https://www.keycloak.org/docs/latest/securing_apps/#logout-endpoint
   Future<void> logoutToken() async {
