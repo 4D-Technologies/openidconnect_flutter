@@ -157,10 +157,7 @@ class OpenIdConnectClient {
 
       return _identity!;
     } on Exception catch (e) {
-      if (this._identity != null) {
-        await OpenIdIdentity.clear();
-        this._identity = null;
-      }
+      clearIdentity();
       _raiseEvent(AuthEvent(AuthEventTypes.Error, message: e.toString()));
       throw AuthenticationException(e.toString());
     }
@@ -190,13 +187,8 @@ class OpenIdConnectClient {
       _raiseEvent(AuthEvent(AuthEventTypes.Success));
       return _identity!;
     } on Exception catch (e) {
-      if (this._identity != null) {
-        await OpenIdIdentity.clear();
-        this._identity = null;
-      }
-
+      clearIdentity();
       _raiseEvent(AuthEvent(AuthEventTypes.Error, message: e.toString()));
-
       throw AuthenticationException(e.toString());
     }
   }
@@ -252,13 +244,8 @@ class OpenIdConnectClient {
 
       return _identity!;
     } on Exception catch (e) {
-      if (this._identity != null) {
-        await OpenIdIdentity.clear();
-        this._identity = null;
-      }
-
+      clearIdentity();
       _raiseEvent(AuthEvent(AuthEventTypes.Error, message: e.toString()));
-
       throw AuthenticationException(e.toString());
     }
   }
@@ -368,15 +355,18 @@ class OpenIdConnectClient {
 
       return true;
     } on Exception catch (e) {
-      if (this._identity != null) {
-        await OpenIdIdentity.clear();
-        this._identity = null;
-
-        _raiseEvent(AuthEvent(AuthEventTypes.Error, message: e.toString()));
-      }
+      clearIdentity();
+      _raiseEvent(AuthEvent(AuthEventTypes.Error, message: e.toString()));
       return false;
     } finally {
       _refreshing = false;
+    }
+  }
+
+  Future<void> clearIdentity() async {
+    if (this._identity != null) {
+      await OpenIdIdentity.clear();
+      this._identity = null;
     }
   }
 
