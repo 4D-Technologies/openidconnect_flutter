@@ -245,6 +245,80 @@ class OpenIdConnect {
     return authorizationResponse;
   }
 
+
+  static Future<DeviceCodeResponse> authorizeDeviceGetDeviceCodeResponse(
+      {required DeviceAuthorizationRequest request}) async {
+    var response = await httpRetry(
+      () => http.post(
+        Uri.parse(request.configuration.deviceAuthorizationEndpoint!),
+        body: request.toMap(),
+      ),
+    );
+
+    if (response == null) throw AuthenticationException(ERROR_INVALID_RESPONSE);
+
+    final codeResponse = DeviceCodeResponse.fromJson(response);
+
+    return codeResponse;
+  }
+
+  static Future<AuthorizationResponse> authorizeDeviceCompleteDeviceCodeResponseRequest(
+      {required DeviceAuthorizationRequest request,
+      required DeviceCodeResponse codeResponse}) async {
+    await launch(
+      Uri.parse(codeResponse.verificationUrlComplete)
+          .replace(
+            queryParameters:
+                // ignore: unnecessary_cast
+                {"user_code": codeResponse.userCode} as Map<String, dynamic>,
+          )
+          .toString(),
+      enableJavaScript: true,
+    );
+
+    final pollingUri = Uri.parse(request.configuration.tokenEndpoint);
+    var pollingBody = {
+      "grant_type": "urn:ietf:params:oauth:grant-type:device_code",
+      "device_code": codeResponse.deviceCode,
+      "client_id": request.clientId,
+    };
+
+    if (request.clientSecret != null)
+      pollingBody = {"client_secret": request.clientSecret!, ...pollingBody};
+
+    late AuthorizationResponse authorizationResponse;
+
+    var pollingInterval = codeResponse.pollingInterval;
+
+    while (true) {
+      await Future<void>.delayed(Duration(seconds: pollingInterval));
+
+      final pollingResponse = await http.post(pollingUri, body: pollingBody);
+
+      final json = jsonDecode(pollingResponse.body) as Map<String, dynamic>;
+
+      if (pollingResponse.statusCode >= 200 && pollingResponse.statusCode < 300) {
+        authorizationResponse = AuthorizationResponse.fromJson(json);
+        break;
+      }
+
+      //Check the error message
+      final error = json["error"]?.toString();
+      if (error == null ||
+          error == "invalid_token" ||
+          error == "expired_token" ||
+          error == "access_denied")
+        throw AuthenticationException(json["error_description"].toString());
+
+      if (error == "slow_down") pollingInterval += 2;
+
+      if (DateTime.now().isAfter(codeResponse.expiresAt))
+        throw AuthenticationException(ERROR_USER_CLOSED);
+    }
+
+    return authorizationResponse;
+  }
+  
   static Future<AuthorizationResponse> refreshToken(
       {required RefreshRequest request}) async {
     final response = await httpRetry(
