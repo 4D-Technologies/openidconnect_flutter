@@ -1,10 +1,10 @@
 name: openidconnect_web
 description: Web implementation for OpenIdConnect.
-version: 1.0.19
+version: 1.0.21
 homepage: https://github.com/Concerti-IO/openidconnect_flutter/tree/main/openidconnect_web
 
 environment:
-  sdk: ">=2.15.0 <3.0.0"
+  sdk: ">=2.18.0 <3.0.0"
   flutter: ">=2.8.0"
 
 dependencies:
@@ -12,10 +12,10 @@ dependencies:
     sdk: flutter
   flutter_web_plugins:
     sdk: flutter
-  openidconnect_platform_interface: ^1.0.11
+  openidconnect_platform_interface: ^1.0.13
 
 dev_dependencies:
-  flutter_lints: ^1.0.4
+  flutter_lints: ^2.0.1
   flutter_test:
     sdk: flutter
 

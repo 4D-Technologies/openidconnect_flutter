@@ -1,3 +1,7 @@
+## [1.0.13] - November 10th, 2022
+
+- Update dependencies
+
 ## [1.0.11] - December 9th, 2021
 
 - Add Build context to the authorizeInteractive method

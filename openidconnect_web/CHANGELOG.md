@@ -1,3 +1,7 @@
+## [1.0.21] - November 10th, 2022
+
+- Update dependencies
+
 ## [1.0.19] - December 9th, 2021
 
 - Update to new interface and fix errors.
