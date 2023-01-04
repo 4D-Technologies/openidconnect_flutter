@@ -18,6 +18,7 @@ class OpenIdConnectClient {
   final bool webUseRefreshTokens;
   final List<String> scopes;
   final List<String>? audiences;
+  final bool useOfflineAccess;
 
   OpenIdConfiguration? configuration = null;
   Future<bool>? _autoRenewTimer = null;
@@ -36,6 +37,7 @@ class OpenIdConnectClient {
     this.webUseRefreshTokens = true,
     this.scopes = DEFAULT_SCOPES,
     this.audiences,
+    this.useOfflineAccess = true,
   });
 
   @mustCallSuper
@@ -48,6 +50,7 @@ class OpenIdConnectClient {
     bool webUseRefreshTokens = true,
     List<String> scopes = DEFAULT_SCOPES,
     List<String>? audiences,
+    bool useOfflineAccess = true,
   }) async {
     final client = OpenIdConnectClient._(
       discoveryDocumentUrl: discoveryDocumentUrl,
@@ -58,6 +61,7 @@ class OpenIdConnectClient {
       webUseRefreshTokens: webUseRefreshTokens,
       autoRefresh: autoRefresh,
       audiences: audiences,
+      useOfflineAccess: useOfflineAccess,
     );
 
     await client._processStartup();
@@ -415,10 +419,9 @@ class OpenIdConnectClient {
     );
   }
 
-  ///Gets the proper scopes and adds offline access if the user has it specified in the configuration for the client.
+  ///Gets the proper scopes and adds offline access if the user has it specified in the client.
   Iterable<String> _getScopes(Iterable<String> scopes) {
-    if (autoRefresh && !scopes.contains(OFFLINE_ACCESS_SCOPE))
-      return [OFFLINE_ACCESS_SCOPE, ...scopes];
+    if (autoRefresh && useOfflineAccess && !scopes.contains(OFFLINE_ACCESS_SCOPE)) return [OFFLINE_ACCESS_SCOPE, ...scopes];
     return scopes;
   }
 }
