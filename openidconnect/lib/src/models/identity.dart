@@ -3,6 +3,7 @@ part of openidconnect;
 class OpenIdIdentity extends AuthorizationResponse {
   static const String _AUTHENTICATION_TOKEN_KEY = "ACCESS_TOKEN";
   static const String _ID_TOKEN_KEY = "ID_TOKEN";
+  static const String _CLAIMS_KEY = "CLAIMS";
   static const String _REFRESH_TOKEN_KEY = "REFRESH_TOKEN";
   static const String _TOKEN_TYPE_KEY = "TOKEN_TYPE";
   static const String _EXPIRES_ON_KEY = "EXPIRES_ON";
@@ -100,6 +101,7 @@ class OpenIdIdentity extends AuthorizationResponse {
         key: _AUTHENTICATION_TOKEN_KEY, value: this.accessToken);
 
     await _storage.write(key: _ID_TOKEN_KEY, value: this.idToken);
+    await _storage.write(key: _CLAIMS_KEY, value: json.encode(this.claims));
     await this.refreshToken == null
         ? _storage.delete(key: _REFRESH_TOKEN_KEY)
         : _storage.write(key: _REFRESH_TOKEN_KEY, value: this.refreshToken);
