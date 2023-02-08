@@ -386,13 +386,16 @@ class OpenIdConnectClient {
   }
 
   Future<void> _completeLogin(AuthorizationResponse response) async {
-    OpenIdIdentity temporaryIdentity =  OpenIdIdentity.fromAuthorizationResponse(response);
-    if(temporaryIdentity.idToken.isEmpty){ 
-      Map<String,dynamic> userInfo = await OpenIdConnect.getUserInfo(request: UserInfoRequest(
+    OpenIdIdentity temporaryIdentity =
+        OpenIdIdentity.fromAuthorizationResponse(response);
+    if (response.idToken.isEmpty || response.idToken == "null") {
+      Map<String, dynamic> userInfo = await OpenIdConnect.getUserInfo(
+          request: UserInfoRequest(
         accessToken: this._identity!.accessToken,
         configuration: configuration!,
       ));
       temporaryIdentity.claims = userInfo;
+      temporaryIdentity.initSub();
     }
     this._identity = temporaryIdentity;
     await this._identity!.save();
