@@ -27,8 +27,14 @@ class OpenIdIdentity extends AuthorizationResponse {
           refreshToken: refreshToken,
           state: state,
         ) {
-    this.claims = JwtDecoder.decode(idToken);
-
+    try {
+      this.claims = JwtDecoder.decode(idToken);
+    } catch (e) {
+      this.claims = <String, dynamic>{};
+    }
+    initSub();
+  }
+  void initSub() {
     this.sub = claims["sub"].toString();
   }
 
