@@ -156,7 +156,7 @@ class OpenIdConnectClient {
       _raiseEvent(AuthEvent(AuthEventTypes.Success));
 
       return _identity!;
-    } on Exception catch (e) {
+    } on Exception catch (e) {  
       if (this._identity != null) {
         await OpenIdIdentity.clear();
         this._identity = null;
@@ -391,7 +391,7 @@ class OpenIdConnectClient {
     if (response.idToken.isEmpty || response.idToken == "null") {
       Map<String, dynamic> userInfo = await OpenIdConnect.getUserInfo(
           request: UserInfoRequest(
-        accessToken: this._identity!.accessToken,
+        accessToken: temporaryIdentity.accessToken,
         configuration: configuration!,
       ));
       temporaryIdentity.claims = userInfo;

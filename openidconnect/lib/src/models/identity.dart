@@ -17,6 +17,7 @@ class OpenIdIdentity extends AuthorizationResponse {
     required DateTime expiresAt,
     required String idToken,
     required String tokenType,
+    Map<String, dynamic>? claims,
     String? refreshToken,
     String? state,
   }) : super(
@@ -27,10 +28,14 @@ class OpenIdIdentity extends AuthorizationResponse {
           refreshToken: refreshToken,
           state: state,
         ) {
-    try {
-      this.claims = JwtDecoder.decode(idToken);
-    } catch (e) {
-      this.claims = <String, dynamic>{};
+    if (claims == null) {
+      try {
+        this.claims = JwtDecoder.decode(idToken);
+      } catch (e) {
+        this.claims = <String, dynamic>{};
+      }
+    } else {
+      this.claims = claims;
     }
     initSub();
   }
@@ -62,6 +67,7 @@ class OpenIdIdentity extends AuthorizationResponse {
       late String expiresOn;
       late String tokenType;
       late String? idToken;
+      late Map<String, dynamic>? claims;
       late String? state;
 
       await Future.wait([
@@ -72,6 +78,8 @@ class OpenIdIdentity extends AuthorizationResponse {
             .read(key: _EXPIRES_ON_KEY)
             .then((value) => expiresOn = value ?? "0"),
         _storage.read(key: _ID_TOKEN_KEY).then((value) => idToken = value),
+        _storage.read(key: _CLAIMS_KEY).then((value) =>
+            claims = json.decode(value ?? "{}") as Map<String, dynamic>),
         _storage
             .read(key: _TOKEN_TYPE_KEY)
             .then((value) => tokenType = value ?? "bearer"),
@@ -91,6 +99,7 @@ class OpenIdIdentity extends AuthorizationResponse {
         idToken: idToken!,
         tokenType: tokenType,
         refreshToken: refreshToken,
+        claims: claims,
         state: state,
       );
     } on Exception catch (e) {
