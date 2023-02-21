@@ -30,7 +30,11 @@ class OpenIdIdentity extends AuthorizationResponse {
         ) {
     if (claims == null) {
       try {
-        this.claims = JwtDecoder.decode(idToken);
+        Map<String, dynamic>? pseudoClaims = JwtDecoder.decode(idToken);
+        if (!pseudoClaims.containsKey("family_name")) {
+          throw Exception("invalid idToken");
+        }
+        this.claims = pseudoClaims;
       } catch (e) {
         this.claims = <String, dynamic>{};
       }
