@@ -263,11 +263,10 @@ class OpenIdConnectClient {
     }
   }
 
-  Future<void> logout() async {
-    if (_autoRenewTimer != null) _autoRenewTimer = null;
-
+  Future<void> logout({bool ignoreError = true}) async {
     if (_identity == null) return;
 
+    var isError = false;
     try {
       //Make sure we have the discovery information
       await _verifyDiscoveryDocument();
@@ -279,9 +278,20 @@ class OpenIdConnectClient {
           state: _identity!.state,
         ),
       );
-    } on Exception {}
-
-    _raiseEvent(AuthEvent(AuthEventTypes.NotLoggedIn));
+    } on Exception catch (e) {
+      isError = true;
+      if (!ignoreError) {
+        _raiseEvent(AuthEvent(AuthEventTypes.Error, message: e.toString()));
+      }
+    }
+    
+    if (ignoreError || !isError) {
+      if (_autoRenewTimer != null) _autoRenewTimer = null;
+      await OpenIdIdentity.clear();
+      this._identity = null;
+      
+      _raiseEvent(AuthEvent(AuthEventTypes.Logout));
+    }
   }
 
   FutureOr<bool> isLoggedIn() async {
