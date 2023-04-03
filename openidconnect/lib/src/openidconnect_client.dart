@@ -316,7 +316,7 @@ class OpenIdConnectClient {
 
     await Future.wait(requests());
   }
-
+  
   FutureOr<bool> verifyToken() async {
     if (_identity == null) return false;
 
@@ -388,7 +388,6 @@ class OpenIdConnectClient {
   Future<void> _completeLogin(AuthorizationResponse response) async {
     OpenIdIdentity temporaryIdentity =
         OpenIdIdentity.fromAuthorizationResponse(response);
-    if (response.idToken.isEmpty || response.idToken == "null") {
       Map<String, dynamic> userInfo = await OpenIdConnect.getUserInfo(
           request: UserInfoRequest(
         accessToken: temporaryIdentity.accessToken,
@@ -396,7 +395,6 @@ class OpenIdConnectClient {
       ));
       temporaryIdentity.claims = userInfo;
       temporaryIdentity.initSub();
-    }
     this._identity = temporaryIdentity;
     await this._identity!.save();
   }
