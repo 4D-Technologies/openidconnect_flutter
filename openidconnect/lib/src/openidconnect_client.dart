@@ -77,8 +77,10 @@ class OpenIdConnectClient {
         autoRefresh: autoRefresh,
       );
 
-      if (response != null)
+      if (response != null) {
         _identity = OpenIdIdentity.fromAuthorizationResponse(response);
+        await this._identity?.save();
+      }
     }
 
     if (_identity == null) _identity = await OpenIdIdentity.load();
