@@ -156,7 +156,7 @@ class OpenIdConnectClient {
       _raiseEvent(AuthEvent(AuthEventTypes.Success));
 
       return _identity!;
-    } on Exception catch (e) {  
+    } on Exception catch (e) {
       if (this._identity != null) {
         await OpenIdIdentity.clear();
         this._identity = null;
@@ -263,11 +263,16 @@ class OpenIdConnectClient {
     }
   }
 
-  Future<void> logout() async {
+  Future<void> logout({bool useApi = false}) async {
     if (_autoRenewTimer != null) _autoRenewTimer = null;
 
     if (_identity == null) return;
 
+    if (!useApi) {
+      await OpenIdIdentity.clear();
+      _identity = null;
+      return;
+    }
     try {
       //Make sure we have the discovery information
       await _verifyDiscoveryDocument();
@@ -316,7 +321,7 @@ class OpenIdConnectClient {
 
     await Future.wait(requests());
   }
-  
+
   FutureOr<bool> verifyToken() async {
     if (_identity == null) return false;
 
@@ -388,13 +393,13 @@ class OpenIdConnectClient {
   Future<void> _completeLogin(AuthorizationResponse response) async {
     OpenIdIdentity temporaryIdentity =
         OpenIdIdentity.fromAuthorizationResponse(response);
-      Map<String, dynamic> userInfo = await OpenIdConnect.getUserInfo(
-          request: UserInfoRequest(
-        accessToken: temporaryIdentity.accessToken,
-        configuration: configuration!,
-      ));
-      temporaryIdentity.claims = userInfo;
-      temporaryIdentity.initSub();
+    Map<String, dynamic> userInfo = await OpenIdConnect.getUserInfo(
+        request: UserInfoRequest(
+      accessToken: temporaryIdentity.accessToken,
+      configuration: configuration!,
+    ));
+    temporaryIdentity.claims = userInfo;
+    temporaryIdentity.initSub();
     this._identity = temporaryIdentity;
     await this._identity!.save();
   }
