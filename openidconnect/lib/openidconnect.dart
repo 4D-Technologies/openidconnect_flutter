@@ -33,6 +33,7 @@ part 'src/models/requests/revoke_token_request.dart';
 part 'src/models/requests/device_authorization_request.dart';
 part 'src/models/requests/user_info_request.dart';
 part 'src/models/requests/token_request.dart';
+part 'src/models/requests/user_registration_request.dart';
 
 part 'src/models/responses/token_response.dart';
 part 'src/models/responses/device_code_response.dart';
@@ -346,6 +347,24 @@ class OpenIdConnect {
       if (response == null) throw UserInfoException(ERROR_INVALID_RESPONSE);
 
       return response;
+    } on Exception catch (e) {
+      throw UserInfoException(e.toString());
+    }
+  }
+
+  static Future<void> registerUser(
+      {required UserRegistrationRequest request}) async {
+    try {
+      final response = await httpRetry(
+        () => http.get(
+          Uri.parse(request.configuration.registrationEndpoint!),
+          headers: {
+            "Authorization": "${request.tokenType} ${request.accessToken}"
+          },
+        ),
+      );
+
+      if (response == null) throw UserInfoException(ERROR_INVALID_RESPONSE);
     } on Exception catch (e) {
       throw UserInfoException(e.toString());
     }
