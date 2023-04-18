@@ -3,6 +3,7 @@ part of openidconnect;
 class OpenIdIdentity extends AuthorizationResponse {
   static const String _AUTHENTICATION_TOKEN_KEY = "ACCESS_TOKEN";
   static const String _ID_TOKEN_KEY = "ID_TOKEN";
+  static const String _CLAIMS_KEY = "CLAIMS";
   static const String _REFRESH_TOKEN_KEY = "REFRESH_TOKEN";
   static const String _TOKEN_TYPE_KEY = "TOKEN_TYPE";
   static const String _EXPIRES_ON_KEY = "EXPIRES_ON";
@@ -16,6 +17,7 @@ class OpenIdIdentity extends AuthorizationResponse {
     required DateTime expiresAt,
     required String idToken,
     required String tokenType,
+    Map<String, dynamic>? claims,
     String? refreshToken,
     String? state,
   }) : super(
@@ -26,8 +28,18 @@ class OpenIdIdentity extends AuthorizationResponse {
           refreshToken: refreshToken,
           state: state,
         ) {
-    this.claims = JwtDecoder.decode(idToken);
-
+    if (claims == null) {
+      try {
+        this.claims = JwtDecoder.decode(idToken);
+      } catch (e) {
+        this.claims = <String, dynamic>{};
+      }
+    } else {
+      this.claims = claims;
+    }
+    initSub();
+  }
+  void initSub() {
     this.sub = claims["sub"].toString();
   }
 
@@ -55,6 +67,7 @@ class OpenIdIdentity extends AuthorizationResponse {
       late String expiresOn;
       late String tokenType;
       late String? idToken;
+      late Map<String, dynamic>? claims;
       late String? state;
 
       await Future.wait([
@@ -65,6 +78,8 @@ class OpenIdIdentity extends AuthorizationResponse {
             .read(key: _EXPIRES_ON_KEY)
             .then((value) => expiresOn = value ?? "0"),
         _storage.read(key: _ID_TOKEN_KEY).then((value) => idToken = value),
+        _storage.read(key: _CLAIMS_KEY).then((value) =>
+            claims = json.decode(value ?? "{}") as Map<String, dynamic>),
         _storage
             .read(key: _TOKEN_TYPE_KEY)
             .then((value) => tokenType = value ?? "bearer"),
@@ -84,6 +99,7 @@ class OpenIdIdentity extends AuthorizationResponse {
         idToken: idToken!,
         tokenType: tokenType,
         refreshToken: refreshToken,
+        claims: claims,
         state: state,
       );
     } on Exception catch (e) {
@@ -100,6 +116,7 @@ class OpenIdIdentity extends AuthorizationResponse {
         key: _AUTHENTICATION_TOKEN_KEY, value: this.accessToken);
 
     await _storage.write(key: _ID_TOKEN_KEY, value: this.idToken);
+    await _storage.write(key: _CLAIMS_KEY, value: json.encode(this.claims));
     await this.refreshToken == null
         ? _storage.delete(key: _REFRESH_TOKEN_KEY)
         : _storage.write(key: _REFRESH_TOKEN_KEY, value: this.refreshToken);
