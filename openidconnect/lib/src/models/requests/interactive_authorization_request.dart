@@ -80,7 +80,7 @@ class InteractiveAuthorizationRequest extends TokenRequest {
             "response_type": "code",
             "code_challenge_method": "S256",
             "code_challenge": codeChallenge,
-            ...(additionalParameters ?? {})
+            ...?additionalParameters,
           },
         );
 }
