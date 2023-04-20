@@ -191,15 +191,15 @@ class OpenIdConnect {
 
     final codeResponse = DeviceCodeResponse.fromJson(response);
 
-    await launch(
-      Uri.parse(codeResponse.verificationUrlComplete)
-          .replace(
-            queryParameters:
-                // ignore: unnecessary_cast
-                {"user_code": codeResponse.userCode} as Map<String, dynamic>,
-          )
-          .toString(),
-      enableJavaScript: true,
+    await launchUrl(
+      Uri.parse(codeResponse.verificationUrlComplete).replace(
+        queryParameters:
+            // ignore: unnecessary_cast
+            {"user_code": codeResponse.userCode} as Map<String, dynamic>,
+      ),
+      webViewConfiguration: WebViewConfiguration(
+        enableJavaScript: true,
+      ),
     );
 
     final pollingUri = Uri.parse(request.configuration.tokenEndpoint);
