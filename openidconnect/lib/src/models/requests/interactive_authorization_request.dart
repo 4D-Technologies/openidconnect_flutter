@@ -60,27 +60,22 @@ class InteractiveAuthorizationRequest extends TokenRequest {
   }
 
   InteractiveAuthorizationRequest._({
-    required String clientId,
-    String? clientSecret,
+    required super.clientId,
+    super.clientSecret,
     required this.redirectUrl,
-    required Iterable<String> scopes,
-    required OpenIdConfiguration configuration,
+    required super.scopes,
+    required super.configuration,
     required bool autoRefresh,
     required this.codeVerifier,
     required this.codeChallenge,
     String? loginHint,
-    Iterable<String>? prompts,
+    super.prompts,
     Map<String, String>? additionalParameters,
     this.popupWidth = 640,
     this.popupHeight = 480,
     this.useWebPopup = true,
   }) : super(
-          configuration: configuration,
-          clientId: clientId,
-          clientSecret: clientSecret,
-          grantType: "code",
-          scopes: scopes,
-          prompts: prompts,
+          grantType: "code",          
           additionalParameters: {
             "redirect_uri": redirectUrl,
             "login_hint": loginHint ?? "",
