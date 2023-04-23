@@ -1,5 +1,5 @@
 final defaultDiscoveryUrl =
-    "https://yourdomain.com/.well-known/openid-configuration";
+    "http://localhost:8080/realms/master/.well-known/openid-configuration";
 final defaultClientId = "Admin";
 final String? defaultClientSecret = "setme";
 final String? defaultAudience = "api";
