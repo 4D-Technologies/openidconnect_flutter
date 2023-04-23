@@ -3,6 +3,7 @@ import 'dart:async';
 // of your plugin as a separate package, instead of inlining it in the same
 // package as the core of your plugin.
 // ignore: avoid_web_libraries_in_flutter
+import 'package:flutter/widgets.dart';
 import 'package:flutter_web_plugins/flutter_web_plugins.dart';
 import 'package:openidconnect_platform_interface/openidconnect_platform_interface.dart';
 import "dart:html" as html;
@@ -15,13 +16,14 @@ class OpenIdConnectWeb extends OpenIdConnectPlatform {
 
   @override
   Future<String?> authorizeInteractive({
+    required BuildContext context,
     required String title,
     required String authorizationUrl,
     required String redirectUrl,
     required int popupWidth,
     required int popupHeight,
     bool useWebRedirectLoop = false,
-  }) {
+  }) async {
     if (useWebRedirectLoop) {
       const AUTH_DESTINATION_KEY = "openidconnect_auth_destination_url";
       html.window.sessionStorage[AUTH_DESTINATION_KEY] =
