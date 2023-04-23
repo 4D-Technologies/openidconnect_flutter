@@ -78,8 +78,12 @@ class OpenIdConnect {
   }) async {
     late String? responseUrl;
 
-    final uri = Uri.parse(request.configuration.authorizationEndpoint).replace(
-      queryParameters: request.toMap(),
+    final authEndpoint = Uri.parse(request.configuration.authorizationEndpoint);
+    final uri = authEndpoint.replace(
+      queryParameters: <String, String>{
+        ...authEndpoint.queryParameters,
+        ...request.toMap(),
+      },
     );
 
     //These are special cases for the various different platforms because of limitations in pubspec.yaml
