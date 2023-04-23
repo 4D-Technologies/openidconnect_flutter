@@ -38,7 +38,6 @@ class OpenIdConnectClient {
     this.audiences,
   });
 
-  @mustCallSuper
   static Future<OpenIdConnectClient> create({
     required String discoveryDocumentUrl,
     required String clientId,
