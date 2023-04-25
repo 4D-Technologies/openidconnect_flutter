@@ -7,7 +7,7 @@ class IdentityView extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final captionTheme = Theme.of(context).textTheme.caption;
+    final captionTheme = Theme.of(context).textTheme.bodySmall;
     return Padding(
       padding: EdgeInsets.all(15),
       child: SingleChildScrollView(
