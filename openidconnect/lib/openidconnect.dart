@@ -6,7 +6,6 @@ import 'dart:io';
 import 'dart:math';
 
 import 'package:flutter/material.dart';
-import 'package:flutter/widgets.dart';
 import 'package:http/http.dart' as http;
 import 'package:cryptography/cryptography.dart' as crypto;
 import 'package:jwt_decoder/jwt_decoder.dart';
@@ -26,21 +25,16 @@ part './src/models/event.dart';
 
 part 'src/config/openidconfiguration.dart';
 
-part './src/exceptions/openidconnect_exception.dart';
-part './src/exceptions/authentication_exception.dart';
-part './src/exceptions/http_response_exception.dart';
-part './src/exceptions/user_info_exception.dart';
-part './src/exceptions/revoke_exception.dart';
-part './src/exceptions/logout_exception.dart';
-
 part 'src/models/requests/interactive_authorization_request.dart';
 part 'src/models/requests/password_authorization_request.dart';
 part 'src/models/requests/refresh_request.dart';
 part 'src/models/requests/logout_request.dart';
+part 'src/models/requests/logout_token_request.dart';
 part 'src/models/requests/revoke_token_request.dart';
 part 'src/models/requests/device_authorization_request.dart';
 part 'src/models/requests/user_info_request.dart';
 part 'src/models/requests/token_request.dart';
+part 'src/models/requests/user_registration_request.dart';
 
 part 'src/models/responses/token_response.dart';
 part 'src/models/responses/device_code_response.dart';
@@ -85,8 +79,12 @@ class OpenIdConnect {
   }) async {
     late String? responseUrl;
 
-    final uri = Uri.parse(request.configuration.authorizationEndpoint).replace(
-      queryParameters: request.toMap(),
+    final authEndpoint = Uri.parse(request.configuration.authorizationEndpoint);
+    final uri = authEndpoint.replace(
+      queryParameters: <String, String>{
+        ...authEndpoint.queryParameters,
+        ...request.toMap(),
+      },
     );
 
     //These are special cases for the various different platforms because of limitations in pubspec.yaml
@@ -99,19 +97,7 @@ class OpenIdConnect {
         popupHeight: request.popupHeight,
         popupWidth: request.popupWidth,
       );
-    } else if (!kIsWeb) {
-      //TODO add other implementations as they become available. For now, all desktop uses device code flow instead of authorization code flow
-      return await OpenIdConnect.authorizeDevice(
-        request: DeviceAuthorizationRequest(
-          audience: null,
-          clientId: request.clientId,
-          clientSecret: request.clientSecret,
-          configuration: request.configuration,
-          scopes: request.scopes,
-          additionalParameters: request.additionalParameters,
-        ),
-      );
-    } else {
+    } else if (kIsWeb) {
       final storage = FlutterSecureStorage();
       await storage.write(
           key: CODE_VERIFIER_STORAGE_KEY, value: request.codeVerifier);
@@ -119,6 +105,7 @@ class OpenIdConnect {
           key: CODE_CHALLENGE_STORAGE_KEY, value: request.codeChallenge);
 
       responseUrl = await _platform.authorizeInteractive(
+        context: context,
         title: title,
         authorizationUrl: uri.toString(),
         redirectUrl: request.redirectUrl,
@@ -131,6 +118,18 @@ class OpenIdConnect {
 
       await storage.delete(key: CODE_VERIFIER_STORAGE_KEY);
       await storage.delete(key: CODE_CHALLENGE_STORAGE_KEY);
+    } else {
+      //TODO add other implementations as they become available. For now, all desktop uses device code flow instead of authorization code flow
+      return await OpenIdConnect.authorizeDevice(
+        request: DeviceAuthorizationRequest(
+          audience: null,
+          clientId: request.clientId,
+          clientSecret: request.clientSecret,
+          configuration: request.configuration,
+          scopes: request.scopes,
+          additionalParameters: request.additionalParameters,
+        ),
+      );
     }
 
     return await _completeCodeExchange(request: request, url: responseUrl);
@@ -164,12 +163,9 @@ class OpenIdConnect {
       "grant_type": "authorization_code",
       "code_verifier": request.codeVerifier,
       "code": authCode,
+      if (request.clientSecret != null) "client_secret": request.clientSecret!,
+      if (state != null && state.isNotEmpty) "state": state
     };
-
-    if (request.clientSecret != null)
-      body.addAll({"client_secret": request.clientSecret!});
-
-    if (state != null && state.isNotEmpty) body.addAll({"state": state});
 
     final response = await httpRetry(
       () => http.post(
@@ -197,26 +193,24 @@ class OpenIdConnect {
 
     final codeResponse = DeviceCodeResponse.fromJson(response);
 
-    await launch(
-      Uri.parse(codeResponse.verificationUrlComplete)
-          .replace(
-            queryParameters:
-                // ignore: unnecessary_cast
-                {"user_code": codeResponse.userCode} as Map<String, dynamic>,
-          )
-          .toString(),
-      enableJavaScript: true,
+    await launchUrl(
+      Uri.parse(codeResponse.verificationUrlComplete).replace(
+        queryParameters: <String, String>{
+          "user_code": codeResponse.userCode,
+        },
+      ),
+      webViewConfiguration: WebViewConfiguration(
+        enableJavaScript: true,
+      ),
     );
 
     final pollingUri = Uri.parse(request.configuration.tokenEndpoint);
-    var pollingBody = {
+    var pollingBody = <String, String>{
       "grant_type": "urn:ietf:params:oauth:grant-type:device_code",
       "device_code": codeResponse.deviceCode,
       "client_id": request.clientId,
+      if (request.clientSecret != null) "client_secret": request.clientSecret!,
     };
-
-    if (request.clientSecret != null)
-      pollingBody = {"client_secret": request.clientSecret!, ...pollingBody};
 
     late AuthorizationResponse authorizationResponse;
 
@@ -275,6 +269,21 @@ class OpenIdConnect {
     try {
       await httpRetry(
         () => http.get(url),
+      );
+    } on HttpResponseException catch (e) {
+      throw LogoutException(e.toString());
+    }
+  }
+
+  /// Keycloak compatible logout
+  /// see https://www.keycloak.org/docs/latest/securing_apps/#logout-endpoint
+  static Future<void> logoutToken({required LogoutTokenRequest request}) async {
+    if (request.configuration.endSessionEndpoint == null) return;
+
+    final url = Uri.parse(request.configuration.endSessionEndpoint!);
+    try {
+      await httpRetry(
+            () => http.post(url, body: request.toMap()),
       );
     } on HttpResponseException catch (e) {
       throw LogoutException(e.toString());
@@ -353,6 +362,24 @@ class OpenIdConnect {
       if (response == null) throw UserInfoException(ERROR_INVALID_RESPONSE);
 
       return response;
+    } on Exception catch (e) {
+      throw UserInfoException(e.toString());
+    }
+  }
+
+  static Future<void> registerUser(
+      {required UserRegistrationRequest request}) async {
+    try {
+      final response = await httpRetry(
+        () => http.get(
+          Uri.parse(request.configuration.registrationEndpoint!),
+          headers: {
+            "Authorization": "${request.tokenType} ${request.accessToken}"
+          },
+        ),
+      );
+
+      if (response == null) throw UserInfoException(ERROR_INVALID_RESPONSE);
     } on Exception catch (e) {
       throw UserInfoException(e.toString());
     }

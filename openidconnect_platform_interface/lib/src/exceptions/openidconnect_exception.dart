@@ -1,4 +1,4 @@
-part of openidconnect;
+part of openidconnect_platform_interface;
 
 abstract class OpenIdConnectException implements Exception {
   final String? errorMessage;

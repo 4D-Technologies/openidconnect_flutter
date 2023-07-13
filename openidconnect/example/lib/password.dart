@@ -147,8 +147,8 @@ class _PasswordPageState extends State<PasswordPage> {
                       child: Text(errorMessage ?? "",
                           style: Theme.of(context)
                               .textTheme
-                              .bodyText1!
-                              .copyWith(color: Theme.of(context).errorColor)),
+                              .bodyLarge!
+                              .copyWith(color: Theme.of(context).colorScheme.error)),
                       visible: errorMessage != null,
                     ),
                   ],

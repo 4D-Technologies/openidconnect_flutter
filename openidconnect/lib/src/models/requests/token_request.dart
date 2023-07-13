@@ -22,16 +22,13 @@ abstract class TokenRequest {
 
   @mustCallSuper
   Map<String, String> toMap() {
-    var map = {
+    return {
       "client_id": clientId,
       "grant_type": grantType,
       "scope": scopes.join(" "),
+      if (prompts != null && prompts!.isNotEmpty) 'prompt': prompts!.join(' '),
+      if (clientSecret != null) "client_secret": clientSecret!,
+      ...?additionalParameters
     };
-
-    if (clientSecret != null) map = {"client_secret": clientSecret!, ...map};
-
-    if (additionalParameters != null) map = {...map, ...additionalParameters!};
-
-    return map;
   }
 }

@@ -100,11 +100,13 @@ class _DeviceCodePageState extends State<DeviceCodePage> {
                 visible: discoveryDocument != null,
               ),
               Visibility(
-                child: Text(errorMessage ?? "",
-                    style: Theme.of(context)
-                        .textTheme
-                        .bodyText1!
-                        .copyWith(color: Theme.of(context).errorColor)),
+                child: Text(
+                  errorMessage ?? "",
+                  style: Theme.of(context)
+                      .textTheme
+                      .bodyLarge!
+                      .copyWith(color: Theme.of(context).colorScheme.error),
+                ),
                 visible: errorMessage != null,
               ),
               Visibility(

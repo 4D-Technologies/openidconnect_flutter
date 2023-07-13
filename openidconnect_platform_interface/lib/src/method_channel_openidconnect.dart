@@ -6,6 +6,7 @@ const MethodChannel _channel =
 class MethodChannelOpenIdConnect extends OpenIdConnectPlatform {
   @override
   Future<String?> authorizeInteractive({
+    required BuildContext context,
     required String title,
     required String authorizationUrl,
     required String redirectUrl,

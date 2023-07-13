@@ -123,6 +123,10 @@ class _InteractivePageState extends State<InteractivePage> {
                 visible: identity != null,
               ),
               Visibility(
+                child: SelectableText(errorMessage ?? ""),
+                visible: errorMessage != null,
+              ),
+              Visibility(
                 child: TextButton.icon(
                   onPressed: () async {
                     OpenIdConnect.logout(

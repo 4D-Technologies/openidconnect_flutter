@@ -14,13 +14,11 @@ class LogoutRequest {
   });
 
   Map<String, String> toMap() {
-    var map = {"id_token_hint": idToken};
-
-    if (postLogoutRedirectUrl != null)
-      map = {"post_logout_redirect_url": postLogoutRedirectUrl!, ...map};
-
-    if (state != null) map = {"state": state!, ...map};
-
-    return map;
+    return {
+      "id_token_hint": idToken,
+      if (postLogoutRedirectUrl != null)
+        "post_logout_redirect_url": postLogoutRedirectUrl!,
+      if (state != null) "state": state!,
+    };
   }
 }

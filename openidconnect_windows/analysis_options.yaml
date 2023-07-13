@@ -1,0 +1,30 @@
+include: package:flutter_lints/flutter.yaml
+
+linter:
+  rules:
+    public_member_api_docs: false
+    constant_identifier_names: ALL_CAPS_WITH_UNDERSCORES
+    overridden_fields: true
+    iterable_contains_unrelated_type: true
+    camel_case_types: true
+
+analyzer:
+  language:
+    strict-inference: true
+    strict-raw-types: true
+  strong-mode:
+    implicit-casts: false
+    implicit-dynamic: false
+  errors:
+    unused_element: error
+    unused_import: error
+    unused_local_variable: error
+    invalid_assignment: error
+    missing_return: error
+    dead_code: info
+    todo: ignore
+  exclude:
+    - "**/*.freezed.dart"
+    - "**/*.g.dart"
+    - "**/*.config.dart"
+    - "**/generated_plugin_registrant.dart"
