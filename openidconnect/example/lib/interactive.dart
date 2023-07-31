@@ -92,6 +92,7 @@ class _InteractivePageState extends State<InteractivePage> {
                       final response = await OpenIdConnect.authorizeInteractive(
                         context: context,
                         title: "Login",
+                        configuration: discoveryDocument!,
                         request: await InteractiveAuthorizationRequest.create(
                           clientId: defaultClientId,
                           clientSecret: defaultClientSecret,

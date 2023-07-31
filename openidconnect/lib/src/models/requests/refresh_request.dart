@@ -6,7 +6,6 @@ class RefreshRequest extends TokenRequest {
     super.clientSecret,
     required super.scopes,
     required String refreshToken,
-    required super.configuration,
     Map<String, String>? additionalParameters,
     bool autoRefresh = true,
   }) : super(

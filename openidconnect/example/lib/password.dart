@@ -119,13 +119,13 @@ class _PasswordPageState extends State<PasswordPage> {
                         try {
                           final response =
                               await OpenIdConnect.authorizePassword(
+                            configuration: discoveryDocument!,
                             request: PasswordAuthorizationRequest(
                               clientId: defaultClientId,
                               clientSecret: defaultClientSecret,
                               userName: userName,
                               password: password,
                               scopes: defaultscopes,
-                              configuration: discoveryDocument!,
                               autoRefresh: false,
                             ),
                           );
@@ -148,7 +148,8 @@ class _PasswordPageState extends State<PasswordPage> {
                           style: Theme.of(context)
                               .textTheme
                               .bodyLarge!
-                              .copyWith(color: Theme.of(context).colorScheme.error)),
+                              .copyWith(
+                                  color: Theme.of(context).colorScheme.error)),
                       visible: errorMessage != null,
                     ),
                   ],

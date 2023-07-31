@@ -134,7 +134,6 @@ class OpenIdConnectClient {
       await _verifyDiscoveryDocument();
 
       final request = PasswordAuthorizationRequest(
-        configuration: configuration!,
         password: password,
         scopes: _getScopes(scopes),
         clientId: clientId,
@@ -145,7 +144,10 @@ class OpenIdConnectClient {
         autoRefresh: autoRefresh,
       );
 
-      final response = await OpenIdConnect.authorizePassword(request: request);
+      final response = await OpenIdConnect.authorizePassword(
+        configuration: configuration!,
+        request: request,
+      );
 
       //Load the idToken here
       await _completeLogin(response);
@@ -174,11 +176,11 @@ class OpenIdConnectClient {
     //Get the token information and prompt for login if necessary.
     try {
       final response = await OpenIdConnect.authorizeDevice(
+        configuration: configuration!,
         request: DeviceAuthorizationRequest(
           clientId: clientId,
           scopes: _getScopes(scopes),
           audience: audiences != null ? audiences!.join(" ") : null,
-          configuration: configuration!,
         ),
       );
       //Load the idToken here
@@ -223,6 +225,7 @@ class OpenIdConnectClient {
     try {
       final response = await OpenIdConnect.authorizeInteractive(
         context: context,
+        configuration: configuration!,
         title: title,
         request: await InteractiveAuthorizationRequest.create(
           configuration: configuration!,
@@ -324,7 +327,9 @@ class OpenIdConnectClient {
     return true;
   }
 
-  Future<bool> refresh({bool raiseEvents = true}) async {
+  Future<bool> refresh({
+    bool raiseEvents = true,
+  }) async {
     if (!webUseRefreshTokens) {
       //Web has a special case where it will use a hidden iframe. This just returns true because the iframe does it.
       //In this case we simply load from storage because the web implementation just stores the new values in storage for us.
@@ -345,19 +350,20 @@ class OpenIdConnectClient {
       await _verifyDiscoveryDocument();
 
       final response = await OpenIdConnect.refreshToken(
+        configuration: configuration!,
         request: RefreshRequest(
           clientId: clientId,
           clientSecret: clientSecret,
           scopes: _getScopes(scopes),
           refreshToken: _identity!.refreshToken!,
-          configuration: configuration!,
         ),
       );
 
       await _completeLogin(response);
 
       if (autoRefresh) {
-        var refreshTime = _identity!.expiresAt.difference(DateTime.now().toUtc());
+        var refreshTime =
+            _identity!.expiresAt.difference(DateTime.now().toUtc());
         refreshTime -= Duration(minutes: 1);
 
         _autoRenewTimer = Future.delayed(refreshTime, refresh);

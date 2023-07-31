@@ -8,7 +8,6 @@ abstract class TokenRequest {
   final Iterable<String> scopes;
   final Map<String, String>? additionalParameters;
   final Iterable<String>? prompts;
-  final OpenIdConfiguration configuration;
 
   const TokenRequest({
     required this.clientId,
@@ -17,7 +16,6 @@ abstract class TokenRequest {
     required this.grantType,
     this.additionalParameters,
     this.prompts,
-    required this.configuration,
   });
 
   @mustCallSuper

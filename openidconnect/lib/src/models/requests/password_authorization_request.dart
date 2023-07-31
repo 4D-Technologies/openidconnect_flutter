@@ -7,7 +7,6 @@ class PasswordAuthorizationRequest extends TokenRequest {
     required super.scopes,
     required String userName,
     required String password,
-    required super.configuration,
     required bool autoRefresh,
     super.prompts,
     Map<String, String>? additionalParameters,

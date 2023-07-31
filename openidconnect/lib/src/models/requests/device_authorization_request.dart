@@ -1,7 +1,6 @@
 part of openidconnect;
 
 class DeviceAuthorizationRequest {
-  final OpenIdConfiguration configuration;
   final String clientId;
   final String? clientSecret;
   final Iterable<String> scopes;
@@ -12,7 +11,6 @@ class DeviceAuthorizationRequest {
     required this.clientId,
     required this.scopes,
     required this.audience,
-    required this.configuration,
     this.clientSecret,
     this.additionalParameters,
   });

@@ -75,12 +75,12 @@ class _DeviceCodePageState extends State<DeviceCodePage> {
                   onPressed: () async {
                     try {
                       final response = await OpenIdConnect.authorizeDevice(
+                        configuration: discoveryDocument!,
                         request: DeviceAuthorizationRequest(
                           clientId: defaultClientId,
                           clientSecret: defaultClientSecret,
                           scopes: defaultscopes,
                           audience: defaultAudience,
-                          configuration: discoveryDocument!,
                         ),
                       );
                       setState(() {

@@ -45,7 +45,6 @@ class InteractiveAuthorizationRequest extends TokenRequest {
       clientId: clientId,
       redirectUrl: redirectUrl,
       scopes: scopes,
-      configuration: configuration,
       autoRefresh: autoRefresh,
       codeVerifier: codeVerifier,
       codeChallenge: codeChallenge,
@@ -64,7 +63,6 @@ class InteractiveAuthorizationRequest extends TokenRequest {
     super.clientSecret,
     required this.redirectUrl,
     required super.scopes,
-    required super.configuration,
     required bool autoRefresh,
     required this.codeVerifier,
     required this.codeChallenge,
@@ -75,7 +73,7 @@ class InteractiveAuthorizationRequest extends TokenRequest {
     this.popupHeight = 480,
     this.useWebPopup = true,
   }) : super(
-          grantType: "code",          
+          grantType: "code",
           additionalParameters: {
             "redirect_uri": redirectUrl,
             "login_hint": loginHint ?? "",

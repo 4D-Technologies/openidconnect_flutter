@@ -57,11 +57,13 @@ class OpenIdConnect {
     return OpenIdConfiguration.fromJson(response);
   }
 
-  static Future<AuthorizationResponse> authorizePassword(
-      {required PasswordAuthorizationRequest request}) async {
+  static Future<AuthorizationResponse> authorizePassword({
+    required OpenIdConfiguration configuration,
+    required PasswordAuthorizationRequest request,
+  }) async {
     final response = await httpRetry(
       () => http.post(
-        Uri.parse(request.configuration.tokenEndpoint),
+        Uri.parse(configuration.tokenEndpoint),
         body: request.toMap(),
       ),
     );
@@ -74,11 +76,12 @@ class OpenIdConnect {
   static Future<AuthorizationResponse?> authorizeInteractive({
     required BuildContext context,
     required String title,
+    required OpenIdConfiguration configuration,
     required InteractiveAuthorizationRequest request,
   }) async {
     late String? responseUrl;
 
-    final authEndpoint = Uri.parse(request.configuration.authorizationEndpoint);
+    final authEndpoint = Uri.parse(configuration.authorizationEndpoint);
     final uri = authEndpoint.replace(
       queryParameters: <String, String>{
         ...authEndpoint.queryParameters,
@@ -120,21 +123,26 @@ class OpenIdConnect {
     } else {
       //TODO add other implementations as they become available. For now, all desktop uses device code flow instead of authorization code flow
       return await OpenIdConnect.authorizeDevice(
+        configuration: configuration,
         request: DeviceAuthorizationRequest(
           audience: null,
           clientId: request.clientId,
           clientSecret: request.clientSecret,
-          configuration: request.configuration,
           scopes: request.scopes,
           additionalParameters: request.additionalParameters,
         ),
       );
     }
 
-    return await _completeCodeExchange(request: request, url: responseUrl);
+    return await _completeCodeExchange(
+      request: request,
+      url: responseUrl,
+      configuration: configuration,
+    );
   }
 
   static Future<AuthorizationResponse> _completeCodeExchange({
+    required OpenIdConfiguration configuration,
     required InteractiveAuthorizationRequest request,
     required String url,
   }) async {
@@ -168,7 +176,7 @@ class OpenIdConnect {
 
     final response = await httpRetry(
       () => http.post(
-        Uri.parse(request.configuration.tokenEndpoint),
+        Uri.parse(configuration.tokenEndpoint),
         body: body,
       ),
     );
@@ -179,11 +187,13 @@ class OpenIdConnect {
     return AuthorizationResponse.fromJson(response);
   }
 
-  static Future<AuthorizationResponse> authorizeDevice(
-      {required DeviceAuthorizationRequest request}) async {
+  static Future<AuthorizationResponse> authorizeDevice({
+    required OpenIdConfiguration configuration,
+    required DeviceAuthorizationRequest request,
+  }) async {
     var response = await httpRetry(
       () => http.post(
-        Uri.parse(request.configuration.deviceAuthorizationEndpoint!),
+        Uri.parse(configuration.deviceAuthorizationEndpoint!),
         body: request.toMap(),
       ),
     );
@@ -203,7 +213,7 @@ class OpenIdConnect {
       ),
     );
 
-    final pollingUri = Uri.parse(request.configuration.tokenEndpoint);
+    final pollingUri = Uri.parse(configuration.tokenEndpoint);
     var pollingBody = <String, String>{
       "grant_type": "urn:ietf:params:oauth:grant-type:device_code",
       "device_code": codeResponse.deviceCode,
@@ -245,11 +255,13 @@ class OpenIdConnect {
     return authorizationResponse;
   }
 
-  static Future<AuthorizationResponse> refreshToken(
-      {required RefreshRequest request}) async {
+  static Future<AuthorizationResponse> refreshToken({
+    required RefreshRequest request,
+    required OpenIdConfiguration configuration,
+  }) async {
     final response = await httpRetry(
       () => http.post(
-        Uri.parse(request.configuration.tokenEndpoint),
+        Uri.parse(configuration.tokenEndpoint),
         body: request.toMap(),
       ),
     );
@@ -297,12 +309,12 @@ class OpenIdConnect {
     await storage.delete(key: CODE_CHALLENGE_STORAGE_KEY);
 
     final result = await _completeCodeExchange(
+      configuration: configuration,
       request: InteractiveAuthorizationRequest._(
         clientId: clientId,
         clientSecret: clientSecret,
         redirectUrl: redirectUrl,
         scopes: scopes,
-        configuration: configuration,
         autoRefresh: autoRefresh,
         codeVerifier: codeVerifier!,
         codeChallenge: codeChallenge!,
