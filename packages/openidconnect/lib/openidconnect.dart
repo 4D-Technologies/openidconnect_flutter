@@ -46,7 +46,8 @@ class OpenIdConnect {
   static const CODE_CHALLENGE_STORAGE_KEY = "openidconnect_code_challenge";
 
   static Future<OpenIdConfiguration> getConfiguration(
-      String discoveryDocumentUri) async {
+    String discoveryDocumentUri,
+  ) async {
     final response =
         await httpRetry(() => http.get(Uri.parse(discoveryDocumentUri)));
     if (response == null) {

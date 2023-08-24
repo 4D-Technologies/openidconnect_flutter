@@ -29,6 +29,7 @@
 .pub-cache/
 .pub/
 build/
+pubspec_overrides.yaml
 
 # Android related
 **/android/**/gradle-wrapper.jar
@@ -73,3 +74,4 @@ build/
 !**/ios/**/default.mode2v3
 !**/ios/**/default.pbxuser
 !**/ios/**/default.perspectivev3
+

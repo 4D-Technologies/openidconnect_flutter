@@ -21,10 +21,10 @@ analyzer:
     unused_local_variable: error
     invalid_assignment: error
     missing_return: error
-    dead_code: info
-    todo: ignore
-  exclude:
-    - "**/*.freezed.dart"
-    - "**/*.g.dart"
-    - "**/*.config.dart"
-    - "**/generated_plugin_registrant.dart"
+    # dead_code: info
+    # todo: ignore
+  # exclude:
+  #   - "**/*.freezed.dart"
+  #   - "**/*.g.dart"
+  #   - "**/*.config.dart"
+  #   - "**/generated_plugin_registrant.dart"
