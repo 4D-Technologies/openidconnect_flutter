@@ -1,0 +1,26 @@
+version: '3.3'
+services:
+  keycloak-db:
+    image: postgres
+    environment:
+      POSTGRES_DB: keycloak
+      POSTGRES_USER: keycloak
+      POSTGRES_PASSWORD: password
+      
+  keycloak:
+    image: jboss/keycloak
+    ports:
+    - '18080:8080'
+    - '18443:8443'
+    environment:
+      KEYCLOAK_ADMIN: admin
+      KEYCLOAK_ADMIN_PASSWORD: admin
+      DB_VENDOR: postgres
+      DB_ADDR: keycloak-db
+      DB_DATABASE: keycloak
+      DB_USER: keycloak
+      DB_PASSWORD: password
+    command:
+      - start-dev
+    depends_on:
+      - keycloak-db
