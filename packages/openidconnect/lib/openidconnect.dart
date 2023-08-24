@@ -29,6 +29,7 @@ part 'src/models/requests/interactive_authorization_request.dart';
 part 'src/models/requests/password_authorization_request.dart';
 part 'src/models/requests/refresh_request.dart';
 part 'src/models/requests/logout_request.dart';
+part 'src/models/requests/logout_token_request.dart';
 part 'src/models/requests/revoke_token_request.dart';
 part 'src/models/requests/device_authorization_request.dart';
 part 'src/models/requests/user_info_request.dart';
@@ -269,6 +270,21 @@ class OpenIdConnect {
     try {
       await httpRetry(
         () => http.get(url),
+      );
+    } on HttpResponseException catch (e) {
+      throw LogoutException(e.toString());
+    }
+  }
+
+  /// Keycloak compatible logout
+  /// see https://www.keycloak.org/docs/latest/securing_apps/#logout-endpoint
+  static Future<void> logoutToken({required LogoutTokenRequest request}) async {
+    if (request.configuration.endSessionEndpoint == null) return;
+
+    final url = Uri.parse(request.configuration.endSessionEndpoint!);
+    try {
+      await httpRetry(
+            () => http.post(url, body: request.toMap()),
       );
     } on HttpResponseException catch (e) {
       throw LogoutException(e.toString());
