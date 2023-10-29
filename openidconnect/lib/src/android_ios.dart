@@ -9,8 +9,10 @@ class OpenIdConnectAndroidiOS {
     required int popupWidth,
     required int popupHeight,
   }) async {
-    //Create the url
+    final controller = WebViewController()
+      ..setJavaScriptMode(JavaScriptMode.unrestricted);
 
+    //Create the url
     final result = await showDialog<String?>(
       context: context,
       barrierDismissible: false,
@@ -27,14 +29,18 @@ class OpenIdConnectAndroidiOS {
                 min(popupWidth.toDouble(), MediaQuery.of(context).size.width),
             height:
                 min(popupHeight.toDouble(), MediaQuery.of(context).size.height),
-            child: flutterWebView.WebView(
-              javascriptMode: flutterWebView.JavascriptMode.unrestricted,
-              initialUrl: authorizationUrl,
-              onPageFinished: (url) {
-                if (url.startsWith(redirectUrl)) {
-                  Navigator.pop(dialogContext, url);
-                }
-              },
+            child: flutterWebView.WebViewWidget(
+              controller: controller
+                ..setNavigationDelegate(
+                  NavigationDelegate(
+                    onPageFinished: (String url) {
+                      if (url.startsWith(redirectUrl)) {
+                        Navigator.pop(dialogContext, url);
+                      }
+                    },
+                  ),
+                )
+                ..loadRequest(Uri.parse(authorizationUrl)),
             ),
           ),
           title: Text(title),
