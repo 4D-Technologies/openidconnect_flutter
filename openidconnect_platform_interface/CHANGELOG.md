@@ -1,3 +1,11 @@
+## [1.0.15] - February 7th 2024
+
+- Update dependencies
+
+## [1.0.14] - October 29th, 2023
+
+- Update dependencies
+
 ## [1.0.13] - November 10th, 2022
 
 - Update dependencies

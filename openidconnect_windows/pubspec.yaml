@@ -1,6 +1,6 @@
 name: openidconnect_windows
 description: Windows implementation for OpenIdConnect.
-version: 0.0.6
+version: 0.0.7
 homepage: https://github.com/Concerti-IO/openidconnect_flutter/tree/main/openidconnect_windows
 
 environment:
@@ -9,11 +9,11 @@ environment:
 dependencies:
   flutter:
     sdk: flutter
-  openidconnect_platform_interface: ^1.0.13
+  openidconnect_platform_interface: ^1.0.14
   webview_windows: ^0.3.0
 
 dev_dependencies:
-  flutter_lints: ^3.0.0
+  flutter_lints: ^3.0.1
   flutter_test:
     sdk: flutter
 

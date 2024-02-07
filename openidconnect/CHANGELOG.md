@@ -1,3 +1,11 @@
+# [1.0.27] - February 7th, 2024
+
+- Update dependencies
+
+# [1.0.26] - October 29th, 2023
+
+- Update dependencies
+
 # [1.0.25] - November 16th, 2022
 
 - Revert platform indicator as it was causing problems with windows
