@@ -79,6 +79,14 @@ class OpenIdConnect {
     required InteractiveAuthorizationRequest request,
   }) async {
     late String? responseUrl;
+    bool useFullScreen = false;
+
+    if (request.additionalParameters != null) {
+      if (request.additionalParameters!['useFullScreen'] != null) {
+        useFullScreen =
+            request.additionalParameters!['useFullScreen'] == 'true';
+      }
+    }
 
     final authEndpoint = Uri.parse(request.configuration.authorizationEndpoint);
     final uri = authEndpoint.replace(
@@ -95,8 +103,11 @@ class OpenIdConnect {
         title: title,
         authorizationUrl: uri.toString(),
         redirectUrl: request.redirectUrl,
+        dialogPadding: request.dialogPadding,
+        iconsColor: request.iconsColor,
         popupHeight: request.popupHeight,
         popupWidth: request.popupWidth,
+        useFullScreen: useFullScreen,
       );
     } else if (kIsWeb) {
       final storage = FlutterSecureStorage();
