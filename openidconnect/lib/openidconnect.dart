@@ -5,13 +5,13 @@ import 'dart:convert';
 import 'dart:io';
 import 'dart:math';
 
+import 'package:encrypt_shared_preferences/provider.dart';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
-import 'package:cryptography/cryptography.dart' as crypto;
+import 'package:cryptography_plus/cryptography_plus.dart' as crypto;
 import 'package:jwt_decoder/jwt_decoder.dart';
 import 'package:openidconnect_platform_interface/openidconnect_platform_interface.dart';
 import 'package:flutter/foundation.dart';
-import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:retry/retry.dart';
 import 'package:webview_flutter/webview_flutter.dart' as flutterWebView;
 import 'package:url_launcher/url_launcher.dart';
@@ -42,6 +42,8 @@ part 'src/models/responses/device_code_response.dart';
 part 'src/models/responses/authorization_response.dart';
 
 final _platform = OpenIdConnectPlatform.instance;
+
+const storage_key = "open_id_connect_";
 
 class OpenIdConnect {
   static const CODE_VERIFIER_STORAGE_KEY = "openidconnect_code_verifier";
@@ -99,11 +101,17 @@ class OpenIdConnect {
         popupWidth: request.popupWidth,
       );
     } else if (kIsWeb) {
-      final storage = FlutterSecureStorage();
-      await storage.write(
-          key: CODE_VERIFIER_STORAGE_KEY, value: request.codeVerifier);
-      await storage.write(
-          key: CODE_CHALLENGE_STORAGE_KEY, value: request.codeChallenge);
+      await EncryptedSharedPreferences.initialize(storage_key);
+      final storage = EncryptedSharedPreferences.getInstance();
+
+      await storage.setString(
+        CODE_VERIFIER_STORAGE_KEY,
+        request.codeVerifier,
+      );
+      await storage.setString(
+        CODE_CHALLENGE_STORAGE_KEY,
+        request.codeChallenge,
+      );
 
       responseUrl = await _platform.authorizeInteractive(
         context: context,
@@ -117,8 +125,8 @@ class OpenIdConnect {
 
       if (responseUrl == null) return null;
 
-      await storage.delete(key: CODE_VERIFIER_STORAGE_KEY);
-      await storage.delete(key: CODE_CHALLENGE_STORAGE_KEY);
+      await storage.remove(CODE_VERIFIER_STORAGE_KEY);
+      await storage.remove(CODE_CHALLENGE_STORAGE_KEY);
     } else {
       //TODO add other implementations as they become available. For now, all desktop uses device code flow instead of authorization code flow
       return await OpenIdConnect.authorizeDevice(
@@ -306,12 +314,13 @@ class OpenIdConnect {
 
     if (response == null) return null;
 
-    final storage = new FlutterSecureStorage();
-    final codeVerifier = await storage.read(key: CODE_VERIFIER_STORAGE_KEY);
-    final codeChallenge = await storage.read(key: CODE_CHALLENGE_STORAGE_KEY);
+    final storage = EncryptedSharedPreferences.getInstance();
 
-    await storage.delete(key: CODE_VERIFIER_STORAGE_KEY);
-    await storage.delete(key: CODE_CHALLENGE_STORAGE_KEY);
+    final codeVerifier = await storage.getString(CODE_VERIFIER_STORAGE_KEY);
+    final codeChallenge = await storage.getString(CODE_CHALLENGE_STORAGE_KEY);
+
+    await storage.remove(CODE_VERIFIER_STORAGE_KEY);
+    await storage.remove(CODE_CHALLENGE_STORAGE_KEY);
 
     final result = await _completeCodeExchange(
       request: InteractiveAuthorizationRequest._(

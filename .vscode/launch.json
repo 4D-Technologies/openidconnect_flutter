@@ -9,7 +9,28 @@
       "cwd": "openidconnect\\example",
       "request": "launch",
       "type": "dart",
-      "args": ["--web-enable-expression-evaluation", "--web-port", "62568"]
+      "args": [
+        "--web-enable-expression-evaluation",
+        "--disable-web-security",
+        "--web-port",
+        "62568"
+      ]
+    },
+    {
+      "name": "example chrome",
+      "cwd": "openidconnect\\example",
+      "request": "launch",
+      "type": "dart",
+      "args": [
+        "-d",
+        "chrome",
+        "--web-port",
+        "62568",
+        "--web-browser-flag",
+        "--disable-web-security",
+        "--web-browser-flag",
+        "--user-data-dir=%temp%/search"
+      ]
     },
     {
       "name": "example (profile mode)",
@@ -17,7 +38,11 @@
       "request": "launch",
       "type": "dart",
       "flutterMode": "profile",
-      "args": ["--web-enable-expression-evaluation", "--web-port", "62568"]
+      "args": [
+        "--web-enable-expression-evaluation",
+        "--web-port",
+        "62568"
+      ]
     }
   ]
 }

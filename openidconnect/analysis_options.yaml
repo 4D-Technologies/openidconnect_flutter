@@ -12,6 +12,7 @@ analyzer:
   language:
     strict-inference: true
     strict-raw-types: true
+    strict-casts: false
   strong-mode:
     implicit-casts: false
     implicit-dynamic: false

@@ -59,6 +59,8 @@ class OpenIdConnectClient {
       audiences: audiences,
     );
 
+    await EncryptedSharedPreferences.initialize(storage_key);
+
     await client._processStartup();
 
     return client;
@@ -396,7 +398,8 @@ class OpenIdConnectClient {
       await _completeLogin(response);
 
       if (autoRefresh) {
-        var refreshTime = _identity!.expiresAt.difference(DateTime.now().toUtc());
+        var refreshTime =
+            _identity!.expiresAt.difference(DateTime.now().toUtc());
         refreshTime -= Duration(minutes: 1);
 
         _autoRenewTimer = Future.delayed(refreshTime, refresh);

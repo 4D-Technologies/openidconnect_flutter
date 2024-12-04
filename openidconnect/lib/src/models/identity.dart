@@ -42,46 +42,30 @@ class OpenIdIdentity extends AuthorizationResponse {
         state: response.state,
       );
 
-  static final _storage = FlutterSecureStorage(
-    aOptions: AndroidOptions(
-      encryptedSharedPreferences: true,
-    ),
-  );
+  static final _storage = EncryptedSharedPreferences.getInstance();
 
   static Future<OpenIdIdentity?> load() async {
     try {
       late String? accessToken;
       late String? refreshToken;
-      late String expiresOn;
+      late int expiresOn;
       late String tokenType;
       late String? idToken;
       late String? state;
 
-      await Future.wait([
-        _storage
-            .read(key: _AUTHENTICATION_TOKEN_KEY)
-            .then((value) => accessToken = value),
-        _storage
-            .read(key: _EXPIRES_ON_KEY)
-            .then((value) => expiresOn = value ?? "0"),
-        _storage.read(key: _ID_TOKEN_KEY).then((value) => idToken = value),
-        _storage
-            .read(key: _TOKEN_TYPE_KEY)
-            .then((value) => tokenType = value ?? "bearer"),
-        _storage
-            .read(key: _REFRESH_TOKEN_KEY)
-            .then((value) => refreshToken = value),
-        _storage.read(key: _STATE_KEY).then((value) => state = value),
-      ]);
+      accessToken = _storage.getString(_AUTHENTICATION_TOKEN_KEY);
+      idToken = _storage.getString(_ID_TOKEN_KEY);
+      expiresOn = _storage.getInt(_EXPIRES_ON_KEY) ?? 0;
+      tokenType = _storage.getString(_TOKEN_TYPE_KEY) ?? "bearer";
+      state = _storage.getString(_STATE_KEY);
+      refreshToken = _storage.getString(_REFRESH_TOKEN_KEY);
 
       if (accessToken == null || idToken == null) return null;
 
       return OpenIdIdentity(
-        accessToken: accessToken!,
-        expiresAt: DateTime.fromMillisecondsSinceEpoch(
-          int.parse(expiresOn),
-        ),
-        idToken: idToken!,
+        accessToken: accessToken,
+        expiresAt: DateTime.fromMillisecondsSinceEpoch(expiresOn),
+        idToken: idToken,
         tokenType: tokenType,
         refreshToken: refreshToken,
         state: state,
@@ -96,31 +80,28 @@ class OpenIdIdentity extends AuthorizationResponse {
   }
 
   Future<void> save() async {
-    await _storage.write(
-        key: _AUTHENTICATION_TOKEN_KEY, value: this.accessToken);
+    _storage.setString(_AUTHENTICATION_TOKEN_KEY, this.accessToken);
 
-    await _storage.write(key: _ID_TOKEN_KEY, value: this.idToken);
-    await this.refreshToken == null
-        ? _storage.delete(key: _REFRESH_TOKEN_KEY)
-        : _storage.write(key: _REFRESH_TOKEN_KEY, value: this.refreshToken);
+    _storage.setString(_ID_TOKEN_KEY, this.idToken);
+    this.refreshToken == null
+        ? _storage.remove(_REFRESH_TOKEN_KEY)
+        : _storage.setString(_REFRESH_TOKEN_KEY, this.refreshToken);
 
-    await _storage.write(key: _TOKEN_TYPE_KEY, value: this.tokenType);
-    await _storage.write(
-        key: _EXPIRES_ON_KEY,
-        value: this.expiresAt.millisecondsSinceEpoch.toString());
-    await this.state == null
-        ? _storage.delete(key: _STATE_KEY)
-        : _storage.write(key: _STATE_KEY, value: this.state);
+    _storage.setString(_TOKEN_TYPE_KEY, this.tokenType);
+    _storage.setInt(_EXPIRES_ON_KEY, this.expiresAt.millisecondsSinceEpoch);
+    this.state == null
+        ? _storage.remove(_STATE_KEY)
+        : _storage.setString(_STATE_KEY, this.state);
   }
 
   static Future<void> clear() async {
     await Future.wait([
-      _storage.delete(key: _AUTHENTICATION_TOKEN_KEY),
-      _storage.delete(key: _ID_TOKEN_KEY),
-      _storage.delete(key: _REFRESH_TOKEN_KEY),
-      _storage.delete(key: _TOKEN_TYPE_KEY),
-      _storage.delete(key: _EXPIRES_ON_KEY),
-      _storage.delete(key: _STATE_KEY)
+      _storage.remove(_AUTHENTICATION_TOKEN_KEY),
+      _storage.remove(_ID_TOKEN_KEY),
+      _storage.remove(_REFRESH_TOKEN_KEY),
+      _storage.remove(_TOKEN_TYPE_KEY),
+      _storage.remove(_EXPIRES_ON_KEY),
+      _storage.remove(_STATE_KEY)
     ]);
   }
 

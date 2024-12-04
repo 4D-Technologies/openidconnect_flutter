@@ -1,4 +1,7 @@
 import 'dart:async';
+
+import 'package:web/web.dart' as html;
+
 // In order to *not* need this ignore, consider extracting the "web" version
 // of your plugin as a separate package, instead of inlining it in the same
 // package as the core of your plugin.
@@ -6,7 +9,6 @@ import 'dart:async';
 import 'package:flutter/widgets.dart';
 import 'package:flutter_web_plugins/flutter_web_plugins.dart';
 import 'package:openidconnect_platform_interface/openidconnect_platform_interface.dart';
-import "dart:html" as html;
 
 /// A web implementation of the OpenidconnectWeb plugin.
 class OpenIdConnectWeb extends OpenIdConnectPlatform {
@@ -33,9 +35,9 @@ class OpenIdConnectWeb extends OpenIdConnectPlatform {
     }
 
     final top = (html.window.outerHeight - popupHeight) / 2 +
-        (html.window.screen?.available.top ?? 0);
+        (html.window.screen.availHeight);
     final left = (html.window.outerWidth - popupWidth) / 2 +
-        (html.window.screen?.available.left ?? 0);
+        (html.window.screen.availWidth);
 
     var options =
         'width=${popupWidth},height=${popupHeight},toolbar=no,location=no,directories=no,status=no,menubar=no,copyhistory=no&top=$top,left=$left';
@@ -50,7 +52,7 @@ class OpenIdConnectWeb extends OpenIdConnectPlatform {
     html.window.onMessage.first.then((event) {
       final url = event.data.toString();
       c.complete(url);
-      child.close();
+      child?.close();
     });
 
     return c.future;
@@ -61,7 +63,7 @@ class OpenIdConnectWeb extends OpenIdConnectPlatform {
     const AUTH_RESPONSE_KEY = "openidconnect_auth_response_info";
 
     final url = html.window.sessionStorage[AUTH_RESPONSE_KEY];
-    html.window.sessionStorage.remove(AUTH_RESPONSE_KEY);
+    html.window.sessionStorage.removeItem(AUTH_RESPONSE_KEY);
 
     return url;
   }

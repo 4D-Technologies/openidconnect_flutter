@@ -32,6 +32,8 @@ class InteractiveAuthorizationRequest extends TokenRequest {
     int popupHeight = 600,
     bool useWebPopup = true,
   }) async {
+    await EncryptedSharedPreferences.initialize(storage_key);
+
     final codeVerifier = List.generate(
         128, (i) => _charset[Random.secure().nextInt(_charset.length)]).join();
 
@@ -75,7 +77,7 @@ class InteractiveAuthorizationRequest extends TokenRequest {
     this.popupHeight = 480,
     this.useWebPopup = true,
   }) : super(
-          grantType: "code",          
+          grantType: "code",
           additionalParameters: {
             "redirect_uri": redirectUrl,
             "login_hint": loginHint ?? "",

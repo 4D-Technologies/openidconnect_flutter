@@ -1,3 +1,9 @@
+# Change Log
+
+## [1.0.16] - December 4th 2024
+
+- Update dependencies
+
 ## [1.0.15] - February 7th 2024
 
 - Update dependencies
