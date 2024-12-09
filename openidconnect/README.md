@@ -26,18 +26,21 @@ Currently supports:
 5. MacOs
 6. Linux
 
-**Important**
+## **Important**
 
-For Linux, Windows and macOS currently your IdP MUST support device code flow to function properly with interactive login. Otherwise you must use password flow. This is because webView is not yet supported on these environments.
+1. For Linux, Windows and macOS currently your IdP MUST support device code flow to function properly with interactive login. Otherwise you must use password flow. This is because webView is not yet supported on these environments.
+
+2. If using the base library you **MUST** call OpenIdConnect.InitializeEncryption(encryptionKey) before use.  It MUST be a 16 character key that you generate. If using the OpenIdConnectClient you SHOULD provide your own encryption key and NOT rely on the default. Espeically if you're using EncryptedSharedPreferences in your project, it should use the same key.
 
 ## Getting Started
 
 1. Add openidconnect to your pubspec.yaml file
 2. Import openidconnect: import 'package:openidconnect/openidconnect.dart';
 3. Call the various methods: on OpenIdConnect OR use OpenIdConnectClient and subscribe to the events
-4. Review the example project for details.
+4. Make sure that you call initalizeEncryption (If you've already initialized EncryptedSharedPreferences you don't need to call this again) on OpenIdConnect if you're using it directly or pass in your app's 16 character encryption key to OpenIdConnectClient.
+5. Review the example project for details.
 
-**(more detailed instructions coming soon)**
+(more detailed instructions coming soon)
 
 ## Web
 

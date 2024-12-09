@@ -13,6 +13,7 @@ class _PasswordPageState extends State<PasswordPage> {
   final _formKey = GlobalKey<FormState>();
   final _userFormKey = GlobalKey<FormState>();
 
+  OpenIdConnectClient? client;
   String discoveryUrl = defaultDiscoveryUrl;
   OpenIdConfiguration? discoveryDocument;
 
@@ -21,6 +22,56 @@ class _PasswordPageState extends State<PasswordPage> {
   AuthorizationResponse? identity;
 
   String? errorMessage = null;
+
+  Future<void> lookupSettings() async {
+    _formKey.currentState!.save();
+    if (!_formKey.currentState!.validate()) return;
+
+    try {
+      final configuration = await OpenIdConnect.getConfiguration(discoveryUrl);
+      client = await OpenIdConnectClient.create(
+        clientId: defaultClientId,
+        discoveryDocumentUrl: discoveryUrl,
+        scopes: defaultscopes,
+        audiences: defaultAudience,
+        clientSecret: defaultClientSecret,
+        redirectUrl: defaultRedirectUrl,
+        webUseRefreshTokens: true,
+        autoRefresh: true,
+        encryptionKey: defaultEncryptionKey,
+      );
+      setState(() {
+        discoveryDocument = configuration;
+        errorMessage = null;
+      });
+    } on Exception catch (e) {
+      setState(() {
+        errorMessage = e.toString();
+        discoveryDocument = null;
+      });
+    }
+  }
+
+  Future<void> authorize() async {
+    if (client == null) return;
+    _userFormKey.currentState!.save();
+    if (!_userFormKey.currentState!.validate()) return;
+
+    try {
+      final response = await client!
+          .loginWithPassword(userName: userName, password: password);
+
+      setState(() {
+        identity = response;
+        errorMessage = null;
+      });
+    } on Exception catch (e) {
+      setState(() {
+        errorMessage = e.toString();
+        identity = null;
+      });
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -56,24 +107,7 @@ class _PasswordPageState extends State<PasswordPage> {
                     },
                   ),
                   TextButton.icon(
-                    onPressed: () async {
-                      _formKey.currentState!.save();
-                      if (!_formKey.currentState!.validate()) return;
-
-                      try {
-                        final configuration =
-                            await OpenIdConnect.getConfiguration(discoveryUrl);
-                        setState(() {
-                          discoveryDocument = configuration;
-                          errorMessage = null;
-                        });
-                      } on Exception catch (e) {
-                        setState(() {
-                          errorMessage = e.toString();
-                          discoveryDocument = null;
-                        });
-                      }
-                    },
+                    onPressed: lookupSettings,
                     icon: Icon(Icons.search),
                     label: Text("Lookup OpenId Connect Configuration"),
                   ),
@@ -112,34 +146,7 @@ class _PasswordPageState extends State<PasswordPage> {
                       },
                     ),
                     TextButton.icon(
-                      onPressed: () async {
-                        _userFormKey.currentState!.save();
-                        if (!_userFormKey.currentState!.validate()) return;
-
-                        try {
-                          final response =
-                              await OpenIdConnect.authorizePassword(
-                            request: PasswordAuthorizationRequest(
-                              clientId: defaultClientId,
-                              clientSecret: defaultClientSecret,
-                              userName: userName,
-                              password: password,
-                              scopes: defaultscopes,
-                              configuration: discoveryDocument!,
-                              autoRefresh: false,
-                            ),
-                          );
-                          setState(() {
-                            identity = response;
-                            errorMessage = null;
-                          });
-                        } on Exception catch (e) {
-                          setState(() {
-                            errorMessage = e.toString();
-                            identity = null;
-                          });
-                        }
-                      },
+                      onPressed: authorize,
                       icon: Icon(Icons.login),
                       label: Text("Login"),
                     ),
@@ -148,7 +155,8 @@ class _PasswordPageState extends State<PasswordPage> {
                           style: Theme.of(context)
                               .textTheme
                               .bodyLarge!
-                              .copyWith(color: Theme.of(context).colorScheme.error)),
+                              .copyWith(
+                                  color: Theme.of(context).colorScheme.error)),
                       visible: errorMessage != null,
                     ),
                   ],

@@ -25,7 +25,7 @@
         "-d",
         "chrome",
         "--web-port",
-        "62568",
+        "15503",
         "--web-browser-flag",
         "--disable-web-security",
         "--web-browser-flag",

@@ -12,11 +12,57 @@ class DeviceCodePage extends StatefulWidget {
 class _DeviceCodePageState extends State<DeviceCodePage> {
   final _formKey = GlobalKey<FormState>();
 
+  OpenIdConnectClient? client;
   String discoveryUrl = defaultDiscoveryUrl;
   OpenIdConfiguration? discoveryDocument;
   AuthorizationResponse? identity;
 
   String? errorMessage = null;
+
+  Future<void> lookupSettings() async {
+    _formKey.currentState!.save();
+    if (!_formKey.currentState!.validate()) return;
+
+    try {
+      final configuration = await OpenIdConnect.getConfiguration(discoveryUrl);
+      client = await OpenIdConnectClient.create(
+          clientId: defaultClientId,
+          discoveryDocumentUrl: discoveryUrl,
+          scopes: defaultscopes,
+          audiences: defaultAudience,
+          clientSecret: defaultClientSecret,
+          redirectUrl: defaultRedirectUrl,
+          webUseRefreshTokens: true,
+          autoRefresh: true,
+          encryptionKey: defaultEncryptionKey);
+      setState(() {
+        discoveryDocument = configuration;
+        errorMessage = null;
+      });
+    } on Exception catch (e) {
+      setState(() {
+        errorMessage = e.toString();
+        discoveryDocument = null;
+      });
+    }
+  }
+
+  Future<void> authorize() async {
+    try {
+      if (client == null) return;
+
+      final response = await client!.loginWithDeviceCode();
+      setState(() {
+        identity = response;
+        errorMessage = null;
+      });
+    } on Exception catch (e) {
+      setState(() {
+        errorMessage = e.toString();
+        identity = null;
+      });
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -50,50 +96,13 @@ class _DeviceCodePageState extends State<DeviceCodePage> {
                 },
               ),
               TextButton.icon(
-                onPressed: () async {
-                  _formKey.currentState!.save();
-                  if (!_formKey.currentState!.validate()) return;
-                  try {
-                    final configuration =
-                        await OpenIdConnect.getConfiguration(discoveryUrl);
-                    setState(() {
-                      discoveryDocument = configuration;
-                      errorMessage = null;
-                    });
-                  } on Exception catch (e) {
-                    setState(() {
-                      errorMessage = e.toString();
-                      discoveryDocument = null;
-                    });
-                  }
-                },
+                onPressed: lookupSettings,
                 icon: Icon(Icons.search),
                 label: Text("Lookup OpenId Connect Configuration"),
               ),
               Visibility(
                 child: TextButton.icon(
-                  onPressed: () async {
-                    try {
-                      final response = await OpenIdConnect.authorizeDevice(
-                        request: DeviceAuthorizationRequest(
-                          clientId: defaultClientId,
-                          clientSecret: defaultClientSecret,
-                          scopes: defaultscopes,
-                          audience: defaultAudience,
-                          configuration: discoveryDocument!,
-                        ),
-                      );
-                      setState(() {
-                        identity = response;
-                        errorMessage = null;
-                      });
-                    } on Exception catch (e) {
-                      setState(() {
-                        errorMessage = e.toString();
-                        identity = null;
-                      });
-                    }
-                  },
+                  onPressed: authorize,
                   icon: Icon(Icons.login),
                   label: Text("Login"),
                 ),

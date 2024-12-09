@@ -1,11 +1,34 @@
 # Change Log
 
+## [1.0.36] = Deceimber 9th, 2024
+
+- Refactor client library location
+
+## [1.0.34] = Deceimber 9th, 2024
+
+- Switch to async for shared preferences
+
+## [1.0.33] = Deceimber 9th, 2024
+
+- Require the encryption string in client.
+
+## [1.0.32] = Deceimber 9th, 2024
+
+- Added static initalizeEncryption function on OpenIdConnect if not using the client to setup EncryptedSharedPreferences. You should set this to your app key if you use EncryptedSharedPreferences or generate a new 16 character key for OpenIdConnect.
+- Added a parameter to the OpenIdConnectClient to set the encryption key so that there is no conflict for your apps. You should set this and not use the default.
+- Cleaned up the example app to use the OpenIdConnectClient and make it more explicit what's going on.
+
+## [1.0.31] - December 4th, 2024
+
+- Add back the picture property on the identity
+
 ## [1.0.30] - December 4th, 2024
 
 - Remove Flutter Secure Storage
 - Update web support to not use dart:html for wasm support
 - Updated crypto library to cryptography_plus as the old package was abandoned
-- 
+- Enable Device Authorization code flow with code prompt for verification if you so desire. (#17)
+- Fixed tokens not being saved when doing interactive without a popup (#30)
 
 ## [1.0.27] - February 7th, 2024
 

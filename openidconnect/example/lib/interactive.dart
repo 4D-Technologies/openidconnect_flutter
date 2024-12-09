@@ -15,10 +15,62 @@ class _InteractivePageState extends State<InteractivePage> {
 
   String discoveryUrl = defaultDiscoveryUrl;
   OpenIdConfiguration? discoveryDocument;
+  OpenIdConnectClient? client;
   AuthorizationResponse? identity;
   bool usePopup = true;
 
   String? errorMessage = null;
+
+  Future<void> lookupSettings() async {
+    _formKey.currentState!.save();
+    if (!_formKey.currentState!.validate()) return;
+
+    try {
+      final configuration = await OpenIdConnect.getConfiguration(discoveryUrl);
+      client = await OpenIdConnectClient.create(
+        clientId: defaultClientId,
+        discoveryDocumentUrl: discoveryUrl,
+        scopes: defaultscopes,
+        audiences: defaultAudience,
+        clientSecret: defaultClientSecret,
+        redirectUrl: defaultRedirectUrl,
+        webUseRefreshTokens: true,
+        autoRefresh: true,
+        encryptionKey: defaultEncryptionKey,
+      );
+      setState(() {
+        discoveryDocument = configuration;
+        errorMessage = null;
+      });
+    } on Exception catch (e) {
+      setState(() {
+        errorMessage = e.toString();
+        discoveryDocument = null;
+      });
+    }
+  }
+
+  Future<void> authorize() async {
+    try {
+      if (client == null) return;
+
+      final response = await client!.loginInteractive(
+        context: context,
+        title: "Login",
+        useWebPopup: usePopup,
+      );
+
+      setState(() {
+        identity = response;
+        errorMessage = null;
+      });
+    } on Exception catch (e) {
+      setState(() {
+        errorMessage = e.toString();
+        identity = null;
+      });
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -52,24 +104,7 @@ class _InteractivePageState extends State<InteractivePage> {
                 },
               ),
               TextButton.icon(
-                onPressed: () async {
-                  _formKey.currentState!.save();
-                  if (!_formKey.currentState!.validate()) return;
-
-                  try {
-                    final configuration =
-                        await OpenIdConnect.getConfiguration(discoveryUrl);
-                    setState(() {
-                      discoveryDocument = configuration;
-                      errorMessage = null;
-                    });
-                  } on Exception catch (e) {
-                    setState(() {
-                      errorMessage = e.toString();
-                      discoveryDocument = null;
-                    });
-                  }
-                },
+                onPressed: lookupSettings,
                 icon: Icon(Icons.search),
                 label: Text("Lookup OpenId Connect Configuration"),
               ),
@@ -87,32 +122,7 @@ class _InteractivePageState extends State<InteractivePage> {
               ),
               Visibility(
                 child: TextButton.icon(
-                  onPressed: () async {
-                    try {
-                      final response = await OpenIdConnect.authorizeInteractive(
-                        context: context,
-                        title: "Login",
-                        request: await InteractiveAuthorizationRequest.create(
-                          clientId: defaultClientId,
-                          clientSecret: defaultClientSecret,
-                          redirectUrl: defaultRedirectUrl,
-                          scopes: defaultscopes,
-                          configuration: discoveryDocument!,
-                          autoRefresh: false,
-                          useWebPopup: usePopup,
-                        ),
-                      );
-                      setState(() {
-                        identity = response;
-                        errorMessage = null;
-                      });
-                    } on Exception catch (e) {
-                      setState(() {
-                        errorMessage = e.toString();
-                        identity = null;
-                      });
-                    }
-                  },
+                  onPressed: authorize,
                   icon: Icon(Icons.login),
                   label: Text("Login"),
                 ),

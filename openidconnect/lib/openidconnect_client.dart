@@ -41,6 +41,7 @@ class OpenIdConnectClient {
   static Future<OpenIdConnectClient> create({
     required String discoveryDocumentUrl,
     required String clientId,
+    required String encryptionKey,
     String? redirectUrl,
     String? clientSecret,
     bool autoRefresh = true,
@@ -48,6 +49,8 @@ class OpenIdConnectClient {
     List<String> scopes = DEFAULT_SCOPES,
     List<String>? audiences,
   }) async {
+    await EncryptedSharedPreferencesAsync.initialize(encryptionKey);
+
     final client = OpenIdConnectClient._(
       discoveryDocumentUrl: discoveryDocumentUrl,
       clientId: clientId,
@@ -58,8 +61,6 @@ class OpenIdConnectClient {
       autoRefresh: autoRefresh,
       audiences: audiences,
     );
-
-    await EncryptedSharedPreferences.initialize(storage_key);
 
     await client._processStartup();
 

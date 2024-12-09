@@ -17,7 +17,7 @@ import 'package:webview_flutter/webview_flutter.dart' as flutterWebView;
 import 'package:url_launcher/url_launcher.dart';
 import 'package:webview_flutter/webview_flutter.dart';
 
-part './src/openidconnect_client.dart';
+part 'openidconnect_client.dart';
 part './src/android_ios.dart';
 part './src/helpers.dart';
 
@@ -43,11 +43,17 @@ part 'src/models/responses/authorization_response.dart';
 
 final _platform = OpenIdConnectPlatform.instance;
 
-const storage_key = "open_id_connect_";
-
 class OpenIdConnect {
   static const CODE_VERIFIER_STORAGE_KEY = "openidconnect_code_verifier";
   static const CODE_CHALLENGE_STORAGE_KEY = "openidconnect_code_challenge";
+
+  static Future<void> initalizeEncryption(String encryptionKey) async {
+    if (encryptionKey.length != 16) {
+      throw ArgumentError("The encryption key must be 16 characters long.");
+    }
+
+    await EncryptedSharedPreferencesAsync.initialize(encryptionKey);
+  }
 
   static Future<OpenIdConfiguration> getConfiguration(
       String discoveryDocumentUri) async {
@@ -101,8 +107,7 @@ class OpenIdConnect {
         popupWidth: request.popupWidth,
       );
     } else if (kIsWeb) {
-      await EncryptedSharedPreferences.initialize(storage_key);
-      final storage = EncryptedSharedPreferences.getInstance();
+      final storage = EncryptedSharedPreferencesAsync.getInstance();
 
       await storage.setString(
         CODE_VERIFIER_STORAGE_KEY,
@@ -255,7 +260,6 @@ class OpenIdConnect {
     return authorizationResponse;
   }
 
-
   static Future<DeviceCodeResponse> authorizeDeviceGetDeviceCodeResponse(
       {required DeviceAuthorizationRequest request}) async {
     var response = await httpRetry(
@@ -272,18 +276,21 @@ class OpenIdConnect {
     return codeResponse;
   }
 
-  static Future<AuthorizationResponse> authorizeDeviceCompleteDeviceCodeResponseRequest(
-      {required DeviceAuthorizationRequest request,
-      required DeviceCodeResponse codeResponse}) async {
-    await launch(
-      Uri.parse(codeResponse.verificationUrlComplete)
-          .replace(
-            queryParameters:
-                // ignore: unnecessary_cast
-                {"user_code": codeResponse.userCode} as Map<String, dynamic>,
-          )
-          .toString(),
-      enableJavaScript: true,
+  static Future<AuthorizationResponse>
+      authorizeDeviceCompleteDeviceCodeResponseRequest(
+          {required DeviceAuthorizationRequest request,
+          required DeviceCodeResponse codeResponse}) async {
+    await launchUrl(
+      Uri.parse(codeResponse.verificationUrlComplete).replace(
+        queryParameters:
+            // ignore: unnecessary_cast
+            {"user_code": codeResponse.userCode} as Map<String, dynamic>,
+      ),
+      webViewConfiguration: WebViewConfiguration(
+        enableJavaScript: true,
+        enableDomStorage: true,
+      ),
+      browserConfiguration: BrowserConfiguration(showTitle: false),
     );
 
     final pollingUri = Uri.parse(request.configuration.tokenEndpoint);
@@ -307,7 +314,8 @@ class OpenIdConnect {
 
       final json = jsonDecode(pollingResponse.body) as Map<String, dynamic>;
 
-      if (pollingResponse.statusCode >= 200 && pollingResponse.statusCode < 300) {
+      if (pollingResponse.statusCode >= 200 &&
+          pollingResponse.statusCode < 300) {
         authorizationResponse = AuthorizationResponse.fromJson(json);
         break;
       }
@@ -328,7 +336,7 @@ class OpenIdConnect {
 
     return authorizationResponse;
   }
-  
+
   static Future<AuthorizationResponse> refreshToken(
       {required RefreshRequest request}) async {
     final response = await httpRetry(
@@ -388,7 +396,7 @@ class OpenIdConnect {
 
     if (response == null) return null;
 
-    final storage = EncryptedSharedPreferences.getInstance();
+    final storage = EncryptedSharedPreferencesAsync.getInstance();
 
     final codeVerifier = await storage.getString(CODE_VERIFIER_STORAGE_KEY);
     final codeChallenge = await storage.getString(CODE_CHALLENGE_STORAGE_KEY);

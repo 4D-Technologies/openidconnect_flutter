@@ -42,7 +42,7 @@ class OpenIdIdentity extends AuthorizationResponse {
         state: response.state,
       );
 
-  static final _storage = EncryptedSharedPreferences.getInstance();
+  static final _storage = EncryptedSharedPreferencesAsync.getInstance();
 
   static Future<OpenIdIdentity?> load() async {
     try {
@@ -53,12 +53,12 @@ class OpenIdIdentity extends AuthorizationResponse {
       late String? idToken;
       late String? state;
 
-      accessToken = _storage.getString(_AUTHENTICATION_TOKEN_KEY);
-      idToken = _storage.getString(_ID_TOKEN_KEY);
-      expiresOn = _storage.getInt(_EXPIRES_ON_KEY) ?? 0;
-      tokenType = _storage.getString(_TOKEN_TYPE_KEY) ?? "bearer";
-      state = _storage.getString(_STATE_KEY);
-      refreshToken = _storage.getString(_REFRESH_TOKEN_KEY);
+      accessToken = await _storage.getString(_AUTHENTICATION_TOKEN_KEY);
+      idToken = await _storage.getString(_ID_TOKEN_KEY);
+      expiresOn = await _storage.getInt(_EXPIRES_ON_KEY) ?? 0;
+      tokenType = await _storage.getString(_TOKEN_TYPE_KEY) ?? "bearer";
+      state = await _storage.getString(_STATE_KEY);
+      refreshToken = await _storage.getString(_REFRESH_TOKEN_KEY);
 
       if (accessToken == null || idToken == null) return null;
 
@@ -80,18 +80,20 @@ class OpenIdIdentity extends AuthorizationResponse {
   }
 
   Future<void> save() async {
-    _storage.setString(_AUTHENTICATION_TOKEN_KEY, this.accessToken);
+    await Future.wait([
+      _storage.setString(_AUTHENTICATION_TOKEN_KEY, this.accessToken),
+      _storage.setString(_ID_TOKEN_KEY, this.idToken),
+      _storage.setString(_TOKEN_TYPE_KEY, this.tokenType),
+      _storage.setInt(_EXPIRES_ON_KEY, this.expiresAt.millisecondsSinceEpoch)
+    ]);
 
-    _storage.setString(_ID_TOKEN_KEY, this.idToken);
     this.refreshToken == null
-        ? _storage.remove(_REFRESH_TOKEN_KEY)
-        : _storage.setString(_REFRESH_TOKEN_KEY, this.refreshToken);
+        ? await _storage.remove(_REFRESH_TOKEN_KEY)
+        : await _storage.setString(_REFRESH_TOKEN_KEY, this.refreshToken);
 
-    _storage.setString(_TOKEN_TYPE_KEY, this.tokenType);
-    _storage.setInt(_EXPIRES_ON_KEY, this.expiresAt.millisecondsSinceEpoch);
     this.state == null
-        ? _storage.remove(_STATE_KEY)
-        : _storage.setString(_STATE_KEY, this.state);
+        ? await _storage.remove(_STATE_KEY)
+        : await _storage.setString(_STATE_KEY, this.state);
   }
 
   static Future<void> clear() async {
@@ -119,6 +121,7 @@ class OpenIdIdentity extends AuthorizationResponse {
       : claims["role"] is String
           ? <String>[claims["role"].toString()]
           : List<String>.from(claims["role"] as Iterable<dynamic>);
+  String? get picture => claims["picture"]?.toString();
 
   @override
   operator ==(Object o) {
