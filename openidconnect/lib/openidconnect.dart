@@ -5,41 +5,37 @@ import 'dart:convert';
 import 'dart:io';
 import 'dart:math';
 
+import 'package:cryptography_plus/cryptography_plus.dart' as crypto;
 import 'package:encrypt_shared_preferences/provider.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
-import 'package:cryptography_plus/cryptography_plus.dart' as crypto;
 import 'package:jwt_decoder/jwt_decoder.dart';
 import 'package:openidconnect_platform_interface/openidconnect_platform_interface.dart';
-import 'package:flutter/foundation.dart';
 import 'package:retry/retry.dart';
-import 'package:webview_flutter/webview_flutter.dart' as flutterWebView;
 import 'package:url_launcher/url_launcher.dart';
+import 'package:webview_flutter/webview_flutter.dart' as flutterWebView;
 import 'package:webview_flutter/webview_flutter.dart';
 
-part 'openidconnect_client.dart';
 part './src/android_ios.dart';
 part './src/helpers.dart';
-
-part './src/models/identity.dart';
 part './src/models/event.dart';
-
+part './src/models/identity.dart';
+part 'openidconnect_client.dart';
 part 'src/config/openidconfiguration.dart';
-
+part 'src/models/requests/device_authorization_request.dart';
 part 'src/models/requests/interactive_authorization_request.dart';
-part 'src/models/requests/password_authorization_request.dart';
-part 'src/models/requests/refresh_request.dart';
 part 'src/models/requests/logout_request.dart';
 part 'src/models/requests/logout_token_request.dart';
+part 'src/models/requests/password_authorization_request.dart';
+part 'src/models/requests/refresh_request.dart';
 part 'src/models/requests/revoke_token_request.dart';
-part 'src/models/requests/device_authorization_request.dart';
-part 'src/models/requests/user_info_request.dart';
 part 'src/models/requests/token_request.dart';
+part 'src/models/requests/user_info_request.dart';
 part 'src/models/requests/user_registration_request.dart';
-
-part 'src/models/responses/token_response.dart';
-part 'src/models/responses/device_code_response.dart';
 part 'src/models/responses/authorization_response.dart';
+part 'src/models/responses/device_code_response.dart';
+part 'src/models/responses/token_response.dart';
 
 final _platform = OpenIdConnectPlatform.instance;
 
@@ -87,6 +83,8 @@ class OpenIdConnect {
     required InteractiveAuthorizationRequest request,
   }) async {
     late String? responseUrl;
+    final bool useFullScreen =
+        request.additionalParameters?['useFullScreen'] == 'true';
 
     final authEndpoint = Uri.parse(request.configuration.authorizationEndpoint);
     final uri = authEndpoint.replace(
@@ -105,6 +103,9 @@ class OpenIdConnect {
         redirectUrl: request.redirectUrl,
         popupHeight: request.popupHeight,
         popupWidth: request.popupWidth,
+        dialogPadding: request.dialogPadding,
+        iconsColor: request.iconsColor,
+        useFullScreen: useFullScreen,
       );
     } else if (kIsWeb) {
       final storage = EncryptedSharedPreferencesAsync.getInstance();

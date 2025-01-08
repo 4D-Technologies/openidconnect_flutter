@@ -10,6 +10,8 @@ class InteractiveAuthorizationRequest extends TokenRequest {
   final String codeChallenge;
   final bool useWebPopup;
   final String redirectUrl;
+  final EdgeInsets dialogPadding;
+  final Color iconsColor;
 
   /// read: https://openid.net/specs/openid-connect-core-1_0.html#AuthRequest
   ///
@@ -28,6 +30,8 @@ class InteractiveAuthorizationRequest extends TokenRequest {
     String? loginHint,
     Iterable<String>? prompts,
     Map<String, String>? additionalParameters,
+    EdgeInsets dialogPadding = EdgeInsets.zero,
+    Color iconsColor = Colors.black,
     int popupWidth = 640,
     int popupHeight = 600,
     bool useWebPopup = true,
@@ -53,6 +57,8 @@ class InteractiveAuthorizationRequest extends TokenRequest {
       clientSecret: clientSecret,
       loginHint: loginHint,
       prompts: prompts,
+      dialogPadding: dialogPadding,
+      iconsColor: iconsColor,
       popupHeight: popupHeight,
       popupWidth: popupWidth,
       useWebPopup: useWebPopup,
@@ -71,6 +77,8 @@ class InteractiveAuthorizationRequest extends TokenRequest {
     String? loginHint,
     super.prompts,
     Map<String, String>? additionalParameters,
+    this.dialogPadding = EdgeInsets.zero,
+    this.iconsColor = Colors.black,
     this.popupWidth = 640,
     this.popupHeight = 480,
     this.useWebPopup = true,
