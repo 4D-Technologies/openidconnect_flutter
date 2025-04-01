@@ -1,19 +1,19 @@
 name: openidconnect_web
 description: Web implementation for OpenIdConnect.
-version: 1.0.25
+version: 1.0.26
 homepage: https://github.com/4D-Technologies/openidconnect_flutter/tree/main/openidconnect_web
 
 environment:
-  sdk: '>=3.5.3 <4.0.0'
-  flutter: '>=3.4.0'
+  sdk: ">=3.5.3 <4.0.0"
+  flutter: ">=3.4.0"
 
 dependencies:
   flutter:
     sdk: flutter
   flutter_web_plugins:
     sdk: flutter
-  openidconnect_platform_interface: ^1.0.16
-  web: ^1.1.0
+  openidconnect_platform_interface: ^1.0.17
+  web: ^1.1.1
 
 dev_dependencies:
   flutter_lints: ^5.0.0

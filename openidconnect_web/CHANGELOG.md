@@ -1,5 +1,9 @@
 # Change Log
 
+## [1.0.26] - April 1st 2025
+
+- Dependency Update
+
 ## [1.0.25] - December 4th 2024
 
 - Remove dart:html for wasm support
@@ -7,7 +11,6 @@
 ## [1.0.24] - December 4th 2024
 
 - Update dependencies
-
 
 ## [1.0.23] - February 7th 2024
 

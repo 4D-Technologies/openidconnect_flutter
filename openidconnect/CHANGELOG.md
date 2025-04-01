@@ -1,5 +1,9 @@
 # Change Log
 
+## [1.0.37] = April 1st, 2025
+
+- Update dependencies
+
 ## [1.0.36] = Deceimber 9th, 2024
 
 - Refactor client library location
