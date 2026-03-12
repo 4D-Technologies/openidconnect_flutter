@@ -1,6 +1,6 @@
 name: openidconnect
 description: OpenIdConnect library for flutter.
-version: 1.0.42
+version: 1.0.44
 homepage: https://github.com/4D-Technologies/openidconnect_flutter
 
 environment:
@@ -18,13 +18,13 @@ dependencies:
   jwt_decoder: ^2.0.1
 
   url_launcher: ^6.3.2
-  http: ^1.5.0
+  http: ^1.6.0
   retry: ^3.1.2
 
   # TODO Remove these once native implementations can be added. Refactor so that the native implementations don't need to do the full cycle through.
-  webview_flutter: ^4.13.0
-  encrypt_shared_preferences: ^0.9.10
-  cryptography_plus: ^2.7.1
+  webview_flutter: ^4.13.1
+  encrypt_shared_preferences: ^1.0.1
+  cryptography_plus: ^3.0.0
 
 dev_dependencies:
   flutter_lints:

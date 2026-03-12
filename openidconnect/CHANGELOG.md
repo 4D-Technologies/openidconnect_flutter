@@ -1,5 +1,9 @@
 # Change Log
 
+## [1.0.44] - March 12th 2026
+
+- Update version dependencies.
+
 ## [1.0.43] - Nov 12th, 2025
 
 - Enable lookup based on username claim for user name in the client.

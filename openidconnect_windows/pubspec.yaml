@@ -13,7 +13,7 @@ dependencies:
   webview_windows: ^0.4.0
 
 dev_dependencies:
-  flutter_lints: ^5.0.0
+  flutter_lints: 
   flutter_test:
     sdk: flutter
 
