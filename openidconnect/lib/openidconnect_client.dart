@@ -92,15 +92,22 @@ class OpenIdConnectClient {
         _raiseEvent(AuthEvent(AuthEventTypes.NotLoggedIn));
         return;
       } else {
-        try {
-          if (isTokenAboutToExpire && !await refresh(raiseEvents: false)) {
+        if (isTokenAboutToExpire) {
+          try {
+            final isRefreshed = await refresh(raiseEvents: false).timeout(
+                Duration(seconds: 15));
+
+            isRefreshed
+                ? _raiseEvent(AuthEvent(AuthEventTypes.Success))
+                : _raiseEvent(AuthEvent(AuthEventTypes.NotLoggedIn));
+            return;
+          } on TimeoutException catch (e) {
             _raiseEvent(AuthEvent(AuthEventTypes.NotLoggedIn));
             return;
           }
-        } on Exception {
-          // offline or server unreachable - proceed with cached token
+
+          _raiseEvent(AuthEvent(AuthEventTypes.Success));
         }
-        _raiseEvent(AuthEvent(AuthEventTypes.Success));
       }
     } else {
       _raiseEvent(AuthEvent(AuthEventTypes.NotLoggedIn));
