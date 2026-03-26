@@ -92,9 +92,13 @@ class OpenIdConnectClient {
         _raiseEvent(AuthEvent(AuthEventTypes.NotLoggedIn));
         return;
       } else {
-        if (isTokenAboutToExpire && !await refresh(raiseEvents: false)) {
-          _raiseEvent(AuthEvent(AuthEventTypes.NotLoggedIn));
-          return;
+        try {
+          if (isTokenAboutToExpire && !await refresh(raiseEvents: false)) {
+            _raiseEvent(AuthEvent(AuthEventTypes.NotLoggedIn));
+            return;
+          }
+        } on Exception {
+          // offline or server unreachable - proceed with cached token
         }
         _raiseEvent(AuthEvent(AuthEventTypes.Success));
       }
@@ -115,7 +119,10 @@ class OpenIdConnectClient {
   bool get initializationComplete => _isInitializationComplete;
 
   bool get hasTokenExpired =>
-      _identity!.expiresAt.difference(DateTime.now().toUtc()).isNegative;
+      _identity!
+          .expiresAt
+          .difference(DateTime.now().toUtc())
+          .isNegative;
 
   bool get isTokenAboutToExpire {
     var refreshTime = _identity!.expiresAt.difference(DateTime.now().toUtc());
