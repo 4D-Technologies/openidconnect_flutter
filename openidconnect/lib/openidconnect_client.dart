@@ -105,9 +105,9 @@ class OpenIdConnectClient {
             _raiseEvent(AuthEvent(AuthEventTypes.NotLoggedIn));
             return;
           }
-
-          _raiseEvent(AuthEvent(AuthEventTypes.Success));
         }
+
+        _raiseEvent(AuthEvent(AuthEventTypes.Success));
       }
     } else {
       _raiseEvent(AuthEvent(AuthEventTypes.NotLoggedIn));
