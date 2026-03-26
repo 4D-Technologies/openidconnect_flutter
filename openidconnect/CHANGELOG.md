@@ -1,5 +1,9 @@
 # Change Log
 
+## [1.0.45] - March 26th 2026
+
+- Added timeout handling on refresh
+
 ## [1.0.44] - March 12th 2026
 
 - Update version dependencies.
