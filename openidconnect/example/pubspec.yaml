@@ -15,7 +15,7 @@ dependencies:
   openidconnect:
     path: ../
 
-  cupertino_icons: ^1.0.8
+  cupertino_icons: ^1.0.9
 
 dev_dependencies:
   flutter_lints: ^6.0.0
