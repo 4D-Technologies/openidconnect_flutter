@@ -127,7 +127,10 @@ class OpenIdConnectClient {
   bool get initializationComplete => _isInitializationComplete;
 
   bool get hasTokenExpired =>
-      _identity!.expiresAt.difference(DateTime.now().toUtc()).isNegative;
+      _identity!
+          .expiresAt
+          .difference(DateTime.now().toUtc())
+          .isNegative;
 
   bool get isTokenAboutToExpire {
     var refreshTime = _identity!.expiresAt.difference(DateTime.now().toUtc());
@@ -482,8 +485,23 @@ class OpenIdConnectClient {
 
       return true;
     } on Exception catch (e) {
+      // In case when refresh request fails but we know that identity is present
+      // and the token has not expired, we can keep the identity and raise an
+      // error event to notify the app that there is an issue while refreshing
+      // the token.
+      //
+      // There is no need to clear the identity in this case because it is still
+      // valid.
+      if (identity != null && !hasTokenExpired) {
+        _raiseEvent(AuthEvent(AuthEventTypes.Error, message: e.toString()));
+        return false;
+      }
+
+      // Otherwise, if the identity has already expired, then we clear it and
+      // raise the AuthEventTypes.NotLoggedIn to notify the app that the user
+      // should log in again.
       clearIdentity();
-      _raiseEvent(AuthEvent(AuthEventTypes.Error, message: e.toString()));
+      _raiseEvent(AuthEvent(AuthEventTypes.NotLoggedIn, message: e.toString()));
       return false;
     } finally {
       _refreshing = false;
