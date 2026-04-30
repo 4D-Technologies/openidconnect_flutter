@@ -30,6 +30,8 @@ Currently supports:
 
 1. Interactive login now uses `native_authentication`, which means it follows the platform-native browser/session rules instead of embedding the IdP inside a WebView.
 
+   This aligns the mobile/desktop interactive flow with the current OAuth 2.0 for Native Apps guidance in RFC 8252 by avoiding embedded user-agents for native platforms.
+
 2. Your `redirectUrl` must be compatible with the target platform:
    - `http://localhost[:port]/path` for Linux / Windows (and optionally macOS)
    - a custom scheme such as `my.app://callback` for Android / iOS / macOS
@@ -55,7 +57,9 @@ Currently supports:
 
 1. Copy the callback.html file from openidconnect_web (in this repo) into the web folder of your app. Make sure that your Idp has the proper redirect path https://{your_url_to_app/callback.html} as one of the accepted urls.
 
-2. OpenIdConnect web has 2 separate interactive login flows as a result of security restrictions in the browser. (Password and device flows are identical for all platforms) In most cases you'll want to use the default popup window to handle authentication as this keeps everything in process and doesn't require a reload of your flutter application. However, if you have to initiate interactive login outside of clicking a button on the page, your browser will block the popup and put a prompt up asking the user to allow it. This is a bad thing of course. Thus you can set useWebPopup = false on interactiveAuthorization when you need to initialize your authorization outside of a button click. This will result in a redirect in the same page and then the login page on your IdP will redirect back to /callback.html (see notes). This will then be processed using the OpenIdConnect.processStartup or by the OpenIdConnectClient on .create() and then your app will resume as normal including the url that it left off.
+2. OpenIdConnect web has 2 separate interactive login flows as a result of security restrictions in the browser. (Password and device flows are identical for all platforms) In most cases you'll want to use the default popup window to handle authentication as this keeps everything in process and doesn't require a reload of your flutter application. However, if you have to initiate interactive login outside of clicking a button on the page, your browser will block the popup and put a prompt up asking the user to allow it. This is a bad thing of course. Thus you can set `useWebPopup = false` on interactive authorization when you need to initialize your authorization outside of a button click. This will redirect the current page to the IdP and then back to `/callback.html`.
+
+   In that redirect-loop mode, the original `loginInteractive`/`authorizeInteractive` call should be treated as a navigation handoff, not as an immediately consumable authorization result. Completion happens after the app reloads and `OpenIdConnect.processStartup(...)` or `OpenIdConnectClient.create(...)` processes the callback response.
 
 **Note:** It is VERY important to make sure you test on Firefox with the web, as it's behavior for blocking popups is _significantly_ more restrictive than Chromium browsers.
 
@@ -64,6 +68,11 @@ Currently supports:
 1. Expand callback configuration examples for each platform.
 2. Add more end-to-end coverage around interactive login/logout flows.
 3. More documentation!
+
+## Issue/PR status notes
+
+- The historic iOS/custom-scheme redirect failures and embedded-WebView concerns are addressed by the new Darwin/native-authentication structure instead of by patching the old WebView dialog flow.
+- The old full-screen WebView dialog PR is intentionally not carried forward because native platforms now use the system authentication surface rather than an in-app dialog.
 
 ## Contributing
 

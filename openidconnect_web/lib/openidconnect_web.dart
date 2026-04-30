@@ -27,11 +27,15 @@ class OpenIdConnectWeb extends OpenIdConnectPlatform {
     bool useWebRedirectLoop = false,
   }) async {
     if (useWebRedirectLoop) {
-      const AUTH_DESTINATION_KEY = "openidconnect_auth_destination_url";
+      const authDestinationKey = "openidconnect_auth_destination_url";
       html.window.sessionStorage
-          .setItem(AUTH_DESTINATION_KEY, html.window.location.toString());
+          .setItem(authDestinationKey, html.window.location.toString());
       html.window.location.assign(authorizationUrl);
-      return Future<String?>.value(null);
+
+      // Same-tab redirect flows intentionally hand control to the browser and
+      // resume via processStartup/OpenIdConnectClient.create() after the app is
+      // loaded again on the callback page.
+      return Completer<String?>().future;
     }
 
     final top = (html.window.outerHeight - popupHeight) / 2 +
@@ -60,10 +64,10 @@ class OpenIdConnectWeb extends OpenIdConnectPlatform {
 
   @override
   Future<String?> processStartup() async {
-    const AUTH_RESPONSE_KEY = "openidconnect_auth_response_info";
+    const authResponseKey = "openidconnect_auth_response_info";
 
-    final url = html.window.sessionStorage.getItem(AUTH_RESPONSE_KEY);
-    html.window.sessionStorage.removeItem(AUTH_RESPONSE_KEY);
+    final url = html.window.sessionStorage.getItem(authResponseKey);
+    html.window.sessionStorage.removeItem(authResponseKey);
 
     return url;
   }
