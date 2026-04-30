@@ -1,0 +1,30 @@
+name: openidconnect_darwin
+description: Darwin implementation for OpenIdConnect.
+version: 0.0.1
+homepage: https://github.com/4D-Technologies/openidconnect_flutter/tree/main/openidconnect_darwin
+
+environment:
+  sdk: ">=3.8.0 <4.0.0"
+  flutter: ">=3.27.0"
+
+dependencies:
+  flutter:
+    sdk: flutter
+  native_authentication: <2.0.0
+  openidconnect_platform_interface: ^1.0.17
+
+dev_dependencies:
+  flutter_lints:
+  flutter_test:
+    sdk: flutter
+
+flutter:
+  plugin:
+    implements: openidconnect
+    platforms:
+      ios:
+        dartPluginClass: OpenIdConnectDarwin
+        fileName: openidconnect_darwin.dart
+      macos:
+        dartPluginClass: OpenIdConnectDarwin
+        fileName: openidconnect_darwin.dart

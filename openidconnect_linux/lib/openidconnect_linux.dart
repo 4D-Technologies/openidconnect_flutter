@@ -1,21 +1,16 @@
 import 'package:flutter/widgets.dart';
 import 'package:native_authentication/native_authentication.dart';
+import 'package:openidconnect_linux/src/native_authentication_support.dart';
 import 'package:openidconnect_platform_interface/openidconnect_platform_interface.dart';
-import 'package:openidconnect_windows/src/native_authentication_support.dart';
 
-class OpenIdConnectWindows extends OpenIdConnectPlatform {
-  OpenIdConnectWindows({NativeAuthentication? nativeAuthentication})
+class OpenIdConnectLinux extends OpenIdConnectPlatform {
+  OpenIdConnectLinux({NativeAuthentication? nativeAuthentication})
     : _nativeAuthentication = nativeAuthentication ?? NativeAuthentication();
 
   final NativeAuthentication _nativeAuthentication;
 
   static void registerWith() {
-    OpenIdConnectPlatform.instance = OpenIdConnectWindows();
-  }
-
-  @override
-  Future<String?> processStartup() {
-    return Future.value(null);
+    OpenIdConnectPlatform.instance = OpenIdConnectLinux();
   }
 
   @override
@@ -34,4 +29,7 @@ class OpenIdConnectWindows extends OpenIdConnectPlatform {
       redirectUrl: redirectUrl,
     );
   }
+
+  @override
+  Future<String?> processStartup() => Future<String?>.value(null);
 }

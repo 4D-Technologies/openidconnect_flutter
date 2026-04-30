@@ -2,9 +2,9 @@
 
 Standards compliant OpenIdConnect library for flutter that supports:
 
-1. Code flow with PKCE (the evolution of implicit flow). This allows poping a web browser (included) for authentication to any open id connect compliant IdP.
+1. Code flow with PKCE (the evolution of implicit flow). This launches the platform-native authentication surface for authentication to any open id connect compliant IdP.
 2. Password flow. For use when you control the client and server and you wish to have your users login directly to your IdP.
-3. Device flow. For use typically with console applications and similar. Used currently for Windows, Linux and MacOs until WebView is supported on those platforms.
+3. Device flow. For use typically with console applications and similar.
 4. Full OpenIdConnect Client library that encapsulates the entire process including refresh tokens, refreshing and publishes an event stream for your application.
 
 The base library supports most of the basic OpenIdConnect functionality:
@@ -28,17 +28,26 @@ Currently supports:
 
 ## **Important**
 
-1. For Linux, Windows and macOS currently your IdP MUST support device code flow to function properly with interactive login. Otherwise you must use password flow. This is because webView is not yet supported on these environments.
+1. Interactive login now uses `native_authentication`, which means it follows the platform-native browser/session rules instead of embedding the IdP inside a WebView.
 
-2. If using the base library you **MUST** call OpenIdConnect.InitializeEncryption(encryptionKey) before use.  It MUST be a 16 character key that you generate. If using the OpenIdConnectClient you SHOULD provide your own encryption key and NOT rely on the default. Espeically if you're using EncryptedSharedPreferences in your project, it should use the same key.
+2. Your `redirectUrl` must be compatible with the target platform:
+   - `http://localhost[:port]/path` for Linux / Windows (and optionally macOS)
+   - a custom scheme such as `my.app://callback` for Android / iOS / macOS
+   - an HTTPS callback you own and have configured for App Links / Universal Links where supported
+
+3. On Android, if you use a custom scheme or HTTPS callback, add the `native_authentication` callback receiver entries shown in that package's documentation.
+
+4. Token persistence now uses `flutter_secure_storage`, so you no longer need to manage a custom 16 character encryption key. `OpenIdConnect.initalizeEncryption(...)` and the `encryptionKey` parameter on `OpenIdConnectClient.create(...)` remain available for backward compatibility, but are no longer used to derive storage encryption.
 
 ## Getting Started
 
 1. Add openidconnect to your pubspec.yaml file
 2. Import openidconnect: import 'package:openidconnect/openidconnect.dart';
 3. Call the various methods: on OpenIdConnect OR use OpenIdConnectClient and subscribe to the events
-4. Make sure that you call initalizeEncryption (If you've already initialized EncryptedSharedPreferences you don't need to call this again) on OpenIdConnect if you're using it directly or pass in your app's 16 character encryption key to OpenIdConnectClient.
-5. Review the example project for details.
+4. If you already call `initalizeEncryption(...)` or pass an `encryptionKey` into `OpenIdConnectClient.create(...)`, you can keep doing so while upgrading. Those APIs are now compatibility no-ops because secure storage is handled by `flutter_secure_storage`.
+
+5. On the web, `flutter_secure_storage` requires HTTPS (or `localhost`) to function correctly.
+6. Review the example project for details.
 
 (more detailed instructions coming soon)
 
@@ -52,19 +61,16 @@ Currently supports:
 
 ## TODO
 
-Because of the ever changing nature of desktop support on flutter and incomplete plugin implementations the following are outstanding and will be updated when the functionality exists to do so:
-
-1. Use custom tabs and secure authentication popup on Android and IOS instead of WebView
-2. Use Secure authentication popup on windows (requires work from Tim Sneath on integration with Project Reunion on Windows and Dart)
-3. Switch macOs, and Linux to WebView and/or use secure authentication popup at least on macOs.
-4. More documentation!
+1. Expand callback configuration examples for each platform.
+2. Add more end-to-end coverage around interactive login/logout flows.
+3. More documentation!
 
 ## Contributing
 
-Pull requests most welcome to fix any bugs found or address any of the above TODOs. I'm not a C++, Kotlin or Swift developer, so custom implementations for various environments would be greatly appreciated.
+Pull requests most welcome to fix any bugs found or address any of the above TODOs.
 
 If adding a custom environment other than android and iOS please follow the flutter best practices and add a separate implementation project with: flutter create --template=plugin --platforms={YourPlatformHere} openidconnect\_{YourPlatformHere} and add your code as appropriate there and then update the example project to use the new implementation.
 
-Your new implementation needs to import the platform interface which is exactly one entry. That entry passes in the url to display in the secure browser and the redirect url that you should watch for to respond accordingly. (You can ignore the redirect url on most platforms that support custom URLs such as Android, iOS etc.) You should return the entire redirected URL which should include the ?code= (and perhaps state) when complete.
+If you are integrating with another native-auth package or platform surface, the implementation still needs to return the final redirected URL (including `code` and optional `state`) back to the Dart layer so token exchange and validation continue to happen centrally.
 
 Everything else is handled in native dart code so the implementation is very straight forward.

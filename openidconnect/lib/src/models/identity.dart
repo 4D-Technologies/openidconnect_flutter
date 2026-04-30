@@ -42,8 +42,6 @@ class OpenIdIdentity extends AuthorizationResponse {
     state: response.state,
   );
 
-  static final _storage = EncryptedSharedPreferencesAsync.getInstance();
-
   static Future<OpenIdIdentity?> load() async {
     try {
       late String? accessToken;
@@ -53,12 +51,19 @@ class OpenIdIdentity extends AuthorizationResponse {
       late String? idToken;
       late String? state;
 
-      accessToken = await _storage.getString(_AUTHENTICATION_TOKEN_KEY);
-      idToken = await _storage.getString(_ID_TOKEN_KEY);
-      expiresOn = await _storage.getInt(_EXPIRES_ON_KEY) ?? 0;
-      tokenType = await _storage.getString(_TOKEN_TYPE_KEY) ?? "bearer";
-      state = await _storage.getString(_STATE_KEY);
-      refreshToken = await _storage.getString(_REFRESH_TOKEN_KEY);
+      accessToken = await _OpenIdConnectSecureStorage.getString(
+        _AUTHENTICATION_TOKEN_KEY,
+      );
+      idToken = await _OpenIdConnectSecureStorage.getString(_ID_TOKEN_KEY);
+      expiresOn =
+          await _OpenIdConnectSecureStorage.getInt(_EXPIRES_ON_KEY) ?? 0;
+      tokenType =
+          await _OpenIdConnectSecureStorage.getString(_TOKEN_TYPE_KEY) ??
+          "bearer";
+      state = await _OpenIdConnectSecureStorage.getString(_STATE_KEY);
+      refreshToken = await _OpenIdConnectSecureStorage.getString(
+        _REFRESH_TOKEN_KEY,
+      );
 
       if (accessToken == null || idToken == null) return null;
 
@@ -81,29 +86,38 @@ class OpenIdIdentity extends AuthorizationResponse {
 
   Future<void> save() async {
     await Future.wait([
-      _storage.setString(_AUTHENTICATION_TOKEN_KEY, this.accessToken),
-      _storage.setString(_ID_TOKEN_KEY, this.idToken),
-      _storage.setString(_TOKEN_TYPE_KEY, this.tokenType),
-      _storage.setInt(_EXPIRES_ON_KEY, this.expiresAt.millisecondsSinceEpoch),
+      _OpenIdConnectSecureStorage.setString(
+        _AUTHENTICATION_TOKEN_KEY,
+        this.accessToken,
+      ),
+      _OpenIdConnectSecureStorage.setString(_ID_TOKEN_KEY, this.idToken),
+      _OpenIdConnectSecureStorage.setString(_TOKEN_TYPE_KEY, this.tokenType),
+      _OpenIdConnectSecureStorage.setInt(
+        _EXPIRES_ON_KEY,
+        this.expiresAt.millisecondsSinceEpoch,
+      ),
     ]);
 
     this.refreshToken == null
-        ? await _storage.remove(_REFRESH_TOKEN_KEY)
-        : await _storage.setString(_REFRESH_TOKEN_KEY, this.refreshToken);
+        ? await _OpenIdConnectSecureStorage.remove(_REFRESH_TOKEN_KEY)
+        : await _OpenIdConnectSecureStorage.setString(
+            _REFRESH_TOKEN_KEY,
+            this.refreshToken!,
+          );
 
     this.state == null
-        ? await _storage.remove(_STATE_KEY)
-        : await _storage.setString(_STATE_KEY, this.state);
+        ? await _OpenIdConnectSecureStorage.remove(_STATE_KEY)
+        : await _OpenIdConnectSecureStorage.setString(_STATE_KEY, this.state!);
   }
 
   static Future<void> clear() async {
     await Future.wait([
-      _storage.remove(_AUTHENTICATION_TOKEN_KEY),
-      _storage.remove(_ID_TOKEN_KEY),
-      _storage.remove(_REFRESH_TOKEN_KEY),
-      _storage.remove(_TOKEN_TYPE_KEY),
-      _storage.remove(_EXPIRES_ON_KEY),
-      _storage.remove(_STATE_KEY),
+      _OpenIdConnectSecureStorage.remove(_AUTHENTICATION_TOKEN_KEY),
+      _OpenIdConnectSecureStorage.remove(_ID_TOKEN_KEY),
+      _OpenIdConnectSecureStorage.remove(_REFRESH_TOKEN_KEY),
+      _OpenIdConnectSecureStorage.remove(_TOKEN_TYPE_KEY),
+      _OpenIdConnectSecureStorage.remove(_EXPIRES_ON_KEY),
+      _OpenIdConnectSecureStorage.remove(_STATE_KEY),
     ]);
   }
 

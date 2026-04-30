@@ -1,0 +1,7 @@
+dependency_overrides:
+  openidconnect_darwin:
+    path: ../openidconnect_darwin
+  openidconnect_linux:
+    path: ../openidconnect_linux
+  openidconnect_windows:
+    path: ../openidconnect_windows

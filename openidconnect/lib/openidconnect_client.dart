@@ -45,7 +45,7 @@ class OpenIdConnectClient {
     List<String> scopes = DEFAULT_SCOPES,
     List<String>? audiences,
   }) async {
-    await EncryptedSharedPreferencesAsync.initialize(encryptionKey);
+    await OpenIdConnect.initalizeEncryption(encryptionKey);
 
     final client = OpenIdConnectClient._(
       discoveryDocumentUrl: discoveryDocumentUrl,
@@ -127,10 +127,7 @@ class OpenIdConnectClient {
   bool get initializationComplete => _isInitializationComplete;
 
   bool get hasTokenExpired =>
-      _identity!
-          .expiresAt
-          .difference(DateTime.now().toUtc())
-          .isNegative;
+      _identity!.expiresAt.difference(DateTime.now().toUtc()).isNegative;
 
   bool get isTokenAboutToExpire {
     var refreshTime = _identity!.expiresAt.difference(DateTime.now().toUtc());

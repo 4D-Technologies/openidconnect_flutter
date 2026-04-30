@@ -1,5 +1,10 @@
 # Change Log
 
+## [1.0.47] - April 30th, 2026
+
+- Replace `encrypt_shared_preferences` with `flutter_secure_storage` for token persistence.
+- Keep `initalizeEncryption(...)` and the client `encryptionKey` parameter as backward-compatible no-ops during migration.
+
 ## [1.0.46] - March 30th, 2026
 
 - Fix error handling issue

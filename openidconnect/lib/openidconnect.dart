@@ -5,20 +5,19 @@ import 'dart:convert';
 import 'dart:io';
 import 'dart:math';
 
-import 'package:encrypt_shared_preferences/provider.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:http/http.dart' as http;
 import 'package:cryptography_plus/cryptography_plus.dart' as crypto;
 import 'package:jwt_decoder/jwt_decoder.dart';
+import 'package:native_authentication/native_authentication.dart';
 import 'package:openidconnect_platform_interface/openidconnect_platform_interface.dart';
 import 'package:flutter/foundation.dart';
 import 'package:retry/retry.dart';
-import 'package:webview_flutter/webview_flutter.dart' as flutterWebView;
+import 'package:openidconnect/src/native_authentication_support.dart';
 import 'package:url_launcher/url_launcher.dart';
-import 'package:webview_flutter/webview_flutter.dart';
 
 part 'openidconnect_client.dart';
-part './src/android_ios.dart';
 part './src/helpers.dart';
 
 part './src/models/identity.dart';
@@ -43,17 +42,53 @@ part 'src/models/responses/device_code_response.dart';
 part 'src/models/responses/authorization_response.dart';
 
 final _platform = OpenIdConnectPlatform.instance;
+final _secureStorage = FlutterSecureStorage();
+final _nativeAuthentication = NativeAuthentication();
+
+void _ensureSecureStorageInitialized() {
+  WidgetsFlutterBinding.ensureInitialized();
+}
+
+class _OpenIdConnectSecureStorage {
+  const _OpenIdConnectSecureStorage._();
+
+  static Future<void> initialize([String? _]) async {
+    _ensureSecureStorageInitialized();
+  }
+
+  static Future<void> setString(String key, String value) async {
+    _ensureSecureStorageInitialized();
+    await _secureStorage.write(key: key, value: value);
+  }
+
+  static Future<String?> getString(String key) async {
+    _ensureSecureStorageInitialized();
+    return await _secureStorage.read(key: key);
+  }
+
+  static Future<void> setInt(String key, int value) async {
+    await setString(key, value.toString());
+  }
+
+  static Future<int?> getInt(String key) async {
+    final value = await getString(key);
+    if (value == null) return null;
+
+    return int.tryParse(value);
+  }
+
+  static Future<void> remove(String key) async {
+    _ensureSecureStorageInitialized();
+    await _secureStorage.delete(key: key);
+  }
+}
 
 class OpenIdConnect {
   static const CODE_VERIFIER_STORAGE_KEY = "openidconnect_code_verifier";
   static const CODE_CHALLENGE_STORAGE_KEY = "openidconnect_code_challenge";
 
   static Future<void> initalizeEncryption(String encryptionKey) async {
-    if (encryptionKey.length != 16) {
-      throw ArgumentError("The encryption key must be 16 characters long.");
-    }
-
-    await EncryptedSharedPreferencesAsync.initialize(encryptionKey);
+    await _OpenIdConnectSecureStorage.initialize(encryptionKey);
   }
 
   static Future<OpenIdConfiguration> getConfiguration(
@@ -102,20 +137,18 @@ class OpenIdConnect {
     );
 
     //These are special cases for the various different platforms because of limitations in pubspec.yaml
-    if (!kIsWeb && (Platform.isIOS || Platform.isAndroid)) {
-      responseUrl = await OpenIdConnectAndroidiOS.authorizeInteractive(
-        context: context,
-        title: title,
+    if (!kIsWeb && Platform.isAndroid) {
+      responseUrl = await startNativeAuthenticationFlow(
+        nativeAuthentication: _nativeAuthentication,
         authorizationUrl: uri.toString(),
         redirectUrl: request.redirectUrl,
-        popupHeight: request.popupHeight,
-        popupWidth: request.popupWidth,
       );
     } else if (kIsWeb) {
-      final storage = EncryptedSharedPreferencesAsync.getInstance();
-
-      await storage.setString(CODE_VERIFIER_STORAGE_KEY, request.codeVerifier);
-      await storage.setString(
+      await _OpenIdConnectSecureStorage.setString(
+        CODE_VERIFIER_STORAGE_KEY,
+        request.codeVerifier,
+      );
+      await _OpenIdConnectSecureStorage.setString(
         CODE_CHALLENGE_STORAGE_KEY,
         request.codeChallenge,
       );
@@ -132,21 +165,29 @@ class OpenIdConnect {
 
       if (responseUrl == null) return null;
 
-      await storage.remove(CODE_VERIFIER_STORAGE_KEY);
-      await storage.remove(CODE_CHALLENGE_STORAGE_KEY);
+      await _OpenIdConnectSecureStorage.remove(CODE_VERIFIER_STORAGE_KEY);
+      await _OpenIdConnectSecureStorage.remove(CODE_CHALLENGE_STORAGE_KEY);
+    } else if (Platform.isIOS ||
+        Platform.isMacOS ||
+        Platform.isLinux ||
+        Platform.isWindows) {
+      responseUrl = await _platform.authorizeInteractive(
+        context: context,
+        title: title,
+        authorizationUrl: uri.toString(),
+        redirectUrl: request.redirectUrl,
+        popupHeight: request.popupHeight,
+        popupWidth: request.popupWidth,
+      );
     } else {
-      //TODO add other implementations as they become available. For now, all desktop uses device code flow instead of authorization code flow
-      return await OpenIdConnect.authorizeDevice(
-        request: DeviceAuthorizationRequest(
-          audience: null,
-          clientId: request.clientId,
-          clientSecret: request.clientSecret,
-          configuration: request.configuration,
-          scopes: request.scopes,
-          additionalParameters: request.additionalParameters,
-        ),
+      responseUrl = await startNativeAuthenticationFlow(
+        nativeAuthentication: _nativeAuthentication,
+        authorizationUrl: uri.toString(),
+        redirectUrl: request.redirectUrl,
       );
     }
+
+    if (responseUrl == null) return null;
 
     return await _completeCodeExchange(request: request, url: responseUrl);
   }
@@ -169,14 +210,11 @@ class OpenIdConnect {
     );
 
     //These are special cases for the various different platforms because of limitations in pubspec.yaml
-    if (!kIsWeb && (Platform.isIOS || Platform.isAndroid)) {
-      responseUrl = await OpenIdConnectAndroidiOS.authorizeInteractive(
-        context: context,
-        title: title,
+    if (!kIsWeb && Platform.isAndroid) {
+      responseUrl = await startNativeAuthenticationFlow(
+        nativeAuthentication: _nativeAuthentication,
         authorizationUrl: uri.toString(),
         redirectUrl: request.postLogoutRedirectUrl,
-        popupHeight: request.popupHeight,
-        popupWidth: request.popupWidth,
       );
     } else if (kIsWeb) {
       responseUrl = await _platform.authorizeInteractive(
@@ -188,7 +226,10 @@ class OpenIdConnect {
         popupWidth: request.popupWidth,
         useWebRedirectLoop: !request.useWebPopup,
       );
-    } else {
+    } else if (Platform.isIOS ||
+        Platform.isMacOS ||
+        Platform.isLinux ||
+        Platform.isWindows) {
       responseUrl = await _platform.authorizeInteractive(
         context: context,
         title: title,
@@ -196,7 +237,12 @@ class OpenIdConnect {
         redirectUrl: request.postLogoutRedirectUrl,
         popupHeight: request.popupHeight,
         popupWidth: request.popupWidth,
-        useWebRedirectLoop: !request.useWebPopup,
+      );
+    } else {
+      responseUrl = await startNativeAuthenticationFlow(
+        nativeAuthentication: _nativeAuthentication,
+        authorizationUrl: uri.toString(),
+        redirectUrl: request.postLogoutRedirectUrl,
       );
     }
 
@@ -433,13 +479,15 @@ class OpenIdConnect {
 
     if (response == null) return null;
 
-    final storage = EncryptedSharedPreferencesAsync.getInstance();
+    final codeVerifier = await _OpenIdConnectSecureStorage.getString(
+      CODE_VERIFIER_STORAGE_KEY,
+    );
+    final codeChallenge = await _OpenIdConnectSecureStorage.getString(
+      CODE_CHALLENGE_STORAGE_KEY,
+    );
 
-    final codeVerifier = await storage.getString(CODE_VERIFIER_STORAGE_KEY);
-    final codeChallenge = await storage.getString(CODE_CHALLENGE_STORAGE_KEY);
-
-    await storage.remove(CODE_VERIFIER_STORAGE_KEY);
-    await storage.remove(CODE_CHALLENGE_STORAGE_KEY);
+    await _OpenIdConnectSecureStorage.remove(CODE_VERIFIER_STORAGE_KEY);
+    await _OpenIdConnectSecureStorage.remove(CODE_CHALLENGE_STORAGE_KEY);
 
     final result = await _completeCodeExchange(
       request: InteractiveAuthorizationRequest._(
