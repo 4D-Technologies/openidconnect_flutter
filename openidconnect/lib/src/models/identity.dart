@@ -95,7 +95,7 @@ class OpenIdIdentity extends AuthorizationResponse {
       );
     } on Exception {
       try {
-        clear(tenantId: tenantId);
+        await clear(tenantId: tenantId);
       } on Exception {}
       return null; //Invalid values, flush.
     }
