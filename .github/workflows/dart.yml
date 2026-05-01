@@ -1,0 +1,174 @@
+name: Dart CI
+
+on:
+  push:
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  analyze:
+    name: Analyze ${{ matrix.package }}
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        package:
+          - openidconnect_platform_interface
+          - openidconnect_android
+          - openidconnect_darwin
+          - openidconnect_linux
+          - openidconnect_web
+          - openidconnect_windows
+          - openidconnect
+          - openidconnect/example
+          - openidconnect/test_harness
+
+    defaults:
+      run:
+        working-directory: ${{ matrix.package }}
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+
+      - name: Install dependencies
+        run: flutter pub get
+
+      - name: Analyze package
+        run: flutter analyze lib test
+
+  test:
+    name: Test ${{ matrix.package }}
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        package:
+          - openidconnect_platform_interface
+          - openidconnect_android
+          - openidconnect_darwin
+          - openidconnect_linux
+          - openidconnect_windows
+          - openidconnect
+          - openidconnect/example
+          - openidconnect/test_harness
+
+    defaults:
+      run:
+        working-directory: ${{ matrix.package }}
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+
+      - name: Install dependencies
+        run: flutter pub get
+
+      - name: Run tests
+        run: flutter test
+
+  test-web:
+    name: Test openidconnect_web
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: openidconnect_web
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+
+      - id: setup-chrome
+        uses: browser-actions/setup-chrome@v1
+
+      - name: Enable Flutter web support
+        run: flutter config --enable-web
+
+      - name: Install dependencies
+        run: flutter pub get
+
+      - name: Run web tests in Chrome
+        env:
+          CHROME_EXECUTABLE: ${{ steps.setup-chrome.outputs.chrome-path }}
+        run: flutter test --platform chrome
+
+  build-example:
+    name: Build example (${{ matrix.buildcommand }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: ubuntu-latest
+            buildcommand: linux
+            enable: linux-desktop
+            buildargs: ''
+            setup_java: false
+          - os: ubuntu-latest
+            buildcommand: web
+            enable: web
+            buildargs: ''
+            setup_java: false
+          - os: ubuntu-latest
+            buildcommand: appbundle
+            enable: ''
+            buildargs: ''
+            setup_java: true
+          - os: windows-latest
+            buildcommand: windows
+            enable: ''
+            buildargs: ''
+            setup_java: false
+          - os: macos-latest
+            buildcommand: ios
+            enable: ''
+            buildargs: --no-codesign
+            setup_java: false
+
+    defaults:
+      run:
+        working-directory: openidconnect/example
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+
+      - uses: actions/setup-java@v4
+        if: matrix.setup_java
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Install Linux desktop dependencies
+        if: matrix.buildcommand == 'linux'
+        run: |
+          sudo apt-get update -y
+          sudo apt-get install -y clang cmake ninja-build pkg-config libgtk-3-dev libsecret-1-dev
+
+      - name: Enable Flutter targets
+        if: matrix.enable != ''
+        run: flutter config --enable-${{ matrix.enable }}
+
+      - name: Install example dependencies
+        run: flutter pub get
+
+      - name: Build example
+        run: flutter build ${{ matrix.buildcommand }} ${{ matrix.buildargs }}
