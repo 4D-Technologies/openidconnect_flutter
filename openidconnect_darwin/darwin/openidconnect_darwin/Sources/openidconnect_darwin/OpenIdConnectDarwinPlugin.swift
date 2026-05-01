@@ -5,33 +5,49 @@ import FlutterMacOS
 import Flutter
 #endif
 
+import AuthenticationServices
 import Foundation
 import Security
 
-public class OpenIdConnectDarwinPlugin: NSObject, FlutterPlugin {
-  private static let channelName = "plugins.concerti.io/openidconnect_secure_storage"
+public class OpenIdConnectDarwinPlugin: NSObject, FlutterPlugin, ASWebAuthenticationPresentationContextProviding {
+  private static let storageChannelName = "plugins.concerti.io/openidconnect_secure_storage"
+  private static let authChannelName = "plugins.concerti.io/openidconnect_darwin_auth"
   private let secureStorage = OpenIdConnectDarwinSecureStorage()
+  private var activeAuthenticationSession: ASWebAuthenticationSession?
+  private var pendingAuthenticationResult: FlutterResult?
 
   public static func register(with registrar: FlutterPluginRegistrar) {
     #if os(macOS)
-    let channel = FlutterMethodChannel(
-      name: channelName,
+    let storageChannel = FlutterMethodChannel(
+      name: storageChannelName,
+      binaryMessenger: registrar.messenger
+    )
+    let authChannel = FlutterMethodChannel(
+      name: authChannelName,
       binaryMessenger: registrar.messenger
     )
     #else
-    let channel = FlutterMethodChannel(
-      name: channelName,
+    let storageChannel = FlutterMethodChannel(
+      name: storageChannelName,
+      binaryMessenger: registrar.messenger()
+    )
+    let authChannel = FlutterMethodChannel(
+      name: authChannelName,
       binaryMessenger: registrar.messenger()
     )
     #endif
 
     let instance = OpenIdConnectDarwinPlugin()
-    registrar.addMethodCallDelegate(instance, channel: channel)
+    registrar.addMethodCallDelegate(instance, channel: storageChannel)
+    registrar.addMethodCallDelegate(instance, channel: authChannel)
   }
 
   public func handle(_ call: FlutterMethodCall, result: @escaping FlutterResult) {
     do {
       switch call.method {
+      case "authorizeInteractive":
+        let args = try Self.arguments(from: call.arguments)
+        try authorizeInteractive(args: args, result: result)
       case "initialize":
         result(nil)
       case "write":
@@ -72,6 +88,133 @@ public class OpenIdConnectDarwinPlugin: NSObject, FlutterPlugin {
       throw OpenIdConnectDarwinStorageError.invalidArguments("Missing required argument: \(key)")
     }
     return value
+  }
+
+  private func authorizeInteractive(args: [String: Any], result: @escaping FlutterResult) throws {
+    if pendingAuthenticationResult != nil {
+      throw OpenIdConnectDarwinStorageError.invalidArguments("An interactive authentication session is already in progress.")
+    }
+
+    let authorizationUrlString = try Self.requiredString("authorizationUrl", from: args)
+    let redirectUrlString = try Self.requiredString("redirectUrl", from: args)
+    let preferEphemeralSession = (args["preferEphemeralSession"] as? Bool) ?? false
+
+    guard let authorizationUrl = URL(string: authorizationUrlString) else {
+      throw OpenIdConnectDarwinStorageError.invalidArguments("authorizationUrl was invalid.")
+    }
+
+    guard let redirectUrl = URL(string: redirectUrlString) else {
+      throw OpenIdConnectDarwinStorageError.invalidArguments("redirectUrl was invalid.")
+    }
+
+    let session = try createAuthenticationSession(
+      authorizationUrl: authorizationUrl,
+      redirectUrl: redirectUrl,
+      preferEphemeralSession: preferEphemeralSession,
+      result: result
+    )
+
+    pendingAuthenticationResult = result
+    activeAuthenticationSession = session
+
+    if !session.start() {
+      cleanupAuthenticationSession()
+      throw OpenIdConnectDarwinStorageError.authenticationFailed("Failed to start ASWebAuthenticationSession.")
+    }
+  }
+
+  private func createAuthenticationSession(
+    authorizationUrl: URL,
+    redirectUrl: URL,
+    preferEphemeralSession: Bool,
+    result: @escaping FlutterResult
+  ) throws -> ASWebAuthenticationSession {
+    let completionHandler: ASWebAuthenticationSession.CompletionHandler = { [weak self] callbackUrl, error in
+      guard let self else { return }
+      defer { self.cleanupAuthenticationSession() }
+
+      if let sessionError = error as? ASWebAuthenticationSessionError, sessionError.code == .canceledLogin {
+        result(FlutterError(code: "user_cancelled", message: "The user cancelled authentication.", details: nil))
+        return
+      }
+
+      if let error {
+        result(FlutterError(code: "authorize_interactive_error", message: error.localizedDescription, details: nil))
+        return
+      }
+
+      guard let callbackUrl else {
+        result(FlutterError(code: "authorize_interactive_error", message: "Authentication completed without a callback URL.", details: nil))
+        return
+      }
+
+      result(callbackUrl.absoluteString)
+    }
+
+    let session: ASWebAuthenticationSession
+    let path = redirectUrl.path.isEmpty ? "/*" : redirectUrl.path
+
+    switch redirectUrl.scheme?.lowercased() {
+    case "http":
+      throw OpenIdConnectDarwinStorageError.invalidArguments("HTTP localhost redirects are handled by the macOS loopback flow and should not be routed through the native Apple session bridge.")
+    case "https":
+      guard let host = redirectUrl.host, !host.isEmpty else {
+        throw OpenIdConnectDarwinStorageError.invalidArguments("HTTPS redirect URLs must include a host.")
+      }
+
+      if #available(iOS 17.4, macOS 14.4, *) {
+        session = ASWebAuthenticationSession(
+          url: authorizationUrl,
+          callback: .https(host: host, path: path),
+          completionHandler: completionHandler
+        )
+      } else {
+        throw OpenIdConnectDarwinStorageError.authenticationFailed("HTTPS redirect callbacks require iOS 17.4+ or macOS 14.4+.")
+      }
+    case let scheme? where !scheme.isEmpty:
+      if #available(iOS 17.4, macOS 14.4, *) {
+        session = ASWebAuthenticationSession(
+          url: authorizationUrl,
+          callback: .customScheme(scheme),
+          completionHandler: completionHandler
+        )
+      } else {
+        session = ASWebAuthenticationSession(
+          url: authorizationUrl,
+          callbackURLScheme: scheme,
+          completionHandler: completionHandler
+        )
+      }
+    default:
+      throw OpenIdConnectDarwinStorageError.invalidArguments("Redirect URLs must include a URI scheme.")
+    }
+
+    session.prefersEphemeralWebBrowserSession = preferEphemeralSession
+    session.presentationContextProvider = self
+    return session
+  }
+
+  private func cleanupAuthenticationSession() {
+    activeAuthenticationSession = nil
+    pendingAuthenticationResult = nil
+  }
+
+  public func presentationAnchor(for session: ASWebAuthenticationSession) -> ASPresentationAnchor {
+    #if os(macOS)
+    return NSApp.keyWindow ?? NSApp.windows.first ?? ASPresentationAnchor()
+    #else
+    let connectedScenes = UIApplication.shared.connectedScenes
+    for scene in connectedScenes {
+      guard let windowScene = scene as? UIWindowScene else { continue }
+      if let keyWindow = windowScene.windows.first(where: { $0.isKeyWindow }) {
+        return keyWindow
+      }
+      if let firstWindow = windowScene.windows.first {
+        return firstWindow
+      }
+    }
+    return ASPresentationAnchor()
+    #endif
   }
 }
 
@@ -168,6 +311,7 @@ private final class OpenIdConnectDarwinSecureStorage {
 private enum OpenIdConnectDarwinStorageError: LocalizedError {
   case invalidArguments(String)
   case invalidData
+  case authenticationFailed(String)
   case osStatus(OSStatus, operation: String)
 
   var errorDescription: String? {
@@ -176,6 +320,8 @@ private enum OpenIdConnectDarwinStorageError: LocalizedError {
       return message
     case .invalidData:
       return "The stored keychain value was invalid."
+    case let .authenticationFailed(message):
+      return message
     case let .osStatus(status, operation):
       let message = SecCopyErrorMessageString(status, nil) as String? ?? "Unknown security error"
       return "Unable to \(operation): \(status) (\(message))"

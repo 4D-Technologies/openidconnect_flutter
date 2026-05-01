@@ -17,13 +17,15 @@ You should not add `openidconnect_darwin` to Xcode manually. Add the root `openi
 
 ## Apple-platform configuration
 
-Interactive authentication uses the system browser/session via `native_authentication`.
+Interactive authentication uses the system browser/session through the in-repo Darwin bridge included in this package.
 
 Required host-app setup:
 
 1. For custom-scheme callbacks, add the scheme to `CFBundleURLTypes` in your app `Info.plist`.
 2. For HTTPS callbacks, configure Universal Links / Associated Domains and the matching site-association file for your domain.
 3. For sandboxed macOS apps, enable the network entitlements you need for outbound requests and, if using a localhost callback, loopback/server access.
+
+The Darwin package no longer depends on an external Apple auth plugin; both the Swift Package Manager/CocoaPods packaging and the Apple interactive-auth bridge now live in this repository.
 
 Helpful references:
 
