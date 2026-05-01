@@ -11,9 +11,9 @@
                 const parent = window.opener ?? window.parent;
                 parent.postMessage(location.href, "*");
             } else {
-                const destination = sessionStorage.getItem(AUTH_DESTINATION_KEY || "/");
+                const destination = sessionStorage.getItem(AUTH_DESTINATION_KEY) || "/";
                 sessionStorage.removeItem(AUTH_DESTINATION_KEY);
-                sessionStorage.setItem(AUTH_RESPONSE_KEY, window.location);
+                sessionStorage.setItem(AUTH_RESPONSE_KEY, location.href);
                 location.assign(destination);
             }
         }

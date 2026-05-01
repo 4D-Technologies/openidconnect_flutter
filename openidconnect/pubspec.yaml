@@ -24,10 +24,10 @@ dependencies:
   retry: ">=3.1.2 <4.0.0"
 
 dev_dependencies:
-  flutter_lints:
+  flutter_lints: ^6.0.0
   flutter_test:
     sdk: flutter
-  mockito: 
+  mockito: ^5.4.5
 
 # For information on the generic Dart part of this file, see the
 # following page: https://dart.dev/tools/pub/pubspec

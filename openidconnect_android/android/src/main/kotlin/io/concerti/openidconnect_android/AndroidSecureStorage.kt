@@ -86,7 +86,9 @@ internal class AndroidSecureStorage(
         }
 
         val encoded =
-                key.toByteArray(Charsets.UTF_8).joinToString(separator = "") { "%02x".format(it) }
+                key.toByteArray(Charsets.UTF_8).joinToString(separator = "") {
+                    "%02x".format(it.toInt() and 0xff)
+                }
         return "$ENCODED_FILE_NAME_PREFIX$encoded$FILE_SUFFIX"
     }
 

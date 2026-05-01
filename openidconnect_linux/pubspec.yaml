@@ -14,7 +14,7 @@ dependencies:
   openidconnect_platform_interface: ^2.0.0
 
 dev_dependencies:
-  flutter_lints:
+  flutter_lints: ^6.0.0
   flutter_test:
     sdk: flutter
 
