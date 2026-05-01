@@ -1,5 +1,7 @@
 part of openidconnect;
 
+/// Represents a persisted OpenID Connect identity and its decoded ID token
+/// claims.
 class OpenIdIdentity extends AuthorizationResponse {
   static const String _AUTHENTICATION_TOKEN_KEY = "ACCESS_TOKEN";
   static const String _ID_TOKEN_KEY = "ID_TOKEN";
@@ -11,6 +13,7 @@ class OpenIdIdentity extends AuthorizationResponse {
   late Map<String, dynamic> claims;
   late String sub;
 
+  /// Creates an identity from tokens returned by the provider.
   OpenIdIdentity({
     required String accessToken,
     required DateTime expiresAt,
@@ -35,6 +38,7 @@ class OpenIdIdentity extends AuthorizationResponse {
     this.sub = subject;
   }
 
+  /// Creates an identity from an [AuthorizationResponse].
   factory OpenIdIdentity.fromAuthorizationResponse(
     AuthorizationResponse response,
   ) => OpenIdIdentity(
@@ -46,6 +50,7 @@ class OpenIdIdentity extends AuthorizationResponse {
     state: response.state,
   );
 
+  /// Loads a previously persisted identity from secure storage.
   static Future<OpenIdIdentity?> load() async {
     try {
       late String? accessToken;
@@ -87,6 +92,7 @@ class OpenIdIdentity extends AuthorizationResponse {
     }
   }
 
+  /// Persists this identity to secure storage.
   Future<void> save() async {
     await Future.wait([
       _OpenIdConnectSecureStorage.setString(
@@ -113,6 +119,7 @@ class OpenIdIdentity extends AuthorizationResponse {
         : await _OpenIdConnectSecureStorage.setString(_STATE_KEY, this.state!);
   }
 
+  /// Removes any persisted identity from secure storage.
   static Future<void> clear() async {
     await Future.wait([
       _OpenIdConnectSecureStorage.remove(_AUTHENTICATION_TOKEN_KEY),
@@ -124,22 +131,37 @@ class OpenIdIdentity extends AuthorizationResponse {
     ]);
   }
 
+  /// The `family_name` claim from the ID token, if present.
   String? get familyName => claims["family_name"]?.toString();
+
+  /// The `given_name` claim from the ID token, if present.
   String? get givenName => claims["given_name"]?.toString();
+
+  /// A display-friendly full name derived from the available name claims.
   String? get fullName =>
       claims["name"]?.toString() ??
       (givenName == null ? familyName : "${givenName} ${familyName}");
+
+  /// The preferred user name derived from common username-related claims.
   String? get userName =>
       claims["username"]?.toString() ??
       claims["preferred_username"]?.toString() ??
       claims["sub"]?.toString();
+
+  /// The `email` claim from the ID token, if present.
   String? get email => claims["email"]?.toString();
+
+  /// The `act` claim from the ID token, if present.
   String? get act => claims["act"]?.toString();
+
+  /// Role values extracted from the `role` claim.
   List<String> get roles => claims["role"] == null
       ? List<String>.empty()
       : claims["role"] is String
       ? <String>[claims["role"].toString()]
       : List<String>.from(claims["role"] as Iterable<dynamic>);
+
+  /// The `picture` claim from the ID token, if present.
   String? get picture => claims["picture"]?.toString();
 
   @override

@@ -78,15 +78,31 @@ class _OpenIdConnectSecureStorage {
   }
 }
 
+/// Provides static helpers for performing OpenID Connect discovery, login,
+/// token refresh, logout, revocation, and user-info operations.
 class OpenIdConnect {
+  /// Storage key used to persist the PKCE code verifier during web redirects.
   static const CODE_VERIFIER_STORAGE_KEY = "openidconnect_code_verifier";
+
+  /// Storage key used to persist the PKCE code challenge during web redirects.
   static const CODE_CHALLENGE_STORAGE_KEY = "openidconnect_code_challenge";
+
+  /// Storage key used to persist the authorization request state during web
+  /// redirects.
   static const STATE_STORAGE_KEY = "openidconnect_state";
 
+  /// Initializes secure storage for compatibility with older callers.
+  ///
+  /// The [encryptionKey] parameter is retained for backward compatibility, even
+  /// though the endorsed platform implementations now manage secure storage.
   static Future<void> initalizeEncryption(String encryptionKey) async {
     await _OpenIdConnectSecureStorage.initialize(encryptionKey);
   }
 
+  /// Downloads and parses the OpenID Provider discovery document.
+  ///
+  /// Throws an [ArgumentError] when the document cannot be retrieved or when it
+  /// is missing required OpenID Connect metadata fields.
   static Future<OpenIdConfiguration> getConfiguration(
     String discoveryDocumentUri,
   ) async {
@@ -124,6 +140,7 @@ class OpenIdConnect {
     return OpenIdConfiguration.fromJson(response);
   }
 
+  /// Authenticates with the resource-owner password flow.
   static Future<AuthorizationResponse> authorizePassword({
     required PasswordAuthorizationRequest request,
   }) async {
@@ -139,6 +156,11 @@ class OpenIdConnect {
     return AuthorizationResponse.fromJson(response);
   }
 
+  /// Starts an interactive authorization-code flow and exchanges the returned
+  /// code for tokens.
+  ///
+  /// Returns `null` when the user closes the flow before a response is
+  /// received.
   static Future<AuthorizationResponse?> authorizeInteractive({
     required BuildContext context,
     required String title,
@@ -204,6 +226,11 @@ class OpenIdConnect {
     return await _completeCodeExchange(request: request, url: responseUrl);
   }
 
+  /// Starts RP-initiated logout against the provider's end-session endpoint.
+  ///
+  /// Returns the post-logout redirect URL when one is received, or `null` when
+  /// the provider does not support interactive logout or the user closes the
+  /// flow.
   static Future<String?> logoutInteractive({
     required BuildContext context,
     required String title,
@@ -293,6 +320,7 @@ class OpenIdConnect {
     return AuthorizationResponse.fromJson(response, state: state);
   }
 
+  /// Starts the device authorization flow and polls until tokens are issued.
   static Future<AuthorizationResponse> authorizeDevice({
     required DeviceAuthorizationRequest request,
   }) async {
@@ -356,6 +384,7 @@ class OpenIdConnect {
     return authorizationResponse;
   }
 
+  /// Requests a device code without completing the interactive device flow.
   static Future<DeviceCodeResponse> authorizeDeviceGetDeviceCodeResponse({
     required DeviceAuthorizationRequest request,
   }) async {
@@ -373,6 +402,8 @@ class OpenIdConnect {
     return codeResponse;
   }
 
+  /// Completes a previously started device authorization flow by polling the
+  /// token endpoint with the supplied [codeResponse].
   static Future<AuthorizationResponse>
   authorizeDeviceCompleteDeviceCodeResponseRequest({
     required DeviceAuthorizationRequest request,
@@ -435,6 +466,7 @@ class OpenIdConnect {
     return authorizationResponse;
   }
 
+  /// Exchanges a refresh token for a new access token and related metadata.
   static Future<AuthorizationResponse> refreshToken({
     required RefreshRequest request,
   }) async {
@@ -453,6 +485,7 @@ class OpenIdConnect {
     );
   }
 
+  /// Performs non-interactive logout against the provider end-session endpoint.
   static Future<void> logout({required LogoutRequest request}) async {
     if (request.configuration.endSessionEndpoint == null) return;
 
@@ -467,6 +500,10 @@ class OpenIdConnect {
     }
   }
 
+  /// Completes a web redirect-loop login flow after the application restarts.
+  ///
+  /// Returns `null` on platforms that do not use web redirect-loop startup
+  /// processing.
   static Future<AuthorizationResponse?> processStartup({
     required String clientId,
     String? clientSecret,
@@ -518,6 +555,7 @@ class OpenIdConnect {
     return result;
   }
 
+  /// Revokes a refresh or access token at the provider revocation endpoint.
   static Future<void> revokeToken({
     required RevokeTokenRequest request,
     bool useBasicAuth = true,
@@ -550,6 +588,8 @@ class OpenIdConnect {
     }
   }
 
+  /// Calls the OpenID Connect UserInfo endpoint and returns the decoded JSON
+  /// response.
   static Future<Map<String, dynamic>> getUserInfo({
     required UserInfoRequest request,
   }) async {
@@ -571,6 +611,7 @@ class OpenIdConnect {
     }
   }
 
+  /// Calls the dynamic client registration endpoint for the current provider.
   static Future<void> registerUser({
     required UserRegistrationRequest request,
   }) async {

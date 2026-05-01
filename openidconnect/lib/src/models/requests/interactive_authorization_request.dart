@@ -1,5 +1,6 @@
 part of openidconnect;
 
+/// Request payload for the interactive authorization-code flow with PKCE.
 class InteractiveAuthorizationRequest extends TokenRequest {
   static const String _charset =
       'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-._~';
@@ -84,6 +85,7 @@ class InteractiveAuthorizationRequest extends TokenRequest {
     this.useWebPopup = true,
   }) : super(grantType: "authorization_code");
 
+  /// Builds the authorization request parameters sent to the provider.
   @override
   Map<String, String> toMap() {
     final map = super.toMap();

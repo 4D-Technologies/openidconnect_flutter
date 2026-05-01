@@ -1,7 +1,12 @@
 part of openidconnect;
 
+/// High-level client wrapper that manages discovery, persisted identity,
+/// refresh handling, and auth lifecycle events.
 class OpenIdConnectClient {
+  /// Scope automatically added when refresh-token based renewal is enabled.
   static const OFFLINE_ACCESS_SCOPE = "offline_access";
+
+  /// Default scopes requested when none are supplied by the caller.
   static const DEFAULT_SCOPES = ["openid", "profile", "email"];
 
   final _eventStreamController = StreamController<AuthEvent>();
@@ -21,6 +26,7 @@ class OpenIdConnectClient {
   bool _refreshing = false;
   bool _isInitializationComplete = false;
 
+  /// The most recently raised authentication event, if any.
   AuthEvent? currentEvent;
 
   OpenIdConnectClient._({
@@ -34,6 +40,8 @@ class OpenIdConnectClient {
     this.audiences,
   });
 
+  /// Creates and initializes an [OpenIdConnectClient], including any pending
+  /// web startup authentication state and previously persisted identity.
   static Future<OpenIdConnectClient> create({
     required String discoveryDocumentUrl,
     required String clientId,
@@ -120,27 +128,35 @@ class OpenIdConnectClient {
     _autoRenewTimer = null;
   }
 
+  /// Releases timers and closes the auth event stream.
   void dispose() {
     _cancelAutoRenewTimer();
     _eventStreamController.close();
   }
 
+  /// Stream of authentication lifecycle events raised by this client.
   Stream<AuthEvent> get changes =>
       _eventStreamController.stream.asBroadcastStream();
 
+  /// The currently loaded identity, if any.
   OpenIdIdentity? get identity => _identity;
 
+  /// Whether startup processing has completed.
   bool get initializationComplete => _isInitializationComplete;
 
+  /// Whether the current access token is already expired.
   bool get hasTokenExpired =>
       _identity!.expiresAt.difference(DateTime.now().toUtc()).isNegative;
 
+  /// Whether the current access token is close enough to expiry that it should
+  /// be refreshed.
   bool get isTokenAboutToExpire {
     var refreshTime = _identity!.expiresAt.difference(DateTime.now().toUtc());
     refreshTime -= Duration(minutes: 1);
     return refreshTime.isNegative;
   }
 
+  /// Logs in with the password grant and persists the resulting identity.
   Future<OpenIdIdentity> loginWithPassword({
     required String userName,
     required String password,
@@ -182,6 +198,7 @@ class OpenIdConnectClient {
     }
   }
 
+  /// Logs in with the device authorization flow.
   Future<OpenIdIdentity> loginWithDeviceCode() async {
     _cancelAutoRenewTimer();
 
@@ -212,6 +229,7 @@ class OpenIdConnectClient {
     }
   }
 
+  /// Starts an interactive login flow and persists the resulting identity.
   Future<OpenIdIdentity> loginInteractive({
     required BuildContext context,
     required String title,
@@ -270,6 +288,8 @@ class OpenIdConnectClient {
     }
   }
 
+  /// Revokes the current tokens, clears persisted identity state, and raises a
+  /// not-logged-in event.
   Future<void> logout() async {
     _cancelAutoRenewTimer();
 
@@ -298,7 +318,8 @@ class OpenIdConnectClient {
     _raiseEvent(AuthEvent(AuthEventTypes.NotLoggedIn));
   }
 
-  // Example: add this method to OpenIdConnectClient
+  /// Performs RP-initiated logout when supported, while also revoking local
+  /// tokens and clearing persisted identity state.
   Future<String?> logoutInteractive({
     required BuildContext context,
     required String title,
@@ -368,6 +389,8 @@ class OpenIdConnectClient {
     return response;
   }
 
+  /// Revokes the current refresh token when available, otherwise the access
+  /// token.
   Future<void> revokeTokens({bool useBasicAuth = true}) async {
     _cancelAutoRenewTimer();
 
@@ -407,6 +430,8 @@ class OpenIdConnectClient {
     }
   }
 
+  /// Returns whether the client is currently logged in, refreshing first when
+  /// necessary and enabled.
   FutureOr<bool> isLoggedIn() async {
     if (!_isInitializationComplete)
       throw StateError(
@@ -422,12 +447,15 @@ class OpenIdConnectClient {
     return !hasTokenExpired;
   }
 
+  /// Raises an explicit error event on the auth event stream.
   void reportError(String errorMessage) {
     currentEvent = AuthEvent(AuthEventTypes.Error, message: errorMessage);
 
     _eventStreamController.add(currentEvent!);
   }
 
+  /// Ensures authentication is valid before executing a batch of asynchronous
+  /// requests.
   Future<void> sendRequests<T>(Iterable<Future<T>> Function() requests) async {
     if ((_identity == null || isTokenAboutToExpire) &&
         (!this.autoRefresh || !await refresh(raiseEvents: true)))
@@ -436,6 +464,7 @@ class OpenIdConnectClient {
     await Future.wait(requests());
   }
 
+  /// Verifies that the current token is still usable, refreshing when needed.
   FutureOr<bool> verifyToken() async {
     if (_identity == null) return false;
 
@@ -444,6 +473,9 @@ class OpenIdConnectClient {
     return true;
   }
 
+  /// Refreshes the current identity using the stored refresh token.
+  ///
+  /// Returns `false` when refresh is not possible or fails.
   Future<bool> refresh({bool raiseEvents = true}) async {
     if (!webUseRefreshTokens) {
       //Web has a special case where it will use a hidden iframe. This just returns true because the iframe does it.
@@ -514,6 +546,7 @@ class OpenIdConnectClient {
     }
   }
 
+  /// Clears the persisted identity from storage and memory.
   Future<void> clearIdentity() async {
     if (this._identity != null) {
       await OpenIdIdentity.clear();

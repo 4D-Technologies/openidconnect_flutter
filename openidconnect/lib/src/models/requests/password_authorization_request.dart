@@ -1,6 +1,8 @@
 part of openidconnect;
 
+/// Request body for the resource-owner password grant.
 class PasswordAuthorizationRequest extends TokenRequest {
+  /// Creates a password-grant token request.
   PasswordAuthorizationRequest({
     required super.clientId,
     super.clientSecret,
@@ -12,11 +14,11 @@ class PasswordAuthorizationRequest extends TokenRequest {
     super.prompts,
     Map<String, String>? additionalParameters,
   }) : super(
-          grantType: "password",
-          additionalParameters: {
-            "username": userName,
-            "password": password,
-            ...?additionalParameters,
-          },
-        );
+         grantType: "password",
+         additionalParameters: {
+           "username": userName,
+           "password": password,
+           ...?additionalParameters,
+         },
+       );
 }

@@ -1,5 +1,6 @@
 part of openidconnect;
 
+/// Base request payload for token-related OpenID Connect operations.
 abstract class TokenRequest {
   final String clientId;
   final String? clientSecret;
@@ -20,6 +21,7 @@ abstract class TokenRequest {
     required this.configuration,
   });
 
+  /// Builds the form body sent to the token endpoint.
   @mustCallSuper
   Map<String, String> toMap() {
     return {
@@ -28,7 +30,7 @@ abstract class TokenRequest {
       "scope": scopes.join(" "),
       if (prompts != null && prompts!.isNotEmpty) 'prompt': prompts!.join(' '),
       if (clientSecret != null) "client_secret": clientSecret!,
-      ...?additionalParameters
+      ...?additionalParameters,
     };
   }
 }

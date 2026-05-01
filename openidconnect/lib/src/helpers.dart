@@ -17,6 +17,9 @@ Map<String, dynamic> _decodeJwtPayload(String token) {
   return payload;
 }
 
+/// Executes an HTTP request with retry behavior and decodes JSON responses.
+///
+/// Returns `null` when the response body is empty.
 Future<Map<String, dynamic>?> httpRetry<T extends http.Response>(
   FutureOr<T> Function() fn, {
   Duration delayFactor = const Duration(milliseconds: 200),
