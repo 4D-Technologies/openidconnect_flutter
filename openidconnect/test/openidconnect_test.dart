@@ -1,3 +1,5 @@
+import 'dart:convert';
+
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 
@@ -6,7 +8,7 @@ import 'package:openidconnect/openidconnect.dart';
 const TEST_ID_TOKEN =
     "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkwIiwibmFtZSI6IkpvaG4gRG9lIiwiaWF0IjoxNTE2MjM5MDIyfQ.SflKxwRJSMeKKF2QT4fwpMeJf36POk6yJV_adQssw5c";
 const _secureStorageChannel = MethodChannel(
-  'plugins.it_nomads.com/flutter_secure_storage',
+  'plugins.concerti.io/openidconnect_secure_storage',
 );
 
 void main() {
@@ -25,6 +27,8 @@ void main() {
           final key = arguments['key'] as String?;
 
           switch (call.method) {
+            case 'initialize':
+              return null;
             case 'write':
               storage[key!] = arguments['value'] as String;
               return null;
@@ -75,6 +79,58 @@ void main() {
 
       final loaded = await OpenIdIdentity.load();
       expect(loaded, isNot(null));
+    });
+
+    test('clears invalid stored identity values', () async {
+      storage['ACCESS_TOKEN'] = 'stale-access-token';
+      storage['ID_TOKEN'] = 'not-a-jwt';
+      storage['EXPIRES_ON'] = DateTime.now().millisecondsSinceEpoch.toString();
+      storage['TOKEN_TYPE'] = 'Bearer';
+
+      final loaded = await OpenIdIdentity.load();
+
+      expect(loaded, isNull);
+      expect(storage, isEmpty);
+    });
+
+    test('exposes identity claims via convenience getters', () {
+      final identity = OpenIdIdentity(
+        accessToken: 'access-token',
+        expiresAt: DateTime.now(),
+        idToken: _buildJwt({
+          'sub': 'subject-123',
+          'given_name': 'Jane',
+          'family_name': 'Doe',
+          'preferred_username': 'jane.doe',
+          'email': 'jane@example.com',
+          'act': 'delegated-user',
+          'role': ['admin', 'reader'],
+          'picture': 'https://images.example.com/avatar.png',
+        }),
+        tokenType: 'Bearer',
+      );
+
+      expect(identity.sub, 'subject-123');
+      expect(identity.givenName, 'Jane');
+      expect(identity.familyName, 'Doe');
+      expect(identity.fullName, 'Jane Doe');
+      expect(identity.userName, 'jane.doe');
+      expect(identity.email, 'jane@example.com');
+      expect(identity.act, 'delegated-user');
+      expect(identity.roles, ['admin', 'reader']);
+      expect(identity.picture, 'https://images.example.com/avatar.png');
+    });
+
+    test('rejects id tokens without a subject claim', () {
+      expect(
+        () => OpenIdIdentity(
+          accessToken: 'access-token',
+          expiresAt: DateTime.now(),
+          idToken: _buildJwt({'name': 'No Subject'}),
+          tokenType: 'Bearer',
+        ),
+        throwsFormatException,
+      );
     });
   });
 
@@ -164,6 +220,70 @@ void main() {
       });
     });
   });
+
+  group('request and configuration models', () {
+    test('serializes logout token request optional fields', () {
+      final request = LogoutTokenRequest(
+        configuration: _testConfiguration(),
+        refreshToken: 'refresh-token',
+        clientId: 'client-id',
+        clientSecret: 'client-secret',
+        redirectUrl: 'com.example.app:/logout',
+      );
+
+      expect(request.toMap(), {
+        'client_id': 'client-id',
+        'client_secret': 'client-secret',
+        'redirect_uri': 'com.example.app:/logout',
+        'refresh_token': 'refresh-token',
+      });
+    });
+
+    test('serializes revoke token request with explicit form credentials', () {
+      final request = RevokeTokenRequest(
+        configuration: _testConfiguration(),
+        token: 'refresh-token',
+        tokenType: TokenType.refreshToken,
+        clientId: 'client-id',
+        clientSecret: 'client-secret',
+      );
+
+      expect(request.toMap(useBasicAuth: false), {
+        'client_secret': 'client-secret',
+        'client_id': 'client-id',
+        'token': 'refresh-token',
+        'token_type_hint': 'refresh_token',
+      });
+    });
+
+    test('parses optional discovery metadata and api endpoints', () {
+      final configuration = OpenIdConfiguration.fromJson({
+        'issuer': 'https://issuer.example.com',
+        'jwks_uri': 'https://issuer.example.com/jwks',
+        'authorization_endpoint': 'https://issuer.example.com/authorize',
+        'token_endpoint': 'https://issuer.example.com/token',
+        'userinfo_endpoint': 'https://issuer.example.com/userinfo',
+        'mfa_challenge_endpoint': 'https://issuer.example.com/mfa',
+        'api_endpoint': 'https://issuer.example.com/api',
+        'check_session_iframe': 'https://issuer.example.com/session',
+      });
+
+      expect(
+        configuration.mfaChallengeEndpoint,
+        'https://issuer.example.com/mfa',
+      );
+      expect(configuration.apiEndpoints, ['https://issuer.example.com/api']);
+      expect(
+        configuration.checkSessionIFrame,
+        'https://issuer.example.com/session',
+      );
+      expect(configuration.responseTypesSupported, isEmpty);
+      expect(configuration.responseModesSupported, isEmpty);
+      expect(configuration.tokenEndpointAuthMethodsSupported, isEmpty);
+      expect(configuration.codeChallengeMethodsSupported, isEmpty);
+      expect(configuration.requestUriParameterSupported, isFalse);
+    });
+  });
   // test('adds one to input values', () {
   //   final calculator = Calculator();
   //   expect(calculator.addOne(2), 3);
@@ -188,4 +308,11 @@ OpenIdConfiguration _testConfiguration() {
     document: const {},
     requestUriParameterSupported: false,
   );
+}
+
+String _buildJwt(Map<String, Object?> payload) {
+  String encode(Object value) =>
+      base64Url.encode(utf8.encode(jsonEncode(value))).replaceAll('=', '');
+
+  return '${encode({'alg': 'HS256', 'typ': 'JWT'})}.${encode(payload)}.sig';
 }

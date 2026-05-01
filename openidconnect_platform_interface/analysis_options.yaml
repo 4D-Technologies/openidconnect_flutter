@@ -3,9 +3,8 @@ include: package:flutter_lints/flutter.yaml
 linter:
   rules:
     public_member_api_docs: false
-    constant_identifier_names: ALL_CAPS_WITH_UNDERSCORES
+    constant_identifier_names: false
     overridden_fields: true
-    iterable_contains_unrelated_type: true
     camel_case_types: true
 
 analyzer:

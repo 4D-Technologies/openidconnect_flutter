@@ -5,11 +5,9 @@ import 'dart:convert';
 import 'dart:io';
 import 'dart:math';
 
+import 'package:crypto/crypto.dart' as crypto;
 import 'package:flutter/material.dart';
-import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:http/http.dart' as http;
-import 'package:cryptography_plus/cryptography_plus.dart' as crypto;
-import 'package:jwt_decoder/jwt_decoder.dart';
 import 'package:openidconnect_platform_interface/openidconnect_platform_interface.dart';
 import 'package:flutter/foundation.dart';
 import 'package:retry/retry.dart';
@@ -39,8 +37,7 @@ part 'src/models/responses/token_response.dart';
 part 'src/models/responses/device_code_response.dart';
 part 'src/models/responses/authorization_response.dart';
 
-final _platform = OpenIdConnectPlatform.instance;
-final _secureStorage = FlutterSecureStorage();
+OpenIdConnectPlatform get _platform => OpenIdConnectPlatform.instance;
 
 void _ensureSecureStorageInitialized() {
   WidgetsFlutterBinding.ensureInitialized();
@@ -51,16 +48,17 @@ class _OpenIdConnectSecureStorage {
 
   static Future<void> initialize([String? _]) async {
     _ensureSecureStorageInitialized();
+    await _platform.secureStorageInitialize();
   }
 
   static Future<void> setString(String key, String value) async {
     _ensureSecureStorageInitialized();
-    await _secureStorage.write(key: key, value: value);
+    await _platform.secureStorageWrite(key: key, value: value);
   }
 
   static Future<String?> getString(String key) async {
     _ensureSecureStorageInitialized();
-    return await _secureStorage.read(key: key);
+    return await _platform.secureStorageRead(key: key);
   }
 
   static Future<void> setInt(String key, int value) async {
@@ -76,7 +74,7 @@ class _OpenIdConnectSecureStorage {
 
   static Future<void> remove(String key) async {
     _ensureSecureStorageInitialized();
-    await _secureStorage.delete(key: key);
+    await _platform.secureStorageDelete(key: key);
   }
 }
 
@@ -98,6 +96,28 @@ class OpenIdConnect {
     if (response == null) {
       throw ArgumentError(
         "The discovery document could not be found at: ${discoveryDocumentUri}",
+      );
+    }
+
+    const requiredFields = <String>[
+      'issuer',
+      'jwks_uri',
+      'authorization_endpoint',
+      'token_endpoint',
+      'userinfo_endpoint',
+    ];
+
+    final missingFields = requiredFields
+        .where(
+          (field) =>
+              response[field] == null ||
+              response[field].toString().trim().isEmpty,
+        )
+        .toList(growable: false);
+
+    if (missingFields.isNotEmpty) {
+      throw ArgumentError(
+        'The discovery document was invalid and missing: ${missingFields.join(', ')}',
       );
     }
 
@@ -268,8 +288,7 @@ class OpenIdConnect {
           http.post(Uri.parse(request.configuration.tokenEndpoint), body: body),
     );
 
-    if (response == null)
-      if (response == null) throw UnsupportedError('The response was null.');
+    if (response == null) throw UnsupportedError('The response was null.');
 
     return AuthorizationResponse.fromJson(response, state: state);
   }

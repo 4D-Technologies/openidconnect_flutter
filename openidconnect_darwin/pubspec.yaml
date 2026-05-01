@@ -10,7 +10,7 @@ environment:
 dependencies:
   flutter:
     sdk: flutter
-  native_authentication: '>=0.1.5 <2.0.0'
+  native_authentication: ^0.1.5
   openidconnect_platform_interface: ^2.0.0
 
 dev_dependencies:
@@ -23,12 +23,12 @@ flutter:
     implements: openidconnect
     platforms:
       ios:
-        ffiPlugin: true
         sharedDarwinSource: true
+        pluginClass: OpenIdConnectDarwinPlugin
         dartPluginClass: OpenIdConnectDarwin
         fileName: openidconnect_darwin.dart
       macos:
-        ffiPlugin: true
         sharedDarwinSource: true
+        pluginClass: OpenIdConnectDarwinPlugin
         dartPluginClass: OpenIdConnectDarwin
         fileName: openidconnect_darwin.dart

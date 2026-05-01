@@ -3,6 +3,7 @@
 ## 2.0.0 - April 30th 2026
 
 - Breaking change: first stable Linux release for the 2.x federated package line using `native_authentication` loopback flows.
+- Document the required loopback redirect configuration for Linux interactive authentication.
 
 ## 0.0.1
 

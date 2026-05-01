@@ -26,9 +26,13 @@ class OpenIdIdentity extends AuthorizationResponse {
          refreshToken: refreshToken,
          state: state,
        ) {
-    this.claims = JwtDecoder.decode(idToken);
+    this.claims = _decodeJwtPayload(idToken);
+    final subject = claims["sub"]?.toString();
+    if (subject == null || subject.isEmpty) {
+      throw const FormatException('Missing sub claim');
+    }
 
-    this.sub = claims["sub"].toString();
+    this.sub = subject;
   }
 
   factory OpenIdIdentity.fromAuthorizationResponse(
@@ -75,8 +79,7 @@ class OpenIdIdentity extends AuthorizationResponse {
         refreshToken: refreshToken,
         state: state,
       );
-    } on Exception catch (e) {
-      print(e.toString());
+    } on Exception {
       try {
         clear();
       } on Exception {}

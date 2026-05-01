@@ -47,4 +47,17 @@ abstract class OpenIdConnectPlatform extends PlatformInterface {
   });
 
   Future<String?> processStartup();
+
+  Future<void> secureStorageInitialize();
+
+  Future<void> secureStorageWrite({
+    required String key,
+    required String value,
+  });
+
+  Future<String?> secureStorageRead({required String key});
+
+  Future<void> secureStorageDelete({required String key});
+
+  Future<bool> secureStorageContainsKey({required String key});
 }

@@ -12,11 +12,15 @@ let package = Package(
     products: [
         .library(name: "openidconnect-darwin", targets: ["openidconnect_darwin"])
     ],
-    dependencies: [],
+    dependencies: [
+        .package(name: "FlutterFramework", path: "../FlutterFramework")
+    ],
     targets: [
         .target(
             name: "openidconnect_darwin",
-            dependencies: [],
+            dependencies: [
+                .product(name: "FlutterFramework", package: "FlutterFramework")
+            ],
             resources: []
         )
     ]

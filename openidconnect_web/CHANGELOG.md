@@ -4,6 +4,7 @@
 
 - Breaking change: align the web implementation with the 2.x federated release line.
 - Preserve same-tab redirect-loop authentication handoff and add coverage for web implementation registration behavior.
+- Document secure-context and callback-page requirements for web authentication.
 
 ## [1.0.26] - April 1st 2025
 

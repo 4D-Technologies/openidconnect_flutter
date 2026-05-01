@@ -1,0 +1,26 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <script>
+        const AUTH_DESTINATION_KEY = "openidconnect_auth_destination_url";
+        const AUTH_RESPONSE_KEY = "openidconnect_auth_response_info";
+
+        window.onload = function () {
+            if (window.opener && window.opener !== window) {
+                const parent = window.opener ?? window.parent;
+                parent.postMessage(location.href, "*");
+            } else {
+                const destination = sessionStorage.getItem(AUTH_DESTINATION_KEY || "/");
+                sessionStorage.removeItem(AUTH_DESTINATION_KEY);
+                sessionStorage.setItem(AUTH_RESPONSE_KEY, window.location);
+                location.assign(destination);
+            }
+        }
+    </script>
+</head>
+
+<body>
+</body>
+
+</html>

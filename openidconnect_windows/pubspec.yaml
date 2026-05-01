@@ -10,7 +10,8 @@ environment:
 dependencies:
   flutter:
     sdk: flutter
-  native_authentication: '>=0.1.5 <2.0.0'
+  ffi: ^2.1.4
+  native_authentication: ^0.1.5
   openidconnect_platform_interface: ^2.0.0
 
 dev_dependencies:

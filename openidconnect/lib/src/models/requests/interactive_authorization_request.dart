@@ -39,10 +39,8 @@ class InteractiveAuthorizationRequest extends TokenRequest {
       (i) => _charset[Random.secure().nextInt(_charset.length)],
     ).join();
 
-    final sha256 = crypto.Sha256();
-
     final codeChallenge = base64Url
-        .encode((await sha256.hash(ascii.encode(codeVerifier))).bytes)
+        .encode(crypto.sha256.convert(ascii.encode(codeVerifier)).bytes)
         .replaceAll('=', '');
     final state = List.generate(
       43,

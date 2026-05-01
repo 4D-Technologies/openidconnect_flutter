@@ -39,25 +39,202 @@ Currently supports:
 
 3. On Android, if you use a custom scheme or HTTPS callback, add the `native_authentication` callback receiver entries shown in that package's documentation.
 
-4. Token persistence now uses `flutter_secure_storage`, so you no longer need to manage a custom 16 character encryption key. `OpenIdConnect.initalizeEncryption(...)` and the `encryptionKey` parameter on `OpenIdConnectClient.create(...)` remain available for backward compatibility, but are no longer used to derive storage encryption.
+4. Token persistence now uses the in-repo endorsed platform implementations instead of `flutter_secure_storage`. On native platforms this uses the platform secure store directly (Android Keystore-backed AES-GCM, Apple Keychain, libsecret, and Windows Credential Manager). `OpenIdConnect.initalizeEncryption(...)` and the `encryptionKey` parameter on `OpenIdConnectClient.create(...)` remain available for backward compatibility, but are no longer used to derive storage encryption.
+
+## Requirements
+
+### Package requirements
+
+- Dart SDK: `>=3.8.0 <4.0.0`
+- Flutter SDK: `>=3.27.0`
+
+### Platform minimums used by the endorsed implementations
+
+- Android: `minSdkVersion 23`
+- iOS: `13.0`
+- macOS: `10.15`
+- Linux / Windows / Web: no additional package-enforced OS floor beyond the Flutter toolchain you build with, but the plugin assumes the current browser/system-auth flow support used by `native_authentication`.
 
 ## Getting Started
 
-1. Add openidconnect to your pubspec.yaml file
-2. Import openidconnect: import 'package:openidconnect/openidconnect.dart';
-3. Call the various methods: on OpenIdConnect OR use OpenIdConnectClient and subscribe to the events
-4. If you already call `initalizeEncryption(...)` or pass an `encryptionKey` into `OpenIdConnectClient.create(...)`, you can keep doing so while upgrading. Those APIs are now compatibility no-ops because secure storage is handled by `flutter_secure_storage`.
+1. Add `openidconnect` to your `pubspec.yaml`.
+2. Import `package:openidconnect/openidconnect.dart`.
+3. Choose the flow you need:
+   - `loginInteractive` / `authorizeInteractive` for authorization code + PKCE
+   - `loginWithPassword` / `authorizePassword` for password flow
+   - `loginWithDeviceCode` / device-code helpers for device flow
+4. If you already call `initalizeEncryption(...)` or pass an `encryptionKey` into `OpenIdConnectClient.create(...)`, you can keep doing so while upgrading. Those APIs are compatibility no-ops in `2.x` because secure storage is handled internally by the endorsed platform implementations.
+5. Review the platform configuration notes below before testing interactive login.
 
-5. On the web, `flutter_secure_storage` requires HTTPS (or `localhost`) to function correctly.
-6. Review the example project for details.
+## Platform configuration
 
-(more detailed instructions coming soon)
+### Redirect URI rules
+
+Use a redirect URI that matches the platform authentication model:
+
+- Android / iOS: usually a custom scheme such as `my.app://callback`
+- macOS: either a custom scheme such as `my.app://callback` or a loopback URL such as `http://localhost:14100/callback`
+- Linux / Windows: a loopback URL such as `http://localhost:14100/callback`
+- Web: an HTTPS callback page you host, usually `/callback.html`
+
+If you use HTTPS deep links / universal links instead of a custom scheme, you must also configure the platform link-association files for your app and domain.
+
+### Android
+
+Interactive Android authentication uses the endorsed `openidconnect_android` package backed by `native_authentication`.
+
+Required setup:
+
+1. Make sure your app supports at least Android SDK 23.
+2. Add the callback receiver activity and an intent filter for your redirect URI.
+3. If your app does not already declare it, include the `INTERNET` permission because the library performs discovery, token, revocation, and user-info HTTP requests.
+
+Helpful references:
+
+- [Android: Create deep links](https://developer.android.com/training/app-links/deep-linking)
+- [Android: Verify App Links](https://developer.android.com/training/app-links/verify-android-applinks)
+
+For a custom-scheme callback such as `openidconnect.example://callback`, the manifest entry should match the scheme/host you registered with your identity provider. The example app in this repository shows the required `CallbackReceiverActivity` wiring.
+
+Custom-scheme manifest snippet:
+
+```xml
+<uses-permission android:name="android.permission.INTERNET" />
+
+<application ...>
+   <activity
+      android:name="dev.celest.native_authentication.CallbackReceiverActivity"
+      android:exported="true">
+      <intent-filter>
+         <action android:name="android.intent.action.VIEW" />
+         <category android:name="android.intent.category.DEFAULT" />
+         <category android:name="android.intent.category.BROWSABLE" />
+         <data
+            android:scheme="openidconnect.example"
+            android:host="callback" />
+      </intent-filter>
+   </activity>
+</application>
+```
+
+If you use HTTPS app links instead of a custom scheme, configure Android App Links and the corresponding `assetlinks.json` for your domain as well.
+
+### iOS
+
+Interactive iOS authentication uses the endorsed Darwin package backed by the system browser/session APIs.
+
+Required setup:
+
+1. Your iOS deployment target must be at least `13.0`.
+2. If you use a custom-scheme callback, add that scheme under `CFBundleURLTypes` in `Info.plist`.
+3. If you use an HTTPS universal-link callback, add the proper Associated Domains capability and configure the Apple app-site-association file for your domain.
+
+Helpful references:
+
+- [Apple: Defining a custom URL scheme for your app](https://developer.apple.com/documentation/xcode/defining-a-custom-url-scheme-for-your-app)
+- [Apple: Supporting associated domains](https://developer.apple.com/documentation/xcode/supporting-associated-domains)
+
+Important note: this package does **not** require camera, microphone, photo-library, Bluetooth, or location privacy usage strings by itself. There are no OIDC-specific iOS permission prompts to add just for authentication.
+
+Custom-scheme `Info.plist` snippet:
+
+```xml
+<key>CFBundleURLTypes</key>
+<array>
+   <dict>
+      <key>CFBundleTypeRole</key>
+      <string>Editor</string>
+      <key>CFBundleURLName</key>
+      <string>openidconnect.example</string>
+      <key>CFBundleURLSchemes</key>
+      <array>
+         <string>openidconnect.example</string>
+      </array>
+   </dict>
+</array>
+```
+
+If you use Universal Links instead, add your associated domain in Xcode, for example `applinks:auth.example.com`, and host the matching `apple-app-site-association` file for that domain.
+
+### macOS
+
+macOS uses the same endorsed Darwin implementation.
+
+Required setup:
+
+1. Your macOS deployment target must be at least `10.15`.
+2. If you use a custom-scheme callback, add it under `CFBundleURLTypes` in `Runner/Info.plist`.
+3. If you use an HTTPS universal-link style callback, configure Associated Domains accordingly.
+4. If you distribute a sandboxed macOS app, make sure the necessary network entitlements are enabled:
+   - outbound network client access for talking to the IdP/token endpoints
+   - inbound loopback/server access if you use a localhost callback listener
+
+Helpful references:
+
+- [Apple: Defining a custom URL scheme for your app](https://developer.apple.com/documentation/xcode/defining-a-custom-url-scheme-for-your-app)
+- [Apple: Supporting associated domains](https://developer.apple.com/documentation/xcode/supporting-associated-domains)
+- [Apple: Entitlements](https://developer.apple.com/documentation/bundleresources/entitlements)
+
+As with iOS, no camera/microphone/photo privacy strings are required by this package itself.
+
+Custom-scheme `Runner/Info.plist` snippet:
+
+```xml
+<key>CFBundleURLTypes</key>
+<array>
+   <dict>
+      <key>CFBundleTypeRole</key>
+      <string>Editor</string>
+      <key>CFBundleURLName</key>
+      <string>openidconnect.example</string>
+      <key>CFBundleURLSchemes</key>
+      <array>
+         <string>openidconnect.example</string>
+      </array>
+   </dict>
+</array>
+```
+
+Sandboxed macOS apps that use localhost callbacks should typically enable network entitlements like:
+
+```xml
+<key>com.apple.security.network.client</key>
+<true/>
+<key>com.apple.security.network.server</key>
+<true/>
+```
+
+### Linux
+
+Interactive Linux authentication uses a loopback redirect with the endorsed Linux implementation.
+
+Required setup:
+
+1. Use a loopback redirect URI such as `http://localhost:14100/callback`.
+2. Register that exact redirect URI with your identity provider.
+3. Make sure the runtime environment can launch the system browser and accept the loopback callback.
+
+No extra manifest or plist-style configuration is required by this package on Linux.
+
+### Windows
+
+Interactive Windows authentication uses a loopback redirect with the endorsed Windows implementation.
+
+Required setup:
+
+1. Use a loopback redirect URI such as `http://localhost:14100/callback`.
+2. Register that exact redirect URI with your identity provider.
+3. Ensure the app can open the system browser and receive the loopback callback on the local machine.
+
+No Android/iOS-style manifest permission prompts are required by this package on Windows.
 
 ## Web
 
-1. Copy the callback.html file from openidconnect_web (in this repo) into the web folder of your app. Make sure that your Idp has the proper redirect path https://{your_url_to_app/callback.html} as one of the accepted urls.
+1. Copy `callback.html` from `openidconnect_web` into the `web/` folder of your app.
+2. Register the exact callback URL with your identity provider, typically `https://your-app.example.com/callback.html`.
+3. Serve the app from a secure context (`https:` or `http://localhost`) so browser secure storage APIs are available.
 
-2. OpenIdConnect web has 2 separate interactive login flows as a result of security restrictions in the browser. (Password and device flows are identical for all platforms) In most cases you'll want to use the default popup window to handle authentication as this keeps everything in process and doesn't require a reload of your flutter application. However, if you have to initiate interactive login outside of clicking a button on the page, your browser will block the popup and put a prompt up asking the user to allow it. This is a bad thing of course. Thus you can set `useWebPopup = false` on interactive authorization when you need to initialize your authorization outside of a button click. This will redirect the current page to the IdP and then back to `/callback.html`.
+4. OpenIdConnect web has 2 separate interactive login flows as a result of browser security restrictions. In most cases you'll want to use the default popup window because it keeps the current app session alive without a full reload. If you need to initiate authentication from code that is not directly tied to a user gesture, browsers may block the popup. In that case set `useWebPopup = false` to use the same-tab redirect loop instead.
 
    In that redirect-loop mode, the original `loginInteractive`/`authorizeInteractive` call should be treated as a navigation handoff, not as an immediately consumable authorization result. Completion happens after the app reloads and `OpenIdConnect.processStartup(...)` or `OpenIdConnectClient.create(...)` processes the callback response.
 
@@ -65,9 +242,8 @@ Currently supports:
 
 ## TODO
 
-1. Expand callback configuration examples for each platform.
-2. Add more end-to-end coverage around interactive login/logout flows.
-3. More documentation!
+1. Add more end-to-end coverage around interactive login/logout flows.
+2. More documentation!
 
 ## Issue/PR status notes
 
