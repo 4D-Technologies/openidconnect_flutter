@@ -129,6 +129,66 @@ void main() {
       expect(await OpenIdIdentity.load(), isNull);
     });
 
+    test('loads isolated identities for different tenant ids', () async {
+      await _saveIdentity(
+        accessToken: 'tenant-a-access-token',
+        expiresAt: DateTime.now().toUtc().add(const Duration(hours: 1)),
+        tenantId: 'tenant-a',
+      );
+      await _saveIdentity(
+        accessToken: 'tenant-b-access-token',
+        expiresAt: DateTime.now().toUtc().add(const Duration(hours: 1)),
+        tenantId: 'tenant-b',
+      );
+
+      final tenantAClient = await OpenIdConnectClient.create(
+        discoveryDocumentUrl: 'https://issuer.example.com/.well-known/openid',
+        clientId: 'client-id',
+        encryptionKey: 'unused',
+        tenantId: 'tenant-a',
+        autoRefresh: false,
+      );
+      final tenantBClient = await OpenIdConnectClient.create(
+        discoveryDocumentUrl: 'https://issuer.example.com/.well-known/openid',
+        clientId: 'client-id',
+        encryptionKey: 'unused',
+        tenantId: 'tenant-b',
+        autoRefresh: false,
+      );
+      addTearDown(tenantAClient.dispose);
+      addTearDown(tenantBClient.dispose);
+
+      expect(tenantAClient.identity?.accessToken, 'tenant-a-access-token');
+      expect(tenantBClient.identity?.accessToken, 'tenant-b-access-token');
+    });
+
+    test('clearIdentity clears only the matching tenant namespace', () async {
+      await _saveIdentity(
+        accessToken: 'tenant-a-access-token',
+        expiresAt: DateTime.now().toUtc().add(const Duration(hours: 1)),
+        tenantId: 'tenant-a',
+      );
+      await _saveIdentity(
+        accessToken: 'tenant-b-access-token',
+        expiresAt: DateTime.now().toUtc().add(const Duration(hours: 1)),
+        tenantId: 'tenant-b',
+      );
+
+      final tenantAClient = await OpenIdConnectClient.create(
+        discoveryDocumentUrl: 'https://issuer.example.com/.well-known/openid',
+        clientId: 'client-id',
+        encryptionKey: 'unused',
+        tenantId: 'tenant-a',
+        autoRefresh: false,
+      );
+      addTearDown(tenantAClient.dispose);
+
+      await tenantAClient.clearIdentity();
+
+      expect(await OpenIdIdentity.load(tenantId: 'tenant-a'), isNull);
+      expect(await OpenIdIdentity.load(tenantId: 'tenant-b'), isNotNull);
+    });
+
     test('publishes reported errors to the event stream', () async {
       final client = await OpenIdConnectClient.create(
         discoveryDocumentUrl: 'https://issuer.example.com/.well-known/openid',
@@ -216,12 +276,16 @@ void main() {
   });
 }
 
-Future<void> _saveIdentity({required DateTime expiresAt}) {
+Future<void> _saveIdentity({
+  required DateTime expiresAt,
+  String accessToken = 'access-token',
+  String? tenantId,
+}) {
   return OpenIdIdentity(
-    accessToken: 'access-token',
+    accessToken: accessToken,
     expiresAt: expiresAt,
     idToken: _testIdToken,
     tokenType: 'Bearer',
     refreshToken: 'refresh-token',
-  ).save();
+  ).save(tenantId: tenantId);
 }

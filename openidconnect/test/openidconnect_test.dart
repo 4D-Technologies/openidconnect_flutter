@@ -81,6 +81,50 @@ void main() {
       expect(loaded, isNot(null));
     });
 
+    test('load namespaced identities independently', () async {
+      await OpenIdIdentity(
+        accessToken: 'tenant_a_testing_access_token',
+        expiresAt: DateTime.now(),
+        idToken: TEST_ID_TOKEN,
+        tokenType: 'Bearer',
+      ).save(tenantId: 'tenant-a');
+      await OpenIdIdentity(
+        accessToken: 'tenant_b_testing_access_token',
+        expiresAt: DateTime.now(),
+        idToken: TEST_ID_TOKEN,
+        tokenType: 'Bearer',
+      ).save(tenantId: 'tenant-b');
+
+      expect(
+        (await OpenIdIdentity.load(tenantId: 'tenant-a'))?.accessToken,
+        'tenant_a_testing_access_token',
+      );
+      expect(
+        (await OpenIdIdentity.load(tenantId: 'tenant-b'))?.accessToken,
+        'tenant_b_testing_access_token',
+      );
+    });
+
+    test('clear only removes keys for the provided tenant id', () async {
+      await OpenIdIdentity(
+        accessToken: 'tenant_a_testing_access_token',
+        expiresAt: DateTime.now(),
+        idToken: TEST_ID_TOKEN,
+        tokenType: 'Bearer',
+      ).save(tenantId: 'tenant-a');
+      await OpenIdIdentity(
+        accessToken: 'tenant_b_testing_access_token',
+        expiresAt: DateTime.now(),
+        idToken: TEST_ID_TOKEN,
+        tokenType: 'Bearer',
+      ).save(tenantId: 'tenant-b');
+
+      await OpenIdIdentity.clear(tenantId: 'tenant-a');
+
+      expect(await OpenIdIdentity.load(tenantId: 'tenant-a'), isNull);
+      expect(await OpenIdIdentity.load(tenantId: 'tenant-b'), isNotNull);
+    });
+
     test('clears invalid stored identity values', () async {
       storage['ACCESS_TOKEN'] = 'stale-access-token';
       storage['ID_TOKEN'] = 'not-a-jwt';

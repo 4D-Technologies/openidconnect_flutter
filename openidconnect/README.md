@@ -65,6 +65,7 @@ Currently supports:
    - `loginWithDeviceCode` / device-code helpers for device flow
 4. If you already call `initalizeEncryption(...)` or pass an `encryptionKey` into `OpenIdConnectClient.create(...)`, you can keep doing so while upgrading. Those APIs are compatibility no-ops in `2.x` because secure storage is handled internally by the endorsed platform implementations.
 5. Review the platform configuration notes below before testing interactive login.
+6. If you need multiple `OpenIdConnectClient` instances to keep separate persisted credentials, provide a distinct `tenantId` to each client. When `tenantId` is null, the library uses the legacy global storage keys.
 
 ## Platform configuration
 

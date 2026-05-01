@@ -51,7 +51,7 @@ class OpenIdIdentity extends AuthorizationResponse {
   );
 
   /// Loads a previously persisted identity from secure storage.
-  static Future<OpenIdIdentity?> load() async {
+  static Future<OpenIdIdentity?> load({String? tenantId}) async {
     try {
       late String? accessToken;
       late String? refreshToken;
@@ -61,17 +61,26 @@ class OpenIdIdentity extends AuthorizationResponse {
       late String? state;
 
       accessToken = await _OpenIdConnectSecureStorage.getString(
-        _AUTHENTICATION_TOKEN_KEY,
+        _storageKey(_AUTHENTICATION_TOKEN_KEY, tenantId),
       );
-      idToken = await _OpenIdConnectSecureStorage.getString(_ID_TOKEN_KEY);
+      idToken = await _OpenIdConnectSecureStorage.getString(
+        _storageKey(_ID_TOKEN_KEY, tenantId),
+      );
       expiresOn =
-          await _OpenIdConnectSecureStorage.getInt(_EXPIRES_ON_KEY) ?? 0;
+          await _OpenIdConnectSecureStorage.getInt(
+            _storageKey(_EXPIRES_ON_KEY, tenantId),
+          ) ??
+          0;
       tokenType =
-          await _OpenIdConnectSecureStorage.getString(_TOKEN_TYPE_KEY) ??
+          await _OpenIdConnectSecureStorage.getString(
+            _storageKey(_TOKEN_TYPE_KEY, tenantId),
+          ) ??
           "bearer";
-      state = await _OpenIdConnectSecureStorage.getString(_STATE_KEY);
+      state = await _OpenIdConnectSecureStorage.getString(
+        _storageKey(_STATE_KEY, tenantId),
+      );
       refreshToken = await _OpenIdConnectSecureStorage.getString(
-        _REFRESH_TOKEN_KEY,
+        _storageKey(_REFRESH_TOKEN_KEY, tenantId),
       );
 
       if (accessToken == null || idToken == null) return null;
@@ -86,49 +95,75 @@ class OpenIdIdentity extends AuthorizationResponse {
       );
     } on Exception {
       try {
-        clear();
+        clear(tenantId: tenantId);
       } on Exception {}
       return null; //Invalid values, flush.
     }
   }
 
   /// Persists this identity to secure storage.
-  Future<void> save() async {
+  Future<void> save({String? tenantId}) async {
     await Future.wait([
       _OpenIdConnectSecureStorage.setString(
-        _AUTHENTICATION_TOKEN_KEY,
+        _storageKey(_AUTHENTICATION_TOKEN_KEY, tenantId),
         this.accessToken,
       ),
-      _OpenIdConnectSecureStorage.setString(_ID_TOKEN_KEY, this.idToken),
-      _OpenIdConnectSecureStorage.setString(_TOKEN_TYPE_KEY, this.tokenType),
+      _OpenIdConnectSecureStorage.setString(
+        _storageKey(_ID_TOKEN_KEY, tenantId),
+        this.idToken,
+      ),
+      _OpenIdConnectSecureStorage.setString(
+        _storageKey(_TOKEN_TYPE_KEY, tenantId),
+        this.tokenType,
+      ),
       _OpenIdConnectSecureStorage.setInt(
-        _EXPIRES_ON_KEY,
+        _storageKey(_EXPIRES_ON_KEY, tenantId),
         this.expiresAt.millisecondsSinceEpoch,
       ),
     ]);
 
     this.refreshToken == null
-        ? await _OpenIdConnectSecureStorage.remove(_REFRESH_TOKEN_KEY)
+        ? await _OpenIdConnectSecureStorage.remove(
+            _storageKey(_REFRESH_TOKEN_KEY, tenantId),
+          )
         : await _OpenIdConnectSecureStorage.setString(
-            _REFRESH_TOKEN_KEY,
+            _storageKey(_REFRESH_TOKEN_KEY, tenantId),
             this.refreshToken!,
           );
 
     this.state == null
-        ? await _OpenIdConnectSecureStorage.remove(_STATE_KEY)
-        : await _OpenIdConnectSecureStorage.setString(_STATE_KEY, this.state!);
+        ? await _OpenIdConnectSecureStorage.remove(
+            _storageKey(_STATE_KEY, tenantId),
+          )
+        : await _OpenIdConnectSecureStorage.setString(
+            _storageKey(_STATE_KEY, tenantId),
+            this.state!,
+          );
   }
 
   /// Removes any persisted identity from secure storage.
-  static Future<void> clear() async {
+  static Future<void> clear({String? tenantId}) async {
     await Future.wait([
-      _OpenIdConnectSecureStorage.remove(_AUTHENTICATION_TOKEN_KEY),
-      _OpenIdConnectSecureStorage.remove(_ID_TOKEN_KEY),
-      _OpenIdConnectSecureStorage.remove(_REFRESH_TOKEN_KEY),
-      _OpenIdConnectSecureStorage.remove(_TOKEN_TYPE_KEY),
-      _OpenIdConnectSecureStorage.remove(_EXPIRES_ON_KEY),
-      _OpenIdConnectSecureStorage.remove(_STATE_KEY),
+      _OpenIdConnectSecureStorage.remove(
+        _storageKey(_AUTHENTICATION_TOKEN_KEY, tenantId),
+      ),
+      _OpenIdConnectSecureStorage.remove(_storageKey(_ID_TOKEN_KEY, tenantId)),
+      _OpenIdConnectSecureStorage.remove(
+        _storageKey(_REFRESH_TOKEN_KEY, tenantId),
+      ),
+      _OpenIdConnectSecureStorage.remove(
+        _storageKey(_TOKEN_TYPE_KEY, tenantId),
+      ),
+      _OpenIdConnectSecureStorage.remove(
+        _storageKey(_EXPIRES_ON_KEY, tenantId),
+      ),
+      _OpenIdConnectSecureStorage.remove(_storageKey(_STATE_KEY, tenantId)),
     ]);
+  }
+
+  static String _storageKey(String key, String? tenantId) {
+    if (tenantId == null || tenantId.isEmpty) return key;
+    return '$key-$tenantId';
   }
 
   /// The `family_name` claim from the ID token, if present.
