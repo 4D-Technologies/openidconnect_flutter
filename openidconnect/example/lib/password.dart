@@ -5,8 +5,10 @@ import 'identity_view.dart';
 import 'credentials.dart';
 
 class PasswordPage extends StatefulWidget {
+  const PasswordPage({super.key});
+
   @override
-  _PasswordPageState createState() => _PasswordPageState();
+  State<PasswordPage> createState() => _PasswordPageState();
 }
 
 class _PasswordPageState extends State<PasswordPage> {
@@ -21,7 +23,7 @@ class _PasswordPageState extends State<PasswordPage> {
   String password = "";
   AuthorizationResponse? identity;
 
-  String? errorMessage = null;
+  String? errorMessage;
 
   Future<void> lookupSettings() async {
     _formKey.currentState!.save();
@@ -100,8 +102,7 @@ class _PasswordPageState extends State<PasswordPage> {
                       try {
                         Uri.parse(value);
                         return null;
-                      } on Exception catch (e) {
-                        print(e.toString());
+                      } on Exception {
                         return errorMessage;
                       }
                     },
@@ -115,6 +116,7 @@ class _PasswordPageState extends State<PasswordPage> {
               ),
             ),
             Visibility(
+              visible: discoveryDocument != null,
               child: Form(
                 key: _userFormKey,
                 child: Column(
@@ -151,24 +153,24 @@ class _PasswordPageState extends State<PasswordPage> {
                       label: Text("Login"),
                     ),
                     Visibility(
+                      visible: errorMessage != null,
                       child: Text(errorMessage ?? "",
                           style: Theme.of(context)
                               .textTheme
                               .bodyLarge!
                               .copyWith(
                                   color: Theme.of(context).colorScheme.error)),
-                      visible: errorMessage != null,
                     ),
                   ],
                 ),
               ),
-              visible: discoveryDocument != null,
             ),
             Visibility(
-              child: identity == null ? Container() : IdentityView(identity!),
               visible: identity != null,
+              child: identity == null ? Container() : IdentityView(identity!),
             ),
             Visibility(
+              visible: identity != null,
               child: TextButton.icon(
                 onPressed: () async {
                   OpenIdConnect.logout(
@@ -184,7 +186,6 @@ class _PasswordPageState extends State<PasswordPage> {
                 icon: Icon(Icons.logout),
                 label: Text("Logout"),
               ),
-              visible: identity != null,
             ),
           ],
         ),

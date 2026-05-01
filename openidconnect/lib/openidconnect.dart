@@ -1,4 +1,4 @@
-library openidconnect;
+library;
 
 import 'dart:async';
 import 'dart:convert';
@@ -111,7 +111,7 @@ class OpenIdConnect {
     );
     if (response == null) {
       throw ArgumentError(
-        "The discovery document could not be found at: ${discoveryDocumentUri}",
+        "The discovery document could not be found at: $discoveryDocumentUri",
       );
     }
 
@@ -189,6 +189,7 @@ class OpenIdConnect {
         STATE_STORAGE_KEY,
         request.state,
       );
+      if (!context.mounted) return null;
 
       responseUrl = await _platform.authorizeInteractive(
         context: context,
@@ -211,6 +212,7 @@ class OpenIdConnect {
       await _OpenIdConnectSecureStorage.remove(CODE_CHALLENGE_STORAGE_KEY);
       await _OpenIdConnectSecureStorage.remove(STATE_STORAGE_KEY);
     } else {
+      if (!context.mounted) return null;
       responseUrl = await _platform.authorizeInteractive(
         context: context,
         title: title,
@@ -280,16 +282,18 @@ class OpenIdConnect {
 
     final error = resultUri.queryParameters['error'];
 
-    if (error != null && error.isNotEmpty)
+    if (error != null && error.isNotEmpty) {
       throw ArgumentError(
         AUTHORIZE_ERROR_MESSAGE_FORMAT
             .replaceAll("%1", AUTHORIZE_ERROR_CODE)
             .replaceAll("%2", error),
       );
+    }
 
     var authCode = resultUri.queryParameters['code'];
-    if (authCode == null || authCode.isEmpty)
+    if (authCode == null || authCode.isEmpty) {
       throw AuthenticationException(ERROR_INVALID_RESPONSE);
+    }
 
     var state =
         resultUri.queryParameters['state'] ??
@@ -372,13 +376,15 @@ class OpenIdConnect {
       if (error == null ||
           error == "invalid_token" ||
           error == "expired_token" ||
-          error == "access_denied")
+          error == "access_denied") {
         throw AuthenticationException(json["error_description"].toString());
+      }
 
       if (error == "slow_down") pollingInterval += 2;
 
-      if (DateTime.now().isAfter(codeResponse.expiresAt))
+      if (DateTime.now().isAfter(codeResponse.expiresAt)) {
         throw AuthenticationException(ERROR_USER_CLOSED);
+      }
     }
 
     return authorizationResponse;
@@ -429,8 +435,9 @@ class OpenIdConnect {
       "client_id": request.clientId,
     };
 
-    if (request.clientSecret != null)
+    if (request.clientSecret != null) {
       pollingBody = {"client_secret": request.clientSecret!, ...pollingBody};
+    }
 
     late AuthorizationResponse authorizationResponse;
 
@@ -454,13 +461,15 @@ class OpenIdConnect {
       if (error == null ||
           error == "invalid_token" ||
           error == "expired_token" ||
-          error == "access_denied")
+          error == "access_denied") {
         throw AuthenticationException(json["error_description"].toString());
+      }
 
       if (error == "slow_down") pollingInterval += 2;
 
-      if (DateTime.now().isAfter(codeResponse.expiresAt))
+      if (DateTime.now().isAfter(codeResponse.expiresAt)) {
         throw AuthenticationException(ERROR_USER_CLOSED);
+      }
     }
 
     return authorizationResponse;
@@ -512,8 +521,9 @@ class OpenIdConnect {
     required OpenIdConfiguration configuration,
     bool autoRefresh = true,
   }) async {
-    if (!kIsWeb)
+    if (!kIsWeb) {
       return null; //TODO: Change this to not bypass if other platforms need these.
+    }
 
     final response = await _platform.processStartup();
 

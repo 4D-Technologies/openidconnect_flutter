@@ -1,4 +1,4 @@
-part of openidconnect;
+part of '../../../openidconnect.dart';
 
 /// Represents a response from the device authorization endpoint.
 class DeviceCodeResponse {

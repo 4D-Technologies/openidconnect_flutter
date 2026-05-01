@@ -1,5 +1,5 @@
-part of openidconnect_platform_interface;
+part of '../../openidconnect_platform_interface.dart';
 
 class AuthenticationException extends OpenIdConnectException {
-  AuthenticationException([String? errorMessage]) : super(errorMessage);
+  AuthenticationException([super.errorMessage]);
 }

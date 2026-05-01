@@ -3,7 +3,7 @@ import 'package:openidconnect/openidconnect.dart';
 
 class IdentityView extends StatelessWidget {
   final AuthorizationResponse identity;
-  IdentityView(this.identity);
+  const IdentityView(this.identity, {super.key});
 
   @override
   Widget build(BuildContext context) {

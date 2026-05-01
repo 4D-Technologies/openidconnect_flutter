@@ -1,4 +1,4 @@
-part of openidconnect;
+part of '../../openidconnect.dart';
 
 /// Represents a persisted OpenID Connect identity and its decoded ID token
 /// claims.
@@ -15,27 +15,20 @@ class OpenIdIdentity extends AuthorizationResponse {
 
   /// Creates an identity from tokens returned by the provider.
   OpenIdIdentity({
-    required String accessToken,
-    required DateTime expiresAt,
+    required super.accessToken,
+    required super.expiresAt,
     required String idToken,
-    required String tokenType,
-    String? refreshToken,
-    String? state,
-  }) : super(
-         expiresAt: expiresAt,
-         tokenType: tokenType,
-         accessToken: accessToken,
-         idToken: idToken,
-         refreshToken: refreshToken,
-         state: state,
-       ) {
-    this.claims = _decodeJwtPayload(idToken);
+    required super.tokenType,
+    super.refreshToken,
+    super.state,
+  }) : super(idToken: idToken) {
+    claims = _decodeJwtPayload(idToken);
     final subject = claims["sub"]?.toString();
     if (subject == null || subject.isEmpty) {
       throw const FormatException('Missing sub claim');
     }
 
-    this.sub = subject;
+    sub = subject;
   }
 
   /// Creates an identity from an [AuthorizationResponse].
@@ -94,9 +87,9 @@ class OpenIdIdentity extends AuthorizationResponse {
         state: state,
       );
     } on Exception {
-      try {
-        await clear(tenantId: tenantId);
-      } on Exception {}
+      await clear(
+        tenantId: tenantId,
+      ).onError<Object>((Object error, StackTrace stackTrace) => null);
       return null; //Invalid values, flush.
     }
   }
@@ -106,38 +99,38 @@ class OpenIdIdentity extends AuthorizationResponse {
     await Future.wait([
       _OpenIdConnectSecureStorage.setString(
         _storageKey(_AUTHENTICATION_TOKEN_KEY, tenantId),
-        this.accessToken,
+        accessToken,
       ),
       _OpenIdConnectSecureStorage.setString(
         _storageKey(_ID_TOKEN_KEY, tenantId),
-        this.idToken,
+        idToken,
       ),
       _OpenIdConnectSecureStorage.setString(
         _storageKey(_TOKEN_TYPE_KEY, tenantId),
-        this.tokenType,
+        tokenType,
       ),
       _OpenIdConnectSecureStorage.setInt(
         _storageKey(_EXPIRES_ON_KEY, tenantId),
-        this.expiresAt.millisecondsSinceEpoch,
+        expiresAt.millisecondsSinceEpoch,
       ),
     ]);
 
-    this.refreshToken == null
+    refreshToken == null
         ? await _OpenIdConnectSecureStorage.remove(
             _storageKey(_REFRESH_TOKEN_KEY, tenantId),
           )
         : await _OpenIdConnectSecureStorage.setString(
             _storageKey(_REFRESH_TOKEN_KEY, tenantId),
-            this.refreshToken!,
+            refreshToken!,
           );
 
-    this.state == null
+    state == null
         ? await _OpenIdConnectSecureStorage.remove(
             _storageKey(_STATE_KEY, tenantId),
           )
         : await _OpenIdConnectSecureStorage.setString(
             _storageKey(_STATE_KEY, tenantId),
-            this.state!,
+            state!,
           );
   }
 
@@ -175,7 +168,7 @@ class OpenIdIdentity extends AuthorizationResponse {
   /// A display-friendly full name derived from the available name claims.
   String? get fullName =>
       claims["name"]?.toString() ??
-      (givenName == null ? familyName : "${givenName} ${familyName}");
+      (givenName == null ? familyName : "$givenName $familyName");
 
   /// The preferred user name derived from common username-related claims.
   String? get userName =>
@@ -200,16 +193,16 @@ class OpenIdIdentity extends AuthorizationResponse {
   String? get picture => claims["picture"]?.toString();
 
   @override
-  operator ==(Object o) {
-    if (identical(this, o)) return true;
+  operator ==(Object other) {
+    if (identical(this, other)) return true;
 
-    return o is OpenIdIdentity &&
-        o.accessToken == accessToken &&
-        o.idToken == idToken &&
-        o.refreshToken == refreshToken &&
-        o.state == state &&
-        o.tokenType == tokenType &&
-        o.claims == claims;
+    return other is OpenIdIdentity &&
+        other.accessToken == accessToken &&
+        other.idToken == idToken &&
+        other.refreshToken == refreshToken &&
+        other.state == state &&
+        other.tokenType == tokenType &&
+        other.claims == claims;
   }
 
   @override

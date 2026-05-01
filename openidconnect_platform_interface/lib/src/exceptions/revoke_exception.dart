@@ -1,5 +1,5 @@
-part of openidconnect_platform_interface;
+part of '../../openidconnect_platform_interface.dart';
 
 class RevokeException extends OpenIdConnectException {
-  RevokeException([String? errorMessage]) : super(errorMessage);
+  RevokeException([super.errorMessage]);
 }

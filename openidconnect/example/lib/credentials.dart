@@ -3,7 +3,7 @@ import 'package:flutter/foundation.dart';
 final defaultDiscoveryUrl =
     "https://localhost:15112/.well-known/openid-configuration";
 final defaultClientId = "Scribe";
-final String? defaultClientSecret = "scribe321!";
+final String defaultClientSecret = "scribe321!";
 final List<String> defaultAudience = ["fieldservice"];
 String get defaultRedirectUrl {
   if (kIsWeb) return "http://localhost:15503/callback.html";

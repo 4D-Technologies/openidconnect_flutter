@@ -1,4 +1,4 @@
-part of openidconnect_platform_interface;
+part of '../../openidconnect_platform_interface.dart';
 
 abstract class OpenIdConnectException implements Exception {
   final String? errorMessage;

@@ -1,4 +1,4 @@
-part of openidconnect;
+part of '../../../openidconnect.dart';
 
 /// Request payload for non-interactive RP-initiated logout.
 class LogoutRequest {
@@ -19,9 +19,8 @@ class LogoutRequest {
   Map<String, String> toMap() {
     return {
       "id_token_hint": idToken,
-      if (postLogoutRedirectUri != null)
-        "post_logout_redirect_uri": postLogoutRedirectUri!,
-      if (state != null) "state": state!,
+      "post_logout_redirect_uri": ?postLogoutRedirectUri,
+      "state": ?state,
     };
   }
 }

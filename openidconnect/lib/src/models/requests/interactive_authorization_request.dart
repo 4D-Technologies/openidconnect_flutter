@@ -1,4 +1,4 @@
-part of openidconnect;
+part of '../../../openidconnect.dart';
 
 /// Request payload for the interactive authorization-code flow with PKCE.
 class InteractiveAuthorizationRequest extends TokenRequest {

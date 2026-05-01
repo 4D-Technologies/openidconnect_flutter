@@ -6,6 +6,8 @@ import 'password.dart';
 import 'redirectloop_result_page.dart';
 
 class ChoosePage extends StatelessWidget {
+  const ChoosePage({super.key});
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(

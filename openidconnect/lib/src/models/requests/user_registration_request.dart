@@ -1,4 +1,4 @@
-part of openidconnect;
+part of '../../../openidconnect.dart';
 
 /// Request payload for calling the dynamic client registration endpoint.
 class UserRegistrationRequest {

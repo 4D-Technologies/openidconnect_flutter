@@ -1,5 +1,5 @@
-part of openidconnect_platform_interface;
+part of '../../openidconnect_platform_interface.dart';
 
 class UserInfoException extends OpenIdConnectException {
-  UserInfoException([String? errorMessage]) : super(errorMessage);
+  UserInfoException([super.errorMessage]);
 }

@@ -5,8 +5,10 @@ import 'identity_view.dart';
 import 'credentials.dart';
 
 class RedirectLoopResultPage extends StatefulWidget {
+  const RedirectLoopResultPage({super.key});
+
   @override
-  _RedirectLoopResultPageState createState() => _RedirectLoopResultPageState();
+  State<RedirectLoopResultPage> createState() => _RedirectLoopResultPageState();
 }
 
 class _RedirectLoopResultPageState extends State<RedirectLoopResultPage> {
@@ -14,7 +16,7 @@ class _RedirectLoopResultPageState extends State<RedirectLoopResultPage> {
   String discoveryUrl = defaultDiscoveryUrl;
   OpenIdConfiguration? discoveryDocument;
   AuthorizationResponse? identity;
-  String? errorMessage = null;
+  String? errorMessage;
 
   @override
   Widget build(BuildContext context) {
@@ -41,8 +43,7 @@ class _RedirectLoopResultPageState extends State<RedirectLoopResultPage> {
                   try {
                     Uri.parse(value);
                     return null;
-                  } on Exception catch (e) {
-                    print(e.toString());
+                  } on Exception {
                     return errorMessage;
                   }
                 },
@@ -69,6 +70,7 @@ class _RedirectLoopResultPageState extends State<RedirectLoopResultPage> {
                 label: Text("Lookup OpenId Connect Configuration"),
               ),
               Visibility(
+                visible: discoveryDocument != null,
                 child: TextButton.icon(
                   onPressed: () async {
                     try {
@@ -94,11 +96,10 @@ class _RedirectLoopResultPageState extends State<RedirectLoopResultPage> {
                   icon: Icon(Icons.loop),
                   label: Text("Process Startup loop"),
                 ),
-                visible: discoveryDocument != null,
               ),
               Visibility(
-                child: identity == null ? Container() : IdentityView(identity!),
                 visible: identity != null,
+                child: identity == null ? Container() : IdentityView(identity!),
               ),
             ],
           ),

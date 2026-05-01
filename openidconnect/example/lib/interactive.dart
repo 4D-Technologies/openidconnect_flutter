@@ -6,8 +6,10 @@ import 'credentials.dart';
 import 'identity_view.dart';
 
 class InteractivePage extends StatefulWidget {
+  const InteractivePage({super.key});
+
   @override
-  _InteractivePageState createState() => _InteractivePageState();
+  State<InteractivePage> createState() => _InteractivePageState();
 }
 
 class _InteractivePageState extends State<InteractivePage> {
@@ -19,7 +21,7 @@ class _InteractivePageState extends State<InteractivePage> {
   AuthorizationResponse? identity;
   bool usePopup = true;
 
-  String? errorMessage = null;
+  String? errorMessage;
 
   Future<void> lookupSettings() async {
     _formKey.currentState!.save();
@@ -97,8 +99,7 @@ class _InteractivePageState extends State<InteractivePage> {
                   try {
                     Uri.parse(value);
                     return null;
-                  } on Exception catch (e) {
-                    print(e.toString());
+                  } on Exception {
                     return errorMessage;
                   }
                 },
@@ -109,6 +110,7 @@ class _InteractivePageState extends State<InteractivePage> {
                 label: Text("Lookup OpenId Connect Configuration"),
               ),
               Visibility(
+                visible: kIsWeb,
                 child: SwitchListTile.adaptive(
                   value: usePopup,
                   title: Text("Use Web Popup"),
@@ -118,25 +120,25 @@ class _InteractivePageState extends State<InteractivePage> {
                     });
                   },
                 ),
-                visible: kIsWeb,
               ),
               Visibility(
+                visible: discoveryDocument != null,
                 child: TextButton.icon(
                   onPressed: authorize,
                   icon: Icon(Icons.login),
                   label: Text("Login"),
                 ),
-                visible: discoveryDocument != null,
               ),
               Visibility(
-                child: identity == null ? Container() : IdentityView(identity!),
                 visible: identity != null,
+                child: identity == null ? Container() : IdentityView(identity!),
               ),
               Visibility(
-                child: SelectableText(errorMessage ?? ""),
                 visible: errorMessage != null,
+                child: SelectableText(errorMessage ?? ""),
               ),
               Visibility(
+                visible: identity != null,
                 child: TextButton.icon(
                   onPressed: () async {
                     OpenIdConnect.logout(
@@ -152,7 +154,6 @@ class _InteractivePageState extends State<InteractivePage> {
                   icon: Icon(Icons.logout),
                   label: Text("Logout"),
                 ),
-                visible: identity != null,
               ),
             ],
           ),

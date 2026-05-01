@@ -1,4 +1,4 @@
-part of openidconnect;
+part of 'openidconnect.dart';
 
 /// High-level client wrapper that manages discovery, persisted identity,
 /// refresh handling, and auth lifecycle events.
@@ -21,9 +21,9 @@ class OpenIdConnectClient {
   final List<String> scopes;
   final List<String>? audiences;
 
-  OpenIdConfiguration? configuration = null;
-  Timer? _autoRenewTimer = null;
-  OpenIdIdentity? _identity = null;
+  OpenIdConfiguration? configuration;
+  Timer? _autoRenewTimer;
+  OpenIdIdentity? _identity;
   bool _refreshing = false;
   bool _isInitializationComplete = false;
 
@@ -89,12 +89,11 @@ class OpenIdConnectClient {
 
       if (response != null) {
         _identity = OpenIdIdentity.fromAuthorizationResponse(response);
-        await this._identity?.save(tenantId: tenantId);
+        await _identity?.save(tenantId: tenantId);
       }
     }
 
-    if (_identity == null)
-      _identity = await OpenIdIdentity.load(tenantId: tenantId);
+    _identity ??= await OpenIdIdentity.load(tenantId: tenantId);
     _isInitializationComplete = true;
 
     if (_identity != null) {
@@ -216,7 +215,7 @@ class OpenIdConnectClient {
         request: DeviceAuthorizationRequest(
           clientId: clientId,
           scopes: _getScopes(scopes),
-          audience: audiences != null ? audiences!.join(" ") : null,
+          audience: audiences?.join(" "),
           configuration: configuration!,
         ),
       );
@@ -245,10 +244,11 @@ class OpenIdConnectClient {
     int popupWidth = 640,
     int popupHeight = 600,
   }) async {
-    if (this.redirectUrl == null)
+    if (redirectUrl == null) {
       throw StateError(
         "When using login interactive, you must create the client with a redirect url.",
       );
+    }
 
     _cancelAutoRenewTimer();
 
@@ -257,23 +257,27 @@ class OpenIdConnectClient {
 
     //Get the token information and prompt for login if necessary.
     try {
+      final request = await InteractiveAuthorizationRequest.create(
+        configuration: configuration!,
+        clientId: clientId,
+        redirectUrl: redirectUrl!,
+        clientSecret: clientSecret,
+        loginHint: userNameHint,
+        additionalParameters: additionalParameters,
+        scopes: _getScopes(scopes),
+        autoRefresh: autoRefresh,
+        prompts: prompts,
+        useWebPopup: useWebPopup,
+        popupHeight: popupHeight,
+        popupWidth: popupWidth,
+      );
+
+      if (!context.mounted) throw StateError(ERROR_USER_CLOSED);
+
       final response = await OpenIdConnect.authorizeInteractive(
         context: context,
         title: title,
-        request: await InteractiveAuthorizationRequest.create(
-          configuration: configuration!,
-          clientId: clientId,
-          redirectUrl: this.redirectUrl!,
-          clientSecret: this.clientSecret,
-          loginHint: userNameHint,
-          additionalParameters: additionalParameters,
-          scopes: _getScopes(scopes),
-          autoRefresh: autoRefresh,
-          prompts: prompts,
-          useWebPopup: useWebPopup,
-          popupHeight: popupHeight,
-          popupWidth: popupWidth,
-        ),
+        request: request,
       );
 
       if (response == null) throw StateError(ERROR_USER_CLOSED);
@@ -357,7 +361,7 @@ class OpenIdConnectClient {
       configuration: configuration!,
       postLogoutRedirectUrl:
           postLogoutRedirectUri ??
-          this.redirectUrl ??
+          redirectUrl ??
           (throw StateError(
             'When using logout interactive, you must provide a postLogoutRedirectUri or create the client with a redirect url.',
           )),
@@ -366,6 +370,9 @@ class OpenIdConnectClient {
       popupWidth: popupWidth,
       idToken: _identity!.idToken,
     );
+
+    if (!context.mounted) return null;
+
     String? response;
     if (kIsWeb) {
       response = await OpenIdConnect.logoutInteractive(
@@ -381,6 +388,7 @@ class OpenIdConnectClient {
       await revokeTokens(
         useBasicAuth: useBasicAuth,
       ); // keep existing revoke logic (revokes refresh/access)
+      if (!context.mounted) return null;
       response = await OpenIdConnect.logoutInteractive(
         context: context,
         title: title,
@@ -438,16 +446,17 @@ class OpenIdConnectClient {
   /// Returns whether the client is currently logged in, refreshing first when
   /// necessary and enabled.
   FutureOr<bool> isLoggedIn() async {
-    if (!_isInitializationComplete)
+    if (!_isInitializationComplete) {
       throw StateError(
         'You must call processStartupAuthentication before using this library.',
       );
+    }
 
     if (_identity == null) return false;
 
     if (!isTokenAboutToExpire) return true;
 
-    if (this.autoRefresh) await refresh();
+    if (autoRefresh) await refresh();
 
     return !hasTokenExpired;
   }
@@ -463,8 +472,9 @@ class OpenIdConnectClient {
   /// requests.
   Future<void> sendRequests<T>(Iterable<Future<T>> Function() requests) async {
     if ((_identity == null || isTokenAboutToExpire) &&
-        (!this.autoRefresh || !await refresh(raiseEvents: true)))
+        (!autoRefresh || !await refresh(raiseEvents: true))) {
       throw AuthenticationException();
+    }
 
     await Future.wait(requests());
   }
@@ -489,16 +499,19 @@ class OpenIdConnectClient {
       return true;
     }
 
-    while (_refreshing) await Future<void>.delayed(Duration(milliseconds: 200));
+    while (_refreshing) {
+      await Future<void>.delayed(Duration(milliseconds: 200));
+    }
 
     try {
       _refreshing = true;
       _cancelAutoRenewTimer();
 
-      if (this._identity == null ||
-          this._identity!.refreshToken == null ||
-          this._identity!.refreshToken!.isEmpty)
+      if (_identity == null ||
+          _identity!.refreshToken == null ||
+          _identity!.refreshToken!.isEmpty) {
         return false;
+      }
 
       await _verifyDiscoveryDocument();
 
@@ -553,9 +566,9 @@ class OpenIdConnectClient {
 
   /// Clears the persisted identity from storage and memory.
   Future<void> clearIdentity() async {
-    if (this._identity != null) {
+    if (_identity != null) {
       await OpenIdIdentity.clear(tenantId: tenantId);
-      this._identity = null;
+      _identity = null;
     }
   }
 
@@ -565,9 +578,9 @@ class OpenIdConnectClient {
   }
 
   Future<void> _completeLogin(AuthorizationResponse response) async {
-    this._identity = OpenIdIdentity.fromAuthorizationResponse(response);
+    _identity = OpenIdIdentity.fromAuthorizationResponse(response);
 
-    await this._identity!.save(tenantId: tenantId);
+    await _identity!.save(tenantId: tenantId);
   }
 
   Future<bool> _setupAutoRenew() async {
@@ -590,15 +603,14 @@ class OpenIdConnectClient {
   Future<void> _verifyDiscoveryDocument() async {
     if (configuration != null) return;
 
-    configuration = await OpenIdConnect.getConfiguration(
-      this.discoveryDocumentUrl,
-    );
+    configuration = await OpenIdConnect.getConfiguration(discoveryDocumentUrl);
   }
 
   ///Gets the proper scopes and adds offline access if the user has it specified in the configuration for the client.
   Iterable<String> _getScopes(Iterable<String> scopes) {
-    if (autoRefresh && !scopes.contains(OFFLINE_ACCESS_SCOPE))
+    if (autoRefresh && !scopes.contains(OFFLINE_ACCESS_SCOPE)) {
       return [OFFLINE_ACCESS_SCOPE, ...scopes];
+    }
     return scopes;
   }
 }

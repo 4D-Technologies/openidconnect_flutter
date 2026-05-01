@@ -1,4 +1,4 @@
-part of openidconnect;
+part of '../../../openidconnect.dart';
 
 /// Request payload for calling the UserInfo endpoint.
 class UserInfoRequest {
