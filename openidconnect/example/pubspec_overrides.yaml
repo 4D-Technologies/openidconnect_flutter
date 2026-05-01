@@ -1,0 +1,13 @@
+dependency_overrides:
+  openidconnect_android:
+    path: ../../openidconnect_android
+  openidconnect_darwin:
+    path: ../../openidconnect_darwin
+  openidconnect_linux:
+    path: ../../openidconnect_linux
+  openidconnect_platform_interface:
+    path: ../../openidconnect_platform_interface
+  openidconnect_web:
+    path: ../../openidconnect_web
+  openidconnect_windows:
+    path: ../../openidconnect_windows

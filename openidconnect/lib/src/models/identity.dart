@@ -1,5 +1,7 @@
 part of openidconnect;
 
+/// Represents a persisted OpenID Connect identity and its decoded ID token
+/// claims.
 class OpenIdIdentity extends AuthorizationResponse {
   static const String _AUTHENTICATION_TOKEN_KEY = "ACCESS_TOKEN";
   static const String _ID_TOKEN_KEY = "ID_TOKEN";
@@ -11,6 +13,7 @@ class OpenIdIdentity extends AuthorizationResponse {
   late Map<String, dynamic> claims;
   late String sub;
 
+  /// Creates an identity from tokens returned by the provider.
   OpenIdIdentity({
     required String accessToken,
     required DateTime expiresAt,
@@ -26,11 +29,16 @@ class OpenIdIdentity extends AuthorizationResponse {
          refreshToken: refreshToken,
          state: state,
        ) {
-    this.claims = JwtDecoder.decode(idToken);
+    this.claims = _decodeJwtPayload(idToken);
+    final subject = claims["sub"]?.toString();
+    if (subject == null || subject.isEmpty) {
+      throw const FormatException('Missing sub claim');
+    }
 
-    this.sub = claims["sub"].toString();
+    this.sub = subject;
   }
 
+  /// Creates an identity from an [AuthorizationResponse].
   factory OpenIdIdentity.fromAuthorizationResponse(
     AuthorizationResponse response,
   ) => OpenIdIdentity(
@@ -42,8 +50,7 @@ class OpenIdIdentity extends AuthorizationResponse {
     state: response.state,
   );
 
-  static final _storage = EncryptedSharedPreferencesAsync.getInstance();
-
+  /// Loads a previously persisted identity from secure storage.
   static Future<OpenIdIdentity?> load() async {
     try {
       late String? accessToken;
@@ -53,12 +60,19 @@ class OpenIdIdentity extends AuthorizationResponse {
       late String? idToken;
       late String? state;
 
-      accessToken = await _storage.getString(_AUTHENTICATION_TOKEN_KEY);
-      idToken = await _storage.getString(_ID_TOKEN_KEY);
-      expiresOn = await _storage.getInt(_EXPIRES_ON_KEY) ?? 0;
-      tokenType = await _storage.getString(_TOKEN_TYPE_KEY) ?? "bearer";
-      state = await _storage.getString(_STATE_KEY);
-      refreshToken = await _storage.getString(_REFRESH_TOKEN_KEY);
+      accessToken = await _OpenIdConnectSecureStorage.getString(
+        _AUTHENTICATION_TOKEN_KEY,
+      );
+      idToken = await _OpenIdConnectSecureStorage.getString(_ID_TOKEN_KEY);
+      expiresOn =
+          await _OpenIdConnectSecureStorage.getInt(_EXPIRES_ON_KEY) ?? 0;
+      tokenType =
+          await _OpenIdConnectSecureStorage.getString(_TOKEN_TYPE_KEY) ??
+          "bearer";
+      state = await _OpenIdConnectSecureStorage.getString(_STATE_KEY);
+      refreshToken = await _OpenIdConnectSecureStorage.getString(
+        _REFRESH_TOKEN_KEY,
+      );
 
       if (accessToken == null || idToken == null) return null;
 
@@ -70,8 +84,7 @@ class OpenIdIdentity extends AuthorizationResponse {
         refreshToken: refreshToken,
         state: state,
       );
-    } on Exception catch (e) {
-      print(e.toString());
+    } on Exception {
       try {
         clear();
       } on Exception {}
@@ -79,50 +92,76 @@ class OpenIdIdentity extends AuthorizationResponse {
     }
   }
 
+  /// Persists this identity to secure storage.
   Future<void> save() async {
     await Future.wait([
-      _storage.setString(_AUTHENTICATION_TOKEN_KEY, this.accessToken),
-      _storage.setString(_ID_TOKEN_KEY, this.idToken),
-      _storage.setString(_TOKEN_TYPE_KEY, this.tokenType),
-      _storage.setInt(_EXPIRES_ON_KEY, this.expiresAt.millisecondsSinceEpoch),
+      _OpenIdConnectSecureStorage.setString(
+        _AUTHENTICATION_TOKEN_KEY,
+        this.accessToken,
+      ),
+      _OpenIdConnectSecureStorage.setString(_ID_TOKEN_KEY, this.idToken),
+      _OpenIdConnectSecureStorage.setString(_TOKEN_TYPE_KEY, this.tokenType),
+      _OpenIdConnectSecureStorage.setInt(
+        _EXPIRES_ON_KEY,
+        this.expiresAt.millisecondsSinceEpoch,
+      ),
     ]);
 
     this.refreshToken == null
-        ? await _storage.remove(_REFRESH_TOKEN_KEY)
-        : await _storage.setString(_REFRESH_TOKEN_KEY, this.refreshToken);
+        ? await _OpenIdConnectSecureStorage.remove(_REFRESH_TOKEN_KEY)
+        : await _OpenIdConnectSecureStorage.setString(
+            _REFRESH_TOKEN_KEY,
+            this.refreshToken!,
+          );
 
     this.state == null
-        ? await _storage.remove(_STATE_KEY)
-        : await _storage.setString(_STATE_KEY, this.state);
+        ? await _OpenIdConnectSecureStorage.remove(_STATE_KEY)
+        : await _OpenIdConnectSecureStorage.setString(_STATE_KEY, this.state!);
   }
 
+  /// Removes any persisted identity from secure storage.
   static Future<void> clear() async {
     await Future.wait([
-      _storage.remove(_AUTHENTICATION_TOKEN_KEY),
-      _storage.remove(_ID_TOKEN_KEY),
-      _storage.remove(_REFRESH_TOKEN_KEY),
-      _storage.remove(_TOKEN_TYPE_KEY),
-      _storage.remove(_EXPIRES_ON_KEY),
-      _storage.remove(_STATE_KEY),
+      _OpenIdConnectSecureStorage.remove(_AUTHENTICATION_TOKEN_KEY),
+      _OpenIdConnectSecureStorage.remove(_ID_TOKEN_KEY),
+      _OpenIdConnectSecureStorage.remove(_REFRESH_TOKEN_KEY),
+      _OpenIdConnectSecureStorage.remove(_TOKEN_TYPE_KEY),
+      _OpenIdConnectSecureStorage.remove(_EXPIRES_ON_KEY),
+      _OpenIdConnectSecureStorage.remove(_STATE_KEY),
     ]);
   }
 
+  /// The `family_name` claim from the ID token, if present.
   String? get familyName => claims["family_name"]?.toString();
+
+  /// The `given_name` claim from the ID token, if present.
   String? get givenName => claims["given_name"]?.toString();
+
+  /// A display-friendly full name derived from the available name claims.
   String? get fullName =>
       claims["name"]?.toString() ??
       (givenName == null ? familyName : "${givenName} ${familyName}");
+
+  /// The preferred user name derived from common username-related claims.
   String? get userName =>
       claims["username"]?.toString() ??
       claims["preferred_username"]?.toString() ??
       claims["sub"]?.toString();
+
+  /// The `email` claim from the ID token, if present.
   String? get email => claims["email"]?.toString();
+
+  /// The `act` claim from the ID token, if present.
   String? get act => claims["act"]?.toString();
+
+  /// Role values extracted from the `role` claim.
   List<String> get roles => claims["role"] == null
       ? List<String>.empty()
       : claims["role"] is String
       ? <String>[claims["role"].toString()]
       : List<String>.from(claims["role"] as Iterable<dynamic>);
+
+  /// The `picture` claim from the ID token, if present.
   String? get picture => claims["picture"]?.toString();
 
   @override

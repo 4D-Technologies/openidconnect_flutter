@@ -1,0 +1,28 @@
+name: openidconnect_linux
+description: Linux implementation for OpenIdConnect.
+version: 2.0.0
+homepage: https://github.com/4D-Technologies/openidconnect_flutter/tree/main/openidconnect_linux
+
+environment:
+  sdk: ">=3.8.0 <4.0.0"
+  flutter: ">=3.27.0"
+
+dependencies:
+  flutter:
+    sdk: flutter
+  native_authentication: ^0.1.5
+  openidconnect_platform_interface: ^2.0.0
+
+dev_dependencies:
+  flutter_lints: ^6.0.0
+  flutter_test:
+    sdk: flutter
+
+flutter:
+  plugin:
+    implements: openidconnect
+    platforms:
+      linux:
+        pluginClass: OpenidconnectLinuxPlugin
+        dartPluginClass: OpenIdConnectLinux
+        fileName: openidconnect_linux.dart

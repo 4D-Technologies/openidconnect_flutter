@@ -1,5 +1,6 @@
 part of openidconnect;
 
+/// Request payload for the interactive authorization-code flow with PKCE.
 class InteractiveAuthorizationRequest extends TokenRequest {
   static const String _charset =
       'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-._~';
@@ -8,8 +9,10 @@ class InteractiveAuthorizationRequest extends TokenRequest {
   final int popupHeight;
   final String codeVerifier;
   final String codeChallenge;
+  final String state;
   final bool useWebPopup;
   final String redirectUrl;
+  final String? loginHint;
 
   /// read: https://openid.net/specs/openid-connect-core-1_0.html#AuthRequest
   ///
@@ -33,13 +36,17 @@ class InteractiveAuthorizationRequest extends TokenRequest {
     bool useWebPopup = true,
   }) async {
     final codeVerifier = List.generate(
-        128, (i) => _charset[Random.secure().nextInt(_charset.length)]).join();
-
-    final sha256 = crypto.Sha256();
+      128,
+      (i) => _charset[Random.secure().nextInt(_charset.length)],
+    ).join();
 
     final codeChallenge = base64Url
-        .encode((await sha256.hash(ascii.encode(codeVerifier))).bytes)
+        .encode(crypto.sha256.convert(ascii.encode(codeVerifier)).bytes)
         .replaceAll('=', '');
+    final state = List.generate(
+      43,
+      (i) => _charset[Random.secure().nextInt(_charset.length)],
+    ).join();
 
     return InteractiveAuthorizationRequest._(
       clientId: clientId,
@@ -49,6 +56,7 @@ class InteractiveAuthorizationRequest extends TokenRequest {
       autoRefresh: autoRefresh,
       codeVerifier: codeVerifier,
       codeChallenge: codeChallenge,
+      state: state,
       additionalParameters: additionalParameters,
       clientSecret: clientSecret,
       loginHint: loginHint,
@@ -68,21 +76,32 @@ class InteractiveAuthorizationRequest extends TokenRequest {
     required bool autoRefresh,
     required this.codeVerifier,
     required this.codeChallenge,
-    String? loginHint,
+    required this.state,
+    this.loginHint,
     super.prompts,
-    Map<String, String>? additionalParameters,
+    super.additionalParameters,
     this.popupWidth = 640,
     this.popupHeight = 480,
     this.useWebPopup = true,
-  }) : super(
-          grantType: "code",
-          additionalParameters: {
-            "redirect_uri": redirectUrl,
-            "login_hint": loginHint ?? "",
-            "response_type": "code",
-            "code_challenge_method": "S256",
-            "code_challenge": codeChallenge,
-            ...?additionalParameters,
-          },
-        );
+  }) : super(grantType: "authorization_code");
+
+  /// Builds the authorization request parameters sent to the provider.
+  @override
+  Map<String, String> toMap() {
+    final map = super.toMap();
+
+    map.remove('grant_type');
+    map.remove('client_secret');
+    map['response_type'] = 'code';
+    map['redirect_uri'] = redirectUrl;
+    map['state'] = state;
+    map['code_challenge_method'] = 'S256';
+    map['code_challenge'] = codeChallenge;
+
+    if (loginHint != null && loginHint!.isNotEmpty) {
+      map['login_hint'] = loginHint!;
+    }
+
+    return map;
+  }
 }

@@ -1,5 +1,6 @@
 part of openidconnect;
 
+/// Request payload for interactive RP-initiated logout.
 class InteractiveLogoutRequest {
   final String idToken;
   final OpenIdConfiguration configuration;
@@ -9,6 +10,7 @@ class InteractiveLogoutRequest {
   final String postLogoutRedirectUrl;
   final String? state;
 
+  /// Creates an interactive logout request.
   InteractiveLogoutRequest({
     required this.configuration,
     required this.idToken,
@@ -19,6 +21,7 @@ class InteractiveLogoutRequest {
     this.state,
   });
 
+  /// Builds the query parameters sent to the provider logout endpoint.
   Map<String, String> toMap() {
     return {
       "id_token_hint": idToken,

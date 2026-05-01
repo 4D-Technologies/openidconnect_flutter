@@ -1,7 +1,9 @@
 part of openidconnect;
 
+/// Token types supported by the revocation endpoint.
 enum TokenType { idToken, accessToken, refreshToken }
 
+/// Request payload for token revocation.
 class RevokeTokenRequest {
   final OpenIdConfiguration configuration;
   final String token;
@@ -9,6 +11,7 @@ class RevokeTokenRequest {
   final String? clientId;
   final String? clientSecret;
 
+  /// Creates a token revocation request.
   const RevokeTokenRequest({
     required this.configuration,
     required this.token,
@@ -17,6 +20,7 @@ class RevokeTokenRequest {
     this.clientSecret,
   }) : assert(tokenType != TokenType.idToken, "ID Tokens cannot be revoked.");
 
+  /// Builds the form body sent to the revocation endpoint.
   Map<String, String> toMap({bool useBasicAuth = true}) {
     var map = {
       "token": token,
