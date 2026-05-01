@@ -28,7 +28,7 @@ Currently supports:
 
 ## **Important**
 
-1. Interactive login now uses endorsed platform implementations backed by `native_authentication`, which means it follows the platform-native browser/session rules instead of embedding the IdP inside a WebView.
+1. Interactive login now uses endorsed platform implementations and platform-native browser/session APIs, which means it follows the platform-native browser/session rules instead of embedding the IdP inside a WebView.
 
    This aligns the mobile/desktop interactive flow with the current OAuth 2.0 for Native Apps guidance in RFC 8252 by avoiding embedded user-agents for native platforms.
 
@@ -53,7 +53,7 @@ Currently supports:
 - Android: `minSdkVersion 23`
 - iOS: `13.0`
 - macOS: `10.15`
-- Linux / Windows / Web: no additional package-enforced OS floor beyond the Flutter toolchain you build with, but the plugin assumes the current browser/system-auth flow support used by `native_authentication`.
+- Linux / Windows / Web: no additional package-enforced OS floor beyond the Flutter toolchain you build with, but the plugin assumes the current browser/system-auth flow support provided by the platform implementation in use.
 
 ## Getting Started
 

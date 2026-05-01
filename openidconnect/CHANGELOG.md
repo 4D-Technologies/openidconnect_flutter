@@ -1,5 +1,9 @@
 # Change Log
 
+## [Unreleased]
+
+- Remove the external `native_authentication` dependency from the Darwin package and replace it with an in-repo Apple browser-session bridge while preserving macOS localhost callback support.
+
 ## [2.0.0] - April 30th, 2026
 
 - Breaking change: migrate interactive native authentication to system-browser/native-agent flows via `native_authentication` instead of embedded web views.
