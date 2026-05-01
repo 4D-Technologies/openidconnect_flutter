@@ -15,9 +15,11 @@ void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
 
   final storage = <String, String>{};
+  var deleteDelay = Duration.zero;
 
   setUp(() {
     storage.clear();
+    deleteDelay = Duration.zero;
 
     TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
         .setMockMethodCallHandler(_secureStorageChannel, (call) async {
@@ -35,7 +37,10 @@ void main() {
             case 'read':
               return storage[key];
             case 'delete':
-              storage.remove(key);
+              if (deleteDelay > Duration.zero) {
+                await Future<void>.delayed(deleteDelay);
+              }
+              storage.remove(key!);
               return null;
             case 'deleteAll':
               storage.clear();
@@ -136,6 +141,23 @@ void main() {
       expect(loaded, isNull);
       expect(storage, isEmpty);
     });
+
+    test(
+      'awaits clearing invalid stored identity values before returning',
+      () async {
+        deleteDelay = const Duration(milliseconds: 10);
+        storage['ACCESS_TOKEN'] = 'stale-access-token';
+        storage['ID_TOKEN'] = 'not-a-jwt';
+        storage['EXPIRES_ON'] = DateTime.now().millisecondsSinceEpoch
+            .toString();
+        storage['TOKEN_TYPE'] = 'Bearer';
+
+        final loaded = await OpenIdIdentity.load();
+
+        expect(loaded, isNull);
+        expect(storage, isEmpty);
+      },
+    );
 
     test('exposes identity claims via convenience getters', () {
       final identity = OpenIdIdentity(
