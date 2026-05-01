@@ -174,11 +174,10 @@ packages:
   openidconnect_platform_interface:
     dependency: "direct main"
     description:
-      name: openidconnect_platform_interface
-      sha256: "923907ebf22a9d9ddc4f5df9a13853788c030a0e87deb2e343474a7ab628f0c9"
-      url: "https://pub.dev"
-    source: hosted
-    version: "1.0.17"
+      path: "../openidconnect_platform_interface"
+      relative: true
+    source: path
+    version: "2.0.0"
   package_config:
     dependency: transitive
     description:

@@ -1,6 +1,6 @@
 name: openidconnect
 description: OpenIdConnect library for flutter.
-version: 1.0.47
+version: 2.0.0
 homepage: https://github.com/4D-Technologies/openidconnect_flutter
 
 environment:
@@ -12,18 +12,18 @@ dependencies:
     sdk: flutter
   flutter_web_plugins:
     sdk: flutter
-  openidconnect_darwin: ^0.0.1
-  openidconnect_linux: ^0.0.1
-  openidconnect_platform_interface: ^1.0.17
-  openidconnect_web: ^1.0.26
-  openidconnect_windows: ^0.0.8
+  openidconnect_android: ^2.0.0
+  openidconnect_darwin: ^2.0.0
+  openidconnect_linux: ^2.0.0
+  openidconnect_platform_interface: ^2.0.0
+  openidconnect_web: ^2.0.0
+  openidconnect_windows: ^2.0.0
   jwt_decoder: ^2.0.1
 
   url_launcher: ^6.3.2
   http: ^1.6.0
   retry: ^3.1.2
 
-  native_authentication: <2.0.0
   flutter_secure_storage: ^10.0.0
   cryptography_plus: ^3.0.0
 
@@ -40,6 +40,8 @@ dev_dependencies:
 flutter:
   plugin:
     platforms:
+      android:
+        default_package: openidconnect_android
       ios:
         default_package: openidconnect_darwin
       macos:

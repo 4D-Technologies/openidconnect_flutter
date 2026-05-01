@@ -28,7 +28,7 @@ Currently supports:
 
 ## **Important**
 
-1. Interactive login now uses `native_authentication`, which means it follows the platform-native browser/session rules instead of embedding the IdP inside a WebView.
+1. Interactive login now uses endorsed platform implementations backed by `native_authentication`, which means it follows the platform-native browser/session rules instead of embedding the IdP inside a WebView.
 
    This aligns the mobile/desktop interactive flow with the current OAuth 2.0 for Native Apps guidance in RFC 8252 by avoiding embedded user-agents for native platforms.
 
@@ -78,7 +78,7 @@ Currently supports:
 
 Pull requests most welcome to fix any bugs found or address any of the above TODOs.
 
-If adding a custom environment other than android and iOS please follow the flutter best practices and add a separate implementation project with: flutter create --template=plugin --platforms={YourPlatformHere} openidconnect\_{YourPlatformHere} and add your code as appropriate there and then update the example project to use the new implementation.
+If adding a custom environment other than the already-endorsed Android, Darwin, Linux, Web, and Windows packages, please follow the flutter best practices and add a separate implementation project with: flutter create --template=plugin --platforms={YourPlatformHere} openidconnect\_{YourPlatformHere} and add your code as appropriate there and then update the example project to use the new implementation.
 
 If you are integrating with another native-auth package or platform surface, the implementation still needs to return the final redirected URL (including `code` and optional `state`) back to the Dart layer so token exchange and validation continue to happen centrally.
 

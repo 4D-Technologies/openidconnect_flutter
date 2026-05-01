@@ -260,62 +260,67 @@ packages:
     dependency: transitive
     description:
       name: native_authentication
-      sha256: a57108ad38836f5067ef58f5e4a737b08452261779587b88545a0b40561013ce
+      sha256: "9976f600c184bd469a9c2f4faa02e77ee05f3d91bd73c777d88b1a8ee49dfd5d"
       url: "https://pub.dev"
     source: hosted
-    version: "0.1.4"
+    version: "0.1.5"
   objective_c:
     dependency: transitive
     description:
       name: objective_c
-      sha256: "9f034ba1eeca53ddb339bc8f4813cb07336a849cd735559b60cdc068ecce2dc7"
+      sha256: "87103d96b19be76dc34b5ef859fecae78561d49779d5480b73c23b4dec8b9ec4"
       url: "https://pub.dev"
     source: hosted
-    version: "7.1.0"
+    version: "8.1.0"
   openidconnect:
     dependency: "direct main"
     description:
       path: ".."
       relative: true
     source: path
-    version: "1.0.47"
+    version: "2.0.0"
+  openidconnect_android:
+    dependency: "direct overridden"
+    description:
+      path: "../../openidconnect_android"
+      relative: true
+    source: path
+    version: "2.0.0"
   openidconnect_darwin:
     dependency: "direct overridden"
     description:
       path: "../../openidconnect_darwin"
       relative: true
     source: path
-    version: "0.0.1"
+    version: "2.0.0"
   openidconnect_linux:
     dependency: "direct overridden"
     description:
       path: "../../openidconnect_linux"
       relative: true
     source: path
-    version: "0.0.1"
+    version: "2.0.0"
   openidconnect_platform_interface:
-    dependency: transitive
+    dependency: "direct overridden"
     description:
-      name: openidconnect_platform_interface
-      sha256: "923907ebf22a9d9ddc4f5df9a13853788c030a0e87deb2e343474a7ab628f0c9"
-      url: "https://pub.dev"
-    source: hosted
-    version: "1.0.17"
+      path: "../../openidconnect_platform_interface"
+      relative: true
+    source: path
+    version: "2.0.0"
   openidconnect_web:
-    dependency: transitive
+    dependency: "direct overridden"
     description:
-      name: openidconnect_web
-      sha256: "0100bbc472724212d135c12ccdd170563ca62a80cb45efbf777a96984bddaed6"
-      url: "https://pub.dev"
-    source: hosted
-    version: "1.0.26"
+      path: "../../openidconnect_web"
+      relative: true
+    source: path
+    version: "2.0.0"
   openidconnect_windows:
     dependency: "direct overridden"
     description:
       path: "../../openidconnect_windows"
       relative: true
     source: path
-    version: "0.0.8"
+    version: "2.0.0"
   package_config:
     dependency: transitive
     description:

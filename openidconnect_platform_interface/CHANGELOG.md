@@ -1,5 +1,10 @@
 # Change Log
 
+## [2.0.0] - April 30th 2026
+
+- Breaking change: align the federated plugin family on the 2.x release line for the native-authentication migration.
+- Keep the platform interface stable while promoting the major version to match the breaking behavior changes in endorsed implementations.
+
 ## [1.0.17] - April 1st 2025
 
 - Update dependencies

@@ -1,6 +1,6 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:native_authentication/native_authentication.dart';
-import 'package:openidconnect/src/native_authentication_support.dart';
+import 'package:openidconnect_android/src/native_authentication_support.dart';
 import 'package:openidconnect_platform_interface/openidconnect_platform_interface.dart';
 
 void main() {

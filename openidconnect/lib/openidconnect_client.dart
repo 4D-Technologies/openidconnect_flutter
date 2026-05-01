@@ -323,7 +323,12 @@ class OpenIdConnectClient {
 
     final request = InteractiveLogoutRequest(
       configuration: configuration!,
-      postLogoutRedirectUrl: this.redirectUrl!,
+      postLogoutRedirectUrl:
+          postLogoutRedirectUri ??
+          this.redirectUrl ??
+          (throw StateError(
+            'When using logout interactive, you must provide a postLogoutRedirectUri or create the client with a redirect url.',
+          )),
       useWebPopup: useWebPopup,
       popupHeight: popupHeight,
       popupWidth: popupWidth,
@@ -463,6 +468,7 @@ class OpenIdConnectClient {
           clientSecret: clientSecret,
           scopes: _getScopes(scopes),
           refreshToken: _identity!.refreshToken!,
+          currentIdToken: _identity!.idToken,
           configuration: configuration!,
         ),
       );

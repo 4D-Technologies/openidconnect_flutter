@@ -10,11 +10,9 @@ import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:http/http.dart' as http;
 import 'package:cryptography_plus/cryptography_plus.dart' as crypto;
 import 'package:jwt_decoder/jwt_decoder.dart';
-import 'package:native_authentication/native_authentication.dart';
 import 'package:openidconnect_platform_interface/openidconnect_platform_interface.dart';
 import 'package:flutter/foundation.dart';
 import 'package:retry/retry.dart';
-import 'package:openidconnect/src/native_authentication_support.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 part 'openidconnect_client.dart';
@@ -43,7 +41,6 @@ part 'src/models/responses/authorization_response.dart';
 
 final _platform = OpenIdConnectPlatform.instance;
 final _secureStorage = FlutterSecureStorage();
-final _nativeAuthentication = NativeAuthentication();
 
 void _ensureSecureStorageInitialized() {
   WidgetsFlutterBinding.ensureInitialized();
@@ -86,6 +83,7 @@ class _OpenIdConnectSecureStorage {
 class OpenIdConnect {
   static const CODE_VERIFIER_STORAGE_KEY = "openidconnect_code_verifier";
   static const CODE_CHALLENGE_STORAGE_KEY = "openidconnect_code_challenge";
+  static const STATE_STORAGE_KEY = "openidconnect_state";
 
   static Future<void> initalizeEncryption(String encryptionKey) async {
     await _OpenIdConnectSecureStorage.initialize(encryptionKey);
@@ -136,14 +134,7 @@ class OpenIdConnect {
       },
     );
 
-    //These are special cases for the various different platforms because of limitations in pubspec.yaml
-    if (!kIsWeb && Platform.isAndroid) {
-      responseUrl = await startNativeAuthenticationFlow(
-        nativeAuthentication: _nativeAuthentication,
-        authorizationUrl: uri.toString(),
-        redirectUrl: request.redirectUrl,
-      );
-    } else if (kIsWeb) {
+    if (kIsWeb) {
       await _OpenIdConnectSecureStorage.setString(
         CODE_VERIFIER_STORAGE_KEY,
         request.codeVerifier,
@@ -151,6 +142,10 @@ class OpenIdConnect {
       await _OpenIdConnectSecureStorage.setString(
         CODE_CHALLENGE_STORAGE_KEY,
         request.codeChallenge,
+      );
+      await _OpenIdConnectSecureStorage.setString(
+        STATE_STORAGE_KEY,
+        request.state,
       );
 
       responseUrl = await _platform.authorizeInteractive(
@@ -163,14 +158,17 @@ class OpenIdConnect {
         useWebRedirectLoop: !request.useWebPopup,
       );
 
-      if (responseUrl == null) return null;
+      if (responseUrl == null) {
+        await _OpenIdConnectSecureStorage.remove(CODE_VERIFIER_STORAGE_KEY);
+        await _OpenIdConnectSecureStorage.remove(CODE_CHALLENGE_STORAGE_KEY);
+        await _OpenIdConnectSecureStorage.remove(STATE_STORAGE_KEY);
+        return null;
+      }
 
       await _OpenIdConnectSecureStorage.remove(CODE_VERIFIER_STORAGE_KEY);
       await _OpenIdConnectSecureStorage.remove(CODE_CHALLENGE_STORAGE_KEY);
-    } else if (Platform.isIOS ||
-        Platform.isMacOS ||
-        Platform.isLinux ||
-        Platform.isWindows) {
+      await _OpenIdConnectSecureStorage.remove(STATE_STORAGE_KEY);
+    } else {
       responseUrl = await _platform.authorizeInteractive(
         context: context,
         title: title,
@@ -178,12 +176,6 @@ class OpenIdConnect {
         redirectUrl: request.redirectUrl,
         popupHeight: request.popupHeight,
         popupWidth: request.popupWidth,
-      );
-    } else {
-      responseUrl = await startNativeAuthenticationFlow(
-        nativeAuthentication: _nativeAuthentication,
-        authorizationUrl: uri.toString(),
-        redirectUrl: request.redirectUrl,
       );
     }
 
@@ -209,14 +201,7 @@ class OpenIdConnect {
       },
     );
 
-    //These are special cases for the various different platforms because of limitations in pubspec.yaml
-    if (!kIsWeb && Platform.isAndroid) {
-      responseUrl = await startNativeAuthenticationFlow(
-        nativeAuthentication: _nativeAuthentication,
-        authorizationUrl: uri.toString(),
-        redirectUrl: request.postLogoutRedirectUrl,
-      );
-    } else if (kIsWeb) {
+    if (kIsWeb) {
       responseUrl = await _platform.authorizeInteractive(
         context: context,
         title: title,
@@ -226,10 +211,7 @@ class OpenIdConnect {
         popupWidth: request.popupWidth,
         useWebRedirectLoop: !request.useWebPopup,
       );
-    } else if (Platform.isIOS ||
-        Platform.isMacOS ||
-        Platform.isLinux ||
-        Platform.isWindows) {
+    } else {
       responseUrl = await _platform.authorizeInteractive(
         context: context,
         title: title,
@@ -237,12 +219,6 @@ class OpenIdConnect {
         redirectUrl: request.postLogoutRedirectUrl,
         popupHeight: request.popupHeight,
         popupWidth: request.popupWidth,
-      );
-    } else {
-      responseUrl = await startNativeAuthenticationFlow(
-        nativeAuthentication: _nativeAuthentication,
-        authorizationUrl: uri.toString(),
-        redirectUrl: request.postLogoutRedirectUrl,
       );
     }
 
@@ -272,6 +248,12 @@ class OpenIdConnect {
         resultUri.queryParameters['state'] ??
         resultUri.queryParameters['session_state'];
 
+    if (request.state.isNotEmpty) {
+      if (state == null || state.isEmpty || state != request.state) {
+        throw AuthenticationException(ERROR_INVALID_RESPONSE);
+      }
+    }
+
     final body = {
       "client_id": request.clientId,
       "redirect_uri": request.redirectUrl,
@@ -279,7 +261,6 @@ class OpenIdConnect {
       "code_verifier": request.codeVerifier,
       "code": authCode,
       if (request.clientSecret != null) "client_secret": request.clientSecret!,
-      if (state != null && state.isNotEmpty) "state": state,
     };
 
     final response = await httpRetry(
@@ -290,7 +271,7 @@ class OpenIdConnect {
     if (response == null)
       if (response == null) throw UnsupportedError('The response was null.');
 
-    return AuthorizationResponse.fromJson(response);
+    return AuthorizationResponse.fromJson(response, state: state);
   }
 
   static Future<AuthorizationResponse> authorizeDevice({
@@ -447,7 +428,10 @@ class OpenIdConnect {
 
     if (response == null) throw AuthenticationException(ERROR_INVALID_RESPONSE);
 
-    return AuthorizationResponse.fromJson(response);
+    return AuthorizationResponse.fromJson(
+      response,
+      fallbackIdToken: request.currentIdToken,
+    );
   }
 
   static Future<void> logout({required LogoutRequest request}) async {
@@ -485,9 +469,17 @@ class OpenIdConnect {
     final codeChallenge = await _OpenIdConnectSecureStorage.getString(
       CODE_CHALLENGE_STORAGE_KEY,
     );
+    final state = await _OpenIdConnectSecureStorage.getString(
+      STATE_STORAGE_KEY,
+    );
 
     await _OpenIdConnectSecureStorage.remove(CODE_VERIFIER_STORAGE_KEY);
     await _OpenIdConnectSecureStorage.remove(CODE_CHALLENGE_STORAGE_KEY);
+    await _OpenIdConnectSecureStorage.remove(STATE_STORAGE_KEY);
+
+    if (codeVerifier == null || codeChallenge == null || state == null) {
+      throw AuthenticationException(ERROR_INVALID_RESPONSE);
+    }
 
     final result = await _completeCodeExchange(
       request: InteractiveAuthorizationRequest._(
@@ -497,8 +489,9 @@ class OpenIdConnect {
         scopes: scopes,
         configuration: configuration,
         autoRefresh: autoRefresh,
-        codeVerifier: codeVerifier!,
-        codeChallenge: codeChallenge!,
+        codeVerifier: codeVerifier,
+        codeChallenge: codeChallenge,
+        state: state,
       ),
       url: response,
     );

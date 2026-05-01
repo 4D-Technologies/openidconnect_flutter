@@ -1,5 +1,13 @@
 # Change Log
 
+## [2.0.0] - April 30th, 2026
+
+- Breaking change: migrate interactive native authentication to system-browser/native-agent flows via `native_authentication` instead of embedded web views.
+- Breaking change: endorse dedicated Android, Darwin, Linux, Web, and Windows federated platform packages under the 2.x line.
+- Improve OpenID Connect code-flow correctness by separating authorization request parameters from token-endpoint-only parameters.
+- Add request state generation/validation for interactive authorization callbacks and preserve `id_token` across refresh responses when providers omit it.
+- Fix interactive logout to honor the requested `postLogoutRedirectUri` and align request construction with RP-Initiated Logout requirements.
+
 ## [1.0.47] - April 30th, 2026
 
 - Replace `encrypt_shared_preferences` with `flutter_secure_storage` for token persistence.
