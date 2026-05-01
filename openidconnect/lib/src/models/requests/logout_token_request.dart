@@ -1,4 +1,4 @@
-part of openidconnect;
+part of '../../../openidconnect.dart';
 
 /// Request payload used to revoke a refresh token during logout.
 class LogoutTokenRequest {

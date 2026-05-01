@@ -5,8 +5,10 @@ import 'identity_view.dart';
 import 'credentials.dart';
 
 class DeviceCodePage extends StatefulWidget {
+  const DeviceCodePage({super.key});
+
   @override
-  _DeviceCodePageState createState() => _DeviceCodePageState();
+  State<DeviceCodePage> createState() => _DeviceCodePageState();
 }
 
 class _DeviceCodePageState extends State<DeviceCodePage> {
@@ -17,7 +19,7 @@ class _DeviceCodePageState extends State<DeviceCodePage> {
   OpenIdConfiguration? discoveryDocument;
   AuthorizationResponse? identity;
 
-  String? errorMessage = null;
+  String? errorMessage;
 
   Future<void> lookupSettings() async {
     _formKey.currentState!.save();
@@ -89,8 +91,7 @@ class _DeviceCodePageState extends State<DeviceCodePage> {
                   try {
                     Uri.parse(value);
                     return null;
-                  } on Exception catch (e) {
-                    print(e.toString());
+                  } on Exception {
                     return errorMessage;
                   }
                 },
@@ -101,14 +102,15 @@ class _DeviceCodePageState extends State<DeviceCodePage> {
                 label: Text("Lookup OpenId Connect Configuration"),
               ),
               Visibility(
+                visible: discoveryDocument != null,
                 child: TextButton.icon(
                   onPressed: authorize,
                   icon: Icon(Icons.login),
                   label: Text("Login"),
                 ),
-                visible: discoveryDocument != null,
               ),
               Visibility(
+                visible: errorMessage != null,
                 child: Text(
                   errorMessage ?? "",
                   style: Theme.of(context)
@@ -116,13 +118,13 @@ class _DeviceCodePageState extends State<DeviceCodePage> {
                       .bodyLarge!
                       .copyWith(color: Theme.of(context).colorScheme.error),
                 ),
-                visible: errorMessage != null,
               ),
               Visibility(
-                child: identity == null ? Container() : IdentityView(identity!),
                 visible: identity != null,
+                child: identity == null ? Container() : IdentityView(identity!),
               ),
               Visibility(
+                visible: identity != null,
                 child: TextButton.icon(
                   onPressed: () => OpenIdConnect.logout(
                     request: LogoutRequest(
@@ -133,7 +135,6 @@ class _DeviceCodePageState extends State<DeviceCodePage> {
                   icon: Icon(Icons.logout),
                   label: Text("Logout"),
                 ),
-                visible: identity != null,
               ),
             ],
           ),

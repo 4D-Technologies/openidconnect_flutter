@@ -1,5 +1,5 @@
-part of openidconnect_platform_interface;
+part of '../../openidconnect_platform_interface.dart';
 
 class LogoutException extends OpenIdConnectException {
-  LogoutException([String? errorMessage]) : super(errorMessage);
+  LogoutException([super.errorMessage]);
 }

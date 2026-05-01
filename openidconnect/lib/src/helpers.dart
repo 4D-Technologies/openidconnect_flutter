@@ -1,4 +1,4 @@
-part of openidconnect;
+part of '../openidconnect.dart';
 
 Map<String, dynamic> _decodeJwtPayload(String token) {
   final tokenParts = token.split('.');
@@ -63,15 +63,16 @@ Future<Map<String, dynamic>?> httpRetry<T extends http.Response>(
         ? result.body
         : result.body.startsWith("<html")
         ? "{}"
-        : "\{\"error\": \"${result.body.replaceAll("\"", "'")}\"\}";
+        : "{\"error\": \"${result.body.replaceAll("\"", "'")}\"}";
 
     final jsonResponse = jsonDecode(body) as Map<String, dynamic>?;
 
     if (result.statusCode < 200 || result.statusCode >= 300) {
       if (jsonResponse!["error"] != null) {
         var error = jsonResponse["error"].toString();
-        if (jsonResponse["error_description"] != null)
+        if (jsonResponse["error_description"] != null) {
           error += ": ${jsonResponse["error_description"]}";
+        }
         throw HttpResponseException(
           ERROR_MESSAGE_FORMAT.replaceAll("%2", error),
         );

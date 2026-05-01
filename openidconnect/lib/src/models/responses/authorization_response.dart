@@ -1,4 +1,4 @@
-part of openidconnect;
+part of '../../../openidconnect.dart';
 
 /// Token response returned from a successful authorization or refresh flow.
 class AuthorizationResponse extends TokenResponse {

@@ -1,4 +1,4 @@
-part of openidconnect;
+part of '../../../openidconnect.dart';
 
 /// Request body for the resource-owner password grant.
 class PasswordAuthorizationRequest extends TokenRequest {

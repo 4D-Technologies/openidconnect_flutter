@@ -316,5 +316,8 @@ Future<void> _writeJson(
 
 class _FakeBuildContext implements BuildContext {
   @override
+  bool get mounted => true;
+
+  @override
   dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);
 }

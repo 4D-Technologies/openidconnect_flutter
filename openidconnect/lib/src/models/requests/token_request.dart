@@ -1,4 +1,4 @@
-part of openidconnect;
+part of '../../../openidconnect.dart';
 
 /// Base request payload for token-related OpenID Connect operations.
 abstract class TokenRequest {
@@ -29,7 +29,7 @@ abstract class TokenRequest {
       "grant_type": grantType,
       "scope": scopes.join(" "),
       if (prompts != null && prompts!.isNotEmpty) 'prompt': prompts!.join(' '),
-      if (clientSecret != null) "client_secret": clientSecret!,
+      "client_secret": ?clientSecret,
       ...?additionalParameters,
     };
   }

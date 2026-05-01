@@ -1,4 +1,4 @@
-part of openidconnect;
+part of '../../../openidconnect.dart';
 
 /// Base token response returned by the provider.
 class TokenResponse {

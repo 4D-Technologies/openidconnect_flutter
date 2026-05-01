@@ -1,4 +1,4 @@
-part of openidconnect_platform_interface;
+part of '../openidconnect_platform_interface.dart';
 
 const MethodChannel _channel =
     MethodChannel('plugins.concerti.io/openidconnect');

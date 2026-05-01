@@ -1,5 +1,3 @@
-library openidconnect_platform_interface;
-
 import 'dart:async';
 
 import 'package:flutter/services.dart';

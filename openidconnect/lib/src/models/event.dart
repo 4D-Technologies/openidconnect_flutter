@@ -1,4 +1,4 @@
-part of openidconnect;
+part of '../../openidconnect.dart';
 
 /// Authentication lifecycle events emitted by [OpenIdConnectClient].
 enum AuthEventTypes { Error, Success, LoggingOut, NotLoggedIn, Refresh }
@@ -13,9 +13,9 @@ class AuthEvent {
   const AuthEvent(this.type, {this.message});
 
   @override
-  operator ==(Object o) {
-    if (identical(this, o)) return true;
-    return o is AuthEvent && o.type == type && o.message == message;
+  operator ==(Object other) {
+    if (identical(this, other)) return true;
+    return other is AuthEvent && other.type == type && other.message == message;
   }
 
   @override

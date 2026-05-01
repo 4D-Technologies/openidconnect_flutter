@@ -1,4 +1,4 @@
-part of openidconnect;
+part of '../../openidconnect.dart';
 
 /// Parsed OpenID Provider metadata from a discovery document.
 class OpenIdConfiguration {
@@ -113,34 +113,34 @@ class OpenIdConfiguration {
   );
 
   @override
-  operator ==(Object o) {
-    if (identical(this, o)) return true;
+  operator ==(Object other) {
+    if (identical(this, other)) return true;
 
-    return o is OpenIdConfiguration &&
-        o.issuer == issuer &&
-        o.jwksUri == jwksUri &&
-        o.authorizationEndpoint == authorizationEndpoint &&
-        o.tokenEndpoint == tokenEndpoint &&
-        o.userInfoEndpoint == userInfoEndpoint &&
-        o.endSessionEndpoint == endSessionEndpoint &&
-        o.revocationEndpoint == revocationEndpoint &&
-        o.mfaChallengeEndpoint == mfaChallengeEndpoint &&
-        o.registrationEndpoint == registrationEndpoint &&
-        o.scopesSupported == scopesSupported &&
-        o.claimsSupported == claimsSupported &&
-        o.grantTypesSupported == grantTypesSupported &&
-        o.responseTypesSupported == responseTypesSupported &&
-        o.responseModesSupported == responseModesSupported &&
-        o.checkSessionIFrame == checkSessionIFrame &&
-        o.deviceAuthorizationEndpoint == deviceAuthorizationEndpoint &&
-        o.apiEndpoints == apiEndpoints &&
-        o.tokenEndpointAuthMethodsSupported ==
+    return other is OpenIdConfiguration &&
+        other.issuer == issuer &&
+        other.jwksUri == jwksUri &&
+        other.authorizationEndpoint == authorizationEndpoint &&
+        other.tokenEndpoint == tokenEndpoint &&
+        other.userInfoEndpoint == userInfoEndpoint &&
+        other.endSessionEndpoint == endSessionEndpoint &&
+        other.revocationEndpoint == revocationEndpoint &&
+        other.mfaChallengeEndpoint == mfaChallengeEndpoint &&
+        other.registrationEndpoint == registrationEndpoint &&
+        other.scopesSupported == scopesSupported &&
+        other.claimsSupported == claimsSupported &&
+        other.grantTypesSupported == grantTypesSupported &&
+        other.responseTypesSupported == responseTypesSupported &&
+        other.responseModesSupported == responseModesSupported &&
+        other.checkSessionIFrame == checkSessionIFrame &&
+        other.deviceAuthorizationEndpoint == deviceAuthorizationEndpoint &&
+        other.apiEndpoints == apiEndpoints &&
+        other.tokenEndpointAuthMethodsSupported ==
             tokenEndpointAuthMethodsSupported &&
-        o.idTokenSigningAlgValuesSupported ==
+        other.idTokenSigningAlgValuesSupported ==
             idTokenSigningAlgValuesSupported &&
-        o.subjectTypesSupported == subjectTypesSupported &&
-        o.codeChallengeMethodsSupported == codeChallengeMethodsSupported &&
-        o.requestUriParameterSupported == requestUriParameterSupported;
+        other.subjectTypesSupported == subjectTypesSupported &&
+        other.codeChallengeMethodsSupported == codeChallengeMethodsSupported &&
+        other.requestUriParameterSupported == requestUriParameterSupported;
   }
 
   @override

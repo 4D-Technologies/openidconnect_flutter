@@ -1,6 +1,5 @@
 import 'dart:async';
 
-import 'package:flutter/foundation.dart';
 import 'package:flutter/widgets.dart';
 import 'package:openidconnect/openidconnect.dart';
 
@@ -61,6 +60,7 @@ class HarnessController extends ChangeNotifier {
 
     await _runBusy(() async {
       final session = await _ensureSession(config);
+      if (!context.mounted) return;
       final identity = await session.loginInteractive(
         context: context,
         title: config.effectiveLoginTitle,
@@ -80,11 +80,13 @@ class HarnessController extends ChangeNotifier {
     HarnessConfig config,
     BuildContext context,
   ) async {
-    if (!_validateInteractiveConfig(config, requireLogoutRedirect: true))
+    if (!_validateInteractiveConfig(config, requireLogoutRedirect: true)) {
       return;
+    }
 
     await _runBusy(() async {
       final session = await _ensureSession(config);
+      if (!context.mounted) return;
       final redirect = await session.logoutInteractive(
         context: context,
         title: config.effectiveLoginTitle,

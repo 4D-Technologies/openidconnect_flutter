@@ -1,4 +1,4 @@
-part of openidconnect;
+part of '../../../openidconnect.dart';
 
 /// Token types supported by the revocation endpoint.
 enum TokenType { idToken, accessToken, refreshToken }
@@ -28,10 +28,12 @@ class RevokeTokenRequest {
           ? "access_token"
           : "refresh_token",
     };
-    if (!useBasicAuth && clientId != null)
+    if (!useBasicAuth && clientId != null) {
       map = {"client_id": clientId!, ...map};
-    if (!useBasicAuth && clientSecret != null)
+    }
+    if (!useBasicAuth && clientSecret != null) {
       map = {"client_secret": clientSecret!, ...map};
+    }
     return map;
   }
 }

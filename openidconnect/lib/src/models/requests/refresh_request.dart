@@ -1,4 +1,4 @@
-part of openidconnect;
+part of '../../../openidconnect.dart';
 
 /// Request body for exchanging a refresh token for a new access token.
 class RefreshRequest extends TokenRequest {

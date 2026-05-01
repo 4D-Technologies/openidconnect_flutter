@@ -1,4 +1,4 @@
-part of openidconnect;
+part of '../../../openidconnect.dart';
 
 /// Request body for the device authorization endpoint.
 class DeviceAuthorizationRequest {
@@ -24,8 +24,8 @@ class DeviceAuthorizationRequest {
     return <String, dynamic>{
       "client_id": clientId,
       "scope": scopes.join(" "),
-      if (audience != null) "audience": audience!,
-      if (clientSecret != null) "client_secret": clientSecret!,
+      "audience": ?audience,
+      "client_secret": ?clientSecret,
       ...?additionalParameters,
     };
   }
