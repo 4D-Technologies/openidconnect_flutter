@@ -6,7 +6,6 @@
 
 #define OPENIDCONNECT_SCHEMA openidconnect_get_schema()
 
-const char kBadArgumentsError[] = "Bad Arguments";
 const char kSecurityAccessError[] = "Security Access Error";
 const char kMethodInitialize[] = "initialize";
 const char kMethodRead[] = "read";
