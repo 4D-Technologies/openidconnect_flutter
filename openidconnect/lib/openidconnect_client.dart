@@ -14,6 +14,7 @@ class OpenIdConnectClient {
   final String discoveryDocumentUrl;
   final String clientId;
   final String? clientSecret;
+  final String? tenantId;
   final String? redirectUrl;
   final bool autoRefresh;
   final bool webUseRefreshTokens;
@@ -32,6 +33,7 @@ class OpenIdConnectClient {
   OpenIdConnectClient._({
     required this.discoveryDocumentUrl,
     required this.clientId,
+    this.tenantId,
     this.redirectUrl,
     this.clientSecret,
     this.autoRefresh = true,
@@ -46,6 +48,7 @@ class OpenIdConnectClient {
     required String discoveryDocumentUrl,
     required String clientId,
     required String encryptionKey,
+    String? tenantId,
     String? redirectUrl,
     String? clientSecret,
     bool autoRefresh = true,
@@ -58,6 +61,7 @@ class OpenIdConnectClient {
     final client = OpenIdConnectClient._(
       discoveryDocumentUrl: discoveryDocumentUrl,
       clientId: clientId,
+      tenantId: tenantId,
       clientSecret: clientSecret,
       redirectUrl: redirectUrl,
       scopes: scopes,
@@ -85,11 +89,11 @@ class OpenIdConnectClient {
 
       if (response != null) {
         _identity = OpenIdIdentity.fromAuthorizationResponse(response);
-        await this._identity?.save();
+        await this._identity?.save(tenantId: tenantId);
       }
     }
 
-    if (_identity == null) _identity = await OpenIdIdentity.load();
+    if (_identity == null) _identity = await OpenIdIdentity.load(tenantId: tenantId);
     _isInitializationComplete = true;
 
     if (_identity != null) {
@@ -480,7 +484,7 @@ class OpenIdConnectClient {
     if (!webUseRefreshTokens) {
       //Web has a special case where it will use a hidden iframe. This just returns true because the iframe does it.
       //In this case we simply load from storage because the web implementation just stores the new values in storage for us.
-      _identity = await OpenIdIdentity.load();
+      _identity = await OpenIdIdentity.load(tenantId: tenantId);
       return true;
     }
 
@@ -549,7 +553,7 @@ class OpenIdConnectClient {
   /// Clears the persisted identity from storage and memory.
   Future<void> clearIdentity() async {
     if (this._identity != null) {
-      await OpenIdIdentity.clear();
+      await OpenIdIdentity.clear(tenantId: tenantId);
       this._identity = null;
     }
   }
@@ -562,7 +566,7 @@ class OpenIdConnectClient {
   Future<void> _completeLogin(AuthorizationResponse response) async {
     this._identity = OpenIdIdentity.fromAuthorizationResponse(response);
 
-    await this._identity!.save();
+    await this._identity!.save(tenantId: tenantId);
   }
 
   Future<bool> _setupAutoRenew() async {
