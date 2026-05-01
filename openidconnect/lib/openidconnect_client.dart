@@ -93,7 +93,8 @@ class OpenIdConnectClient {
       }
     }
 
-    if (_identity == null) _identity = await OpenIdIdentity.load(tenantId: tenantId);
+    if (_identity == null)
+      _identity = await OpenIdIdentity.load(tenantId: tenantId);
     _isInitializationComplete = true;
 
     if (_identity != null) {
