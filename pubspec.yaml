@@ -1,0 +1,15 @@
+name: openidconnect_workspace
+
+environment:
+  sdk: ">=3.8.0 <4.0.0"
+
+workspace:
+  - openidconnect
+  - openidconnect_android
+  - openidconnect_darwin
+  - openidconnect_linux
+  - openidconnect_platform_interface
+  - openidconnect_web
+  - openidconnect_windows
+  - openidconnect/example
+  - openidconnect/test_harness

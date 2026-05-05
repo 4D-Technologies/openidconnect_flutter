@@ -32,6 +32,7 @@
 .swiftpm/
 build/
 coverage/
+**/pubspec_overrides.yaml
 
 # Android related
 **/android/**/gradle-wrapper.jar
