@@ -277,7 +277,7 @@ Pull requests most welcome to fix any bugs found or address any of the above TOD
 
 For local monorepo development against the sibling federated packages, this project uses Dart Workspaces. You do not need to generate local path overrides. Simply run \`flutter pub get\` in the root directory to resolve the entire workspace.
 
-When publishing the packages via \`flutter pub publish\`, dart will automatically resolve against the hosted package versions as expected, without conflicting with your local workspace setup.
+When publishing the packages via `flutter pub publish`, Dart will automatically resolve against the hosted package versions as expected, without conflicting with your local workspace setup.
 
 If adding a custom environment other than android and iOS please follow the flutter best practices and add a separate implementation project with: flutter create --template=plugin --platforms={YourPlatformHere} openidconnect\_{YourPlatformHere} and add your code as appropriate there and then update the example project to use the new implementation.
 
