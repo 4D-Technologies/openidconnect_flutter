@@ -233,6 +233,21 @@ If you build through Flutter instead of calling `xcodebuild` directly, `flutter 
 
 If `flutter build macos --codesign` still fails, the most common cause is that the `Runner` macOS target does not yet have a **Development Team** selected in Xcode, or code signing is disabled for the active build configuration. Open `macos/Runner.xcworkspace` and confirm the `Runner` target shows a valid team/signing identity under **Signing & Capabilities** for both Debug and Release.
 
+### Fixing macOS keychain access prompts
+
+If your app shows a macOS keychain prompt that asks the user to log in and choose **Always Allow**, that usually means the app is not being recognized as the same stable, signed, entitled application identity that created the stored keychain item.
+
+To avoid that prompt as much as possible:
+
+1. Make sure the app is **code signed** for the configuration you are running.
+2. Make sure the app has the `keychain-access-groups` entitlement described above.
+3. Keep the same bundle identifier, development team, and keychain access group between runs.
+4. Prefer running the app through a normal signed Xcode/Flutter build instead of ad-hoc or unsigned launches.
+
+If prompts continue after you fix signing and entitlements, you may still have older keychain entries created by an unsigned or differently signed build. In that case, delete the existing app-specific keychain items once and let the signed build recreate them.
+
+This package cannot suppress that prompt in code; the prompt is controlled by macOS Keychain security. The practical fix is to make sure the host app is signed consistently and uses the correct entitlement.
+
 Custom-scheme `Runner/Info.plist` snippet:
 
 ```xml
