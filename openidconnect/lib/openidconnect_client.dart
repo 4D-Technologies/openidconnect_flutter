@@ -577,6 +577,7 @@ class OpenIdConnectClient {
       await clearIdentity();
     } on Exception {
       // Best-effort cleanup only. Preserve the original authentication error.
+      _identity = null;
     }
   }
 

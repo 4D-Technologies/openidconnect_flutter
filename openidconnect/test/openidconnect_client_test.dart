@@ -345,6 +345,7 @@ void main() {
           client.currentEvent?.message,
           contains('write failed for ID_TOKEN'),
         );
+        expect(client.identity, isNull);
       },
     );
   });

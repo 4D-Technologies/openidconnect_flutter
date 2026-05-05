@@ -4,7 +4,7 @@ Standards compliant OpenIdConnect library for flutter that supports:
 
 1. Code flow with PKCE (the evolution of implicit flow). This allows poping a web browser (included) for authentication to any open id connect compliant IdP.
 2. Password flow. For use when you control the client and server and you wish to have your users login directly to your IdP.
-3. Device flow. For use typically with console applications and similar. Used currently for Windows, Linux and MacOs until WebView is supported on those platforms.
+3. Device flow. For use typically with console applications and similar.
 4. Full OpenIdConnect Client library that encapsulates the entire process including refresh tokens, refreshing and publishes an event stream for your application.
 
 The base library supports most of the basic OpenIdConnect functionality:
@@ -28,7 +28,18 @@ Currently supports:
 
 ## Important
 
-For Linux and macOS currently your IdP MUST support device code flow to function properly with interactive login. Otherwise you must use password flow. This is because webView is not yet supported on these environments.
+1. Interactive login now uses endorsed platform implementations and platform-native browser/session APIs, which means it follows the platform-native browser/session rules instead of embedding the IdP inside a WebView.
+
+    This aligns the mobile/desktop interactive flow with the current OAuth 2.0 for Native Apps guidance in RFC 8252 by avoiding embedded user-agents for native platforms.
+
+2. Your `redirectUrl` must be compatible with the target platform:
+    - `http://localhost[:port]/path` for Linux / Windows (and optionally macOS)
+    - a custom scheme such as `my.app://callback` for Android / iOS / macOS
+    - an HTTPS callback you own and have configured for App Links / Universal Links where supported
+
+3. On Android, if you use a custom scheme or HTTPS callback, add the `native_authentication` callback receiver entries shown in that package's documentation.
+
+4. Token persistence now uses the in-repo endorsed platform implementations instead of `flutter_secure_storage`. On native platforms this uses the platform secure store directly (Android Keystore-backed AES-GCM, Apple Keychain, libsecret, and Windows Credential Manager). `OpenIdConnect.initalizeEncryption(...)` and the `encryptionKey` parameter on `OpenIdConnectClient.create(...)` remain available for backward compatibility, but are no longer used to derive storage encryption.
 
 ## Requirements
 
