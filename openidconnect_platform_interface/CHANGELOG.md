@@ -1,5 +1,10 @@
 # Change Log
 
+## [2.0.1] - May 5th 2026
+
+- Align the interface package on the `2.0.1` patch line for the federated publish flow.
+- Note the removal of package-local `pubspec_overrides.yaml` files from the publishable platform packages so hosted dependency resolution is used during publish.
+
 ## [2.0.0] - April 30th 2026
 
 - Breaking change: align the federated plugin family on the 2.x release line for the native-authentication migration.

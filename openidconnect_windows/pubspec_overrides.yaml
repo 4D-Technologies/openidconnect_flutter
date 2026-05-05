@@ -1,3 +1,0 @@
-dependency_overrides:
-  openidconnect_platform_interface:
-    path: ../openidconnect_platform_interface

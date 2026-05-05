@@ -12,12 +12,12 @@ dependencies:
     sdk: flutter
   flutter_web_plugins:
     sdk: flutter
-  openidconnect_android: ^2.0.0
-  openidconnect_darwin: ^2.0.0
-  openidconnect_linux: ^2.0.0
-  openidconnect_platform_interface: ^2.0.0
-  openidconnect_web: ^2.0.0
-  openidconnect_windows: ^2.0.0
+  openidconnect_android: ^2.0.1
+  openidconnect_darwin: ^2.0.1
+  openidconnect_linux: ^2.0.1
+  openidconnect_platform_interface: ^2.0.1
+  openidconnect_web: ^2.0.1
+  openidconnect_windows: ^2.0.1
   crypto: ">=3.0.0 <4.0.0"
   url_launcher: ">=6.3.0 <7.0.0"
   http: ">=1.0.0 <2.0.0"
