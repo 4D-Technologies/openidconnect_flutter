@@ -4,7 +4,7 @@ Standards compliant OpenIdConnect library for flutter that supports:
 
 1. Code flow with PKCE (the evolution of implicit flow). This allows poping a web browser (included) for authentication to any open id connect compliant IdP.
 2. Password flow. For use when you control the client and server and you wish to have your users login directly to your IdP.
-3. Device flow. For use typically with console applications and similar. Used currently for Windows, Linux and MacOs until WebView is supported on those platforms.
+3. Device flow. For use typically with console applications and similar.
 4. Full OpenIdConnect Client library that encapsulates the entire process including refresh tokens, refreshing and publishes an event stream for your application.
 
 The base library supports most of the basic OpenIdConnect functionality:
@@ -28,7 +28,18 @@ Currently supports:
 
 ## Important
 
-For Linux and macOS currently your IdP MUST support device code flow to function properly with interactive login. Otherwise you must use password flow. This is because webView is not yet supported on these environments.
+1. Interactive login now uses endorsed platform implementations and platform-native browser/session APIs, which means it follows the platform-native browser/session rules instead of embedding the IdP inside a WebView.
+
+    This aligns the mobile/desktop interactive flow with the current OAuth 2.0 for Native Apps guidance in RFC 8252 by avoiding embedded user-agents for native platforms.
+
+2. Your `redirectUrl` must be compatible with the target platform:
+    - `http://localhost[:port]/path` for Linux / Windows (and optionally macOS)
+    - a custom scheme such as `my.app://callback` for Android / iOS / macOS
+    - an HTTPS callback you own and have configured for App Links / Universal Links where supported
+
+3. On Android, if you use a custom scheme or HTTPS callback, add the `native_authentication` callback receiver entries shown in that package's documentation.
+
+4. Token persistence now uses the in-repo endorsed platform implementations instead of `flutter_secure_storage`. On native platforms this uses the platform secure store directly (Android Keystore-backed AES-GCM, Apple Keychain, libsecret, and Windows Credential Manager). `OpenIdConnect.initalizeEncryption(...)` and the `encryptionKey` parameter on `OpenIdConnectClient.create(...)` remain available for backward compatibility, but are no longer used to derive storage encryption.
 
 ## Requirements
 
@@ -129,6 +140,8 @@ Custom-scheme `Info.plist` snippet:
 
 - Requires macOS `10.15+`
 - Add your custom callback scheme under `CFBundleURLTypes` in `Info.plist`, or configure Associated Domains for HTTPS callbacks
+- Add the **Keychain Sharing** capability for apps that use `OpenIdConnectClient`, or declare `keychain-access-groups` manually. The macOS secure-storage implementation uses the data-protection keychain and will throw `errSecMissingEntitlement` / `-34018` without a keychain access group.
+- Make sure the macOS target is code signed, because the `keychain-access-groups` entitlement is applied during code signing.
 - For sandboxed apps, enable the network entitlements you need, especially outbound client access and loopback/server access if you use localhost callbacks
 - No OIDC-specific privacy usage strings are required by this package
 
@@ -156,9 +169,79 @@ Custom-scheme `Runner/Info.plist` snippet:
 </array>
 ```
 
+Add the same keychain access group to `macos/Runner/DebugProfile.entitlements` and `macos/Runner/Release.entitlements`, and make sure the `Runner` macOS target has code signing enabled:
+
+```xml
+<key>keychain-access-groups</key>
+<array>
+    <string>$(AppIdentifierPrefix)$(CFBundleIdentifier)</string>
+</array>
+```
+
+In Xcode, open `macos/Runner.xcworkspace`, select the `Runner` project, select the `Runner` target, then open **Signing & Capabilities** and either enable **Automatically manage signing** with your development team or configure manual signing for your certificate/profile.
+
+If you need a command-line build with signing enabled, pass the signing settings directly to `xcodebuild`:
+
+```sh
+xcodebuild \
+    -workspace macos/Runner.xcworkspace \
+    -scheme Runner \
+    -configuration Debug \
+    -destination 'platform=macOS' \
+    CODE_SIGN_STYLE=Automatic \
+    DEVELOPMENT_TEAM=YOUR_TEAM_ID \
+    CODE_SIGNING_ALLOWED=YES \
+    CODE_SIGNING_REQUIRED=YES \
+    build
+```
+
+For a signed Release build, use the Release configuration instead:
+
+```sh
+xcodebuild \
+    -workspace macos/Runner.xcworkspace \
+    -scheme Runner \
+    -configuration Release \
+    -destination 'platform=macOS' \
+    CODE_SIGN_STYLE=Automatic \
+    DEVELOPMENT_TEAM=YOUR_TEAM_ID \
+    CODE_SIGNING_ALLOWED=YES \
+    CODE_SIGNING_REQUIRED=YES \
+    build
+```
+
+That command signs the build invocation, but you should still set the persistent project configuration in Xcode so normal Flutter/Xcode builds keep working.
+
+If you build through Flutter instead of invoking `xcodebuild` directly, `flutter build macos --codesign` uses the signing/team configuration already saved in the Xcode project. In practice:
+
+- set the durable signing configuration in **Signing & Capabilities**
+- use `flutter build macos --codesign` for normal signed Flutter macOS builds
+- use raw `xcodebuild` when you need per-invocation signing overrides, such as in CI
+
+If `flutter build macos --codesign` still fails, the most common cause is that the `Runner` macOS target does not have a **Development Team** selected yet, or signing is disabled for the active build configuration. Open `macos/Runner.xcworkspace` and confirm the `Runner` target shows a valid team/signing identity under **Signing & Capabilities** for both Debug and Release.
+
+#### Fixing macOS keychain access prompts
+
+If your app shows a macOS keychain prompt asking the user to log in and choose **Always Allow**, the usual cause is that macOS does not see the running app as the same stable, signed, entitled application identity that created the stored keychain item.
+
+To avoid that prompt as much as possible:
+
+1. Make sure the app is code signed for the configuration you are actually running.
+2. Make sure the app has the `keychain-access-groups` entitlement shown above.
+3. Keep the same bundle identifier, development team, and keychain access group between runs.
+4. Prefer normal signed Xcode/Flutter builds over ad-hoc or unsigned launches.
+
+If prompts still appear after fixing signing and entitlements, you may have older keychain entries created by an unsigned or differently signed build. Delete the existing app-specific keychain items once and let the correctly signed build recreate them.
+
+This package cannot disable that prompt in code; it is enforced by macOS Keychain security. The practical fix is to make sure the host app is signed consistently and uses the correct entitlement.
+
 Sandboxed macOS apps that use localhost callbacks should typically enable:
 
 ```xml
+<key>keychain-access-groups</key>
+<array>
+    <string>$(AppIdentifierPrefix)$(CFBundleIdentifier)</string>
+</array>
 <key>com.apple.security.network.client</key>
 <true/>
 <key>com.apple.security.network.server</key>

@@ -323,6 +323,12 @@ private enum OpenIdConnectDarwinStorageError: LocalizedError {
     case let .authenticationFailed(message):
       return message
     case let .osStatus(status, operation):
+      #if os(macOS)
+      if status == errSecMissingEntitlement {
+        return "Unable to \(operation): macOS secure storage requires the Keychain Sharing entitlement when using the data-protection keychain, and that entitlement only takes effect when code signing is enabled. Add a keychain access group such as $(AppIdentifierPrefix)$(CFBundleIdentifier) to your macOS entitlements file and make sure the macOS target is code signed."
+      }
+      #endif
+
       let message = SecCopyErrorMessageString(status, nil) as String? ?? "Unknown security error"
       return "Unable to \(operation): \(status) (\(message))"
     }

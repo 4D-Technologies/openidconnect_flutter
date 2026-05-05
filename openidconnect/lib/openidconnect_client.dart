@@ -196,7 +196,7 @@ class OpenIdConnectClient {
 
       return _identity!;
     } on Exception catch (e) {
-      await clearIdentity();
+      await _clearIdentityIgnoringErrors();
       _raiseEvent(AuthEvent(AuthEventTypes.Error, message: e.toString()));
       throw AuthenticationException(e.toString());
     }
@@ -227,7 +227,7 @@ class OpenIdConnectClient {
       _raiseEvent(AuthEvent(AuthEventTypes.Success));
       return _identity!;
     } on Exception catch (e) {
-      await clearIdentity();
+      await _clearIdentityIgnoringErrors();
       _raiseEvent(AuthEvent(AuthEventTypes.Error, message: e.toString()));
       throw AuthenticationException(e.toString());
     }
@@ -291,7 +291,7 @@ class OpenIdConnectClient {
 
       return _identity!;
     } on Exception catch (e) {
-      await clearIdentity();
+      await _clearIdentityIgnoringErrors();
       _raiseEvent(AuthEvent(AuthEventTypes.Error, message: e.toString()));
       throw AuthenticationException(e.toString());
     }
@@ -556,7 +556,7 @@ class OpenIdConnectClient {
       // Otherwise, if the identity has already expired, then we clear it and
       // raise the AuthEventTypes.NotLoggedIn to notify the app that the user
       // should log in again.
-      await clearIdentity();
+      await _clearIdentityIgnoringErrors();
       _raiseEvent(AuthEvent(AuthEventTypes.NotLoggedIn, message: e.toString()));
       return false;
     } finally {
@@ -568,6 +568,15 @@ class OpenIdConnectClient {
   Future<void> clearIdentity() async {
     if (_identity != null) {
       await OpenIdIdentity.clear(tenantId: tenantId);
+      _identity = null;
+    }
+  }
+
+  Future<void> _clearIdentityIgnoringErrors() async {
+    try {
+      await clearIdentity();
+    } on Exception {
+      // Best-effort cleanup only. Preserve the original authentication error.
       _identity = null;
     }
   }
