@@ -166,7 +166,9 @@ Required setup:
 1. Your macOS deployment target must be at least `10.15`.
 2. If you use a custom-scheme callback, add it under `CFBundleURLTypes` in `Runner/Info.plist`.
 3. If you use an HTTPS universal-link style callback, configure Associated Domains accordingly.
-4. If you distribute a sandboxed macOS app, make sure the necessary network entitlements are enabled:
+4. If you use `OpenIdConnectClient` on macOS, add the **Keychain Sharing** capability (or the equivalent entitlement manually). The endorsed Darwin implementation stores tokens in the macOS data-protection keychain, and macOS will throw `errSecMissingEntitlement` / `-34018` if the app does not declare a keychain access group.
+5. Make sure the macOS target is **code signed**. macOS entitlements are applied as part of code signing, so `keychain-access-groups` will not take effect for an unsigned target.
+6. If you distribute a sandboxed macOS app, make sure the necessary network entitlements are enabled:
    - outbound network client access for talking to the IdP/token endpoints
    - inbound loopback/server access if you use a localhost callback listener
 
@@ -177,6 +179,59 @@ Helpful references:
 - [Apple: Entitlements](https://developer.apple.com/documentation/bundleresources/entitlements)
 
 As with iOS, no camera/microphone/photo privacy strings are required by this package itself.
+
+For a typical Flutter macOS app, add the same keychain access group to both `macos/Runner/DebugProfile.entitlements` and `macos/Runner/Release.entitlements`, then ensure the `Runner` macOS target has code signing enabled in Xcode's **Signing & Capabilities** settings:
+
+```xml
+<key>keychain-access-groups</key>
+<array>
+   <string>$(AppIdentifierPrefix)$(CFBundleIdentifier)</string>
+</array>
+```
+
+If you are already using a custom shared keychain access group, include that group instead of or in addition to the default bundle-identifier-based group.
+
+In Xcode, open `macos/Runner.xcworkspace`, select the `Runner` project, select the `Runner` target, then go to **Signing & Capabilities** and either choose **Automatically manage signing** with your development team or configure manual signing for your certificate/profile.
+
+If you need to build from the command line with signing enabled, you can pass the signing settings directly to `xcodebuild`:
+
+```sh
+xcodebuild \
+   -workspace macos/Runner.xcworkspace \
+   -scheme Runner \
+   -configuration Debug \
+   -destination 'platform=macOS' \
+   CODE_SIGN_STYLE=Automatic \
+   DEVELOPMENT_TEAM=YOUR_TEAM_ID \
+   CODE_SIGNING_ALLOWED=YES \
+   CODE_SIGNING_REQUIRED=YES \
+   build
+```
+
+For a signed Release build, use the same approach with the Release configuration:
+
+```sh
+xcodebuild \
+   -workspace macos/Runner.xcworkspace \
+   -scheme Runner \
+   -configuration Release \
+   -destination 'platform=macOS' \
+   CODE_SIGN_STYLE=Automatic \
+   DEVELOPMENT_TEAM=YOUR_TEAM_ID \
+   CODE_SIGNING_ALLOWED=YES \
+   CODE_SIGNING_REQUIRED=YES \
+   build
+```
+
+That command signs the build invocation, but the persistent project configuration should still be set in Xcode so regular Flutter/Xcode builds pick it up consistently.
+
+If you build through Flutter instead of calling `xcodebuild` directly, `flutter build macos --codesign` uses the Xcode project signing configuration already stored in `macos/Runner.xcodeproj` / `macos/Runner.xcworkspace`. In other words:
+
+- use **Xcode Signing & Capabilities** to set the long-lived signing/team configuration
+- use `flutter build macos --codesign` when you want Flutter to drive a signed macOS build
+- use raw `xcodebuild` when you need to override signing settings for a specific CI or local invocation
+
+If `flutter build macos --codesign` still fails, the most common cause is that the `Runner` macOS target does not yet have a **Development Team** selected in Xcode, or code signing is disabled for the active build configuration. Open `macos/Runner.xcworkspace` and confirm the `Runner` target shows a valid team/signing identity under **Signing & Capabilities** for both Debug and Release.
 
 Custom-scheme `Runner/Info.plist` snippet:
 
@@ -199,6 +254,10 @@ Custom-scheme `Runner/Info.plist` snippet:
 Sandboxed macOS apps that use localhost callbacks should typically enable network entitlements like:
 
 ```xml
+<key>keychain-access-groups</key>
+<array>
+   <string>$(AppIdentifierPrefix)$(CFBundleIdentifier)</string>
+</array>
 <key>com.apple.security.network.client</key>
 <true/>
 <key>com.apple.security.network.server</key>

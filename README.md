@@ -129,6 +129,8 @@ Custom-scheme `Info.plist` snippet:
 
 - Requires macOS `10.15+`
 - Add your custom callback scheme under `CFBundleURLTypes` in `Info.plist`, or configure Associated Domains for HTTPS callbacks
+- Add the **Keychain Sharing** capability for apps that use `OpenIdConnectClient`, or declare `keychain-access-groups` manually. The macOS secure-storage implementation uses the data-protection keychain and will throw `errSecMissingEntitlement` / `-34018` without a keychain access group.
+- Make sure the macOS target is code signed, because the `keychain-access-groups` entitlement is applied during code signing.
 - For sandboxed apps, enable the network entitlements you need, especially outbound client access and loopback/server access if you use localhost callbacks
 - No OIDC-specific privacy usage strings are required by this package
 
@@ -156,9 +158,64 @@ Custom-scheme `Runner/Info.plist` snippet:
 </array>
 ```
 
+Add the same keychain access group to `macos/Runner/DebugProfile.entitlements` and `macos/Runner/Release.entitlements`, and make sure the `Runner` macOS target has code signing enabled:
+
+```xml
+<key>keychain-access-groups</key>
+<array>
+    <string>$(AppIdentifierPrefix)$(CFBundleIdentifier)</string>
+</array>
+```
+
+In Xcode, open `macos/Runner.xcworkspace`, select the `Runner` project, select the `Runner` target, then open **Signing & Capabilities** and either enable **Automatically manage signing** with your development team or configure manual signing for your certificate/profile.
+
+If you need a command-line build with signing enabled, pass the signing settings directly to `xcodebuild`:
+
+```sh
+xcodebuild \
+    -workspace macos/Runner.xcworkspace \
+    -scheme Runner \
+    -configuration Debug \
+    -destination 'platform=macOS' \
+    CODE_SIGN_STYLE=Automatic \
+    DEVELOPMENT_TEAM=YOUR_TEAM_ID \
+    CODE_SIGNING_ALLOWED=YES \
+    CODE_SIGNING_REQUIRED=YES \
+    build
+```
+
+For a signed Release build, use the Release configuration instead:
+
+```sh
+xcodebuild \
+    -workspace macos/Runner.xcworkspace \
+    -scheme Runner \
+    -configuration Release \
+    -destination 'platform=macOS' \
+    CODE_SIGN_STYLE=Automatic \
+    DEVELOPMENT_TEAM=YOUR_TEAM_ID \
+    CODE_SIGNING_ALLOWED=YES \
+    CODE_SIGNING_REQUIRED=YES \
+    build
+```
+
+That command signs the build invocation, but you should still set the persistent project configuration in Xcode so normal Flutter/Xcode builds keep working.
+
+If you build through Flutter instead of invoking `xcodebuild` directly, `flutter build macos --codesign` uses the signing/team configuration already saved in the Xcode project. In practice:
+
+- set the durable signing configuration in **Signing & Capabilities**
+- use `flutter build macos --codesign` for normal signed Flutter macOS builds
+- use raw `xcodebuild` when you need per-invocation signing overrides, such as in CI
+
+If `flutter build macos --codesign` still fails, the most common cause is that the `Runner` macOS target does not have a **Development Team** selected yet, or signing is disabled for the active build configuration. Open `macos/Runner.xcworkspace` and confirm the `Runner` target shows a valid team/signing identity under **Signing & Capabilities** for both Debug and Release.
+
 Sandboxed macOS apps that use localhost callbacks should typically enable:
 
 ```xml
+<key>keychain-access-groups</key>
+<array>
+    <string>$(AppIdentifierPrefix)$(CFBundleIdentifier)</string>
+</array>
 <key>com.apple.security.network.client</key>
 <true/>
 <key>com.apple.security.network.server</key>
