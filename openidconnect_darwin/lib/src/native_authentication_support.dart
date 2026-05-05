@@ -4,16 +4,18 @@ import 'dart:io';
 import 'package:flutter/services.dart';
 import 'package:openidconnect_platform_interface/openidconnect_platform_interface.dart';
 
-typedef DarwinNativeAuthenticationInvoker = Future<String?> Function({
-  required String authorizationUrl,
-  required String redirectUrl,
-  bool preferEphemeralSession,
-});
+typedef DarwinNativeAuthenticationInvoker =
+    Future<String?> Function({
+      required String authorizationUrl,
+      required String redirectUrl,
+      bool preferEphemeralSession,
+    });
 
-typedef MacOSLoopbackAuthenticationRunner = Future<String> Function({
-  required Uri redirectUri,
-  required String authorizationUrl,
-});
+typedef MacOSLoopbackAuthenticationRunner =
+    Future<String> Function({
+      required Uri redirectUri,
+      required String authorizationUrl,
+    });
 
 DarwinAuthenticationRedirect redirectDetailsForUrl(String redirectUrl) {
   final uri = Uri.parse(redirectUrl);
@@ -70,7 +72,8 @@ Future<String> startNativeAuthenticationFlow({
 }) async {
   final redirect = redirectDetailsForUrl(redirectUrl);
 
-  if (Platform.isMacOS && redirect.kind == DarwinAuthenticationRedirectKind.localhost) {
+  if (Platform.isMacOS &&
+      redirect.kind == DarwinAuthenticationRedirectKind.localhost) {
     return runMacOSLoopbackAuthentication(
       redirectUri: redirect.uri,
       authorizationUrl: authorizationUrl,
@@ -85,7 +88,9 @@ Future<String> startNativeAuthenticationFlow({
     );
 
     if (result == null || result.isEmpty) {
-      throw AuthenticationException('Native authentication completed without a redirect URL.');
+      throw AuthenticationException(
+        'Native authentication completed without a redirect URL.',
+      );
     }
 
     return result.toString();

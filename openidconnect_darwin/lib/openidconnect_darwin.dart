@@ -87,14 +87,12 @@ class OpenIdConnectDarwin extends OpenIdConnectPlatform {
     required String redirectUrl,
     bool preferEphemeralSession = false,
   }) {
-    return _darwinAuthenticationChannel.invokeMethod<String>(
-      'authorizeInteractive',
-      {
-        'authorizationUrl': authorizationUrl,
-        'redirectUrl': redirectUrl,
-        'preferEphemeralSession': preferEphemeralSession,
-      },
-    );
+    return _darwinAuthenticationChannel
+        .invokeMethod<String>('authorizeInteractive', {
+          'authorizationUrl': authorizationUrl,
+          'redirectUrl': redirectUrl,
+          'preferEphemeralSession': preferEphemeralSession,
+        });
   }
 
   static Future<String> _defaultMacOSLoopbackAuthenticationRunner({

@@ -3,6 +3,8 @@ description: Linux implementation for OpenIdConnect.
 version: 2.0.1
 homepage: https://github.com/4D-Technologies/openidconnect_flutter/tree/main/openidconnect_linux
 
+resolution: workspace
+
 environment:
   sdk: ">=3.8.0 <4.0.0"
   flutter: ">=3.27.0"

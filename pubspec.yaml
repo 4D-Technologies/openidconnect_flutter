@@ -1,0 +1,18 @@
+name: openidconnect_workspace
+
+publish_to: none
+
+environment:
+  sdk: ">=3.10.0 <4.0.0"
+  flutter: ">=3.38.0"
+
+workspace:
+  - openidconnect
+  - openidconnect_android
+  - openidconnect_darwin
+  - openidconnect_linux
+  - openidconnect_platform_interface
+  - openidconnect_web
+  - openidconnect_windows
+  - openidconnect/example
+  - openidconnect/test_harness

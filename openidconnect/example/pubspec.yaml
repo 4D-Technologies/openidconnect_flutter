@@ -5,6 +5,8 @@ description: Demonstrates how to use the openidconnect plugin.
 # pub.dev using `pub publish`. This is preferred for private packages.
 publish_to: "none" # Remove this line if you wish to publish to pub.dev
 
+resolution: workspace
+
 environment:
   sdk: '>=3.5.3 <4.0.0'
 

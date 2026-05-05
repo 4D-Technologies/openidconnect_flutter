@@ -275,6 +275,10 @@ Because of the ever changing nature of desktop support on flutter and incomplete
 
 Pull requests most welcome to fix any bugs found or address any of the above TODOs. I'm not a C++, Kotlin or Swift developer, so custom implementations for various environments would be greatly appreciated.
 
+For local monorepo development against the sibling federated packages, this project uses Dart Workspaces. You do not need to generate local path overrides. Simply run \`flutter pub get\` in the root directory to resolve the entire workspace.
+
+When publishing the packages via `flutter pub publish`, Dart will automatically resolve against the hosted package versions as expected, without conflicting with your local workspace setup.
+
 If adding a custom environment other than android and iOS please follow the flutter best practices and add a separate implementation project with: flutter create --template=plugin --platforms={YourPlatformHere} openidconnect\_{YourPlatformHere} and add your code as appropriate there and then update the example project to use the new implementation.
 
 Your new implementation needs to import the platform interface which is exactly one entry. That entry passes in the url to display in the secure browser and the redirect url that you should watch for to respond accordingly. (You can ignore the redirect url on most platforms that support custom URLs such as Android, iOS etc.) You should return the entire redirected URL which should include the ?code= (and perhaps state) when complete.

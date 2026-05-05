@@ -3,6 +3,8 @@ description: Platform interface for OpenIdConnect.
 version: 2.0.1
 homepage: https://github.com/4D-Technologies/openidconnect_flutter/tree/main/openidconnect_platform_interface
 
+resolution: workspace
+
 environment:
   sdk: ">=3.5.3 <4.0.0"
   flutter: ">=3.1.0"
