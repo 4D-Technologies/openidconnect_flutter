@@ -1,7 +1,14 @@
-import 'package:native_authentication/native_authentication.dart';
+import 'package:flutter/services.dart';
 import 'package:openidconnect_platform_interface/openidconnect_platform_interface.dart';
 
-CallbackType callbackTypeForRedirectUrl(String redirectUrl) {
+typedef AndroidNativeAuthenticationInvoker =
+    Future<String?> Function({
+      required String authorizationUrl,
+      required String redirectUrl,
+      bool preferEphemeralSession,
+    });
+
+AndroidAuthenticationRedirect redirectDetailsForUrl(String redirectUrl) {
   final uri = Uri.parse(redirectUrl);
   final path = uri.path.isEmpty ? '/*' : uri.path;
 
@@ -12,7 +19,9 @@ CallbackType callbackTypeForRedirectUrl(String redirectUrl) {
       );
     }
 
-    return CallbackTypeLocalhost(port: uri.hasPort ? uri.port : 0, path: path);
+    throw UnsupportedError(
+      'Android interactive authentication only supports custom-scheme and HTTPS redirect URLs. Received: $redirectUrl',
+    );
   }
 
   if (uri.scheme == 'https') {
@@ -22,7 +31,11 @@ CallbackType callbackTypeForRedirectUrl(String redirectUrl) {
       );
     }
 
-    return CallbackTypeHttps(host: uri.host, path: path);
+    return AndroidAuthenticationRedirect.https(
+      uri: uri,
+      host: uri.host,
+      path: path,
+    );
   }
 
   if (uri.scheme.isEmpty) {
@@ -31,31 +44,83 @@ CallbackType callbackTypeForRedirectUrl(String redirectUrl) {
     );
   }
 
-  return CallbackTypeCustom(
-    uri.scheme,
+  return AndroidAuthenticationRedirect.custom(
+    uri: uri,
+    scheme: uri.scheme,
     host: uri.host.isEmpty ? '*' : uri.host,
     path: path,
   );
 }
 
 Future<String> startNativeAuthenticationFlow({
-  required NativeAuthentication nativeAuthentication,
   required String authorizationUrl,
   required String redirectUrl,
+  required AndroidNativeAuthenticationInvoker invokeNativeAuthentication,
   bool preferEphemeralSession = false,
 }) async {
-  final session = nativeAuthentication.startCallback(
-    uri: Uri.parse(authorizationUrl),
-    type: callbackTypeForRedirectUrl(redirectUrl),
-    preferEphemeralSession: preferEphemeralSession,
-  );
+  redirectDetailsForUrl(redirectUrl);
 
   try {
-    final result = await session.redirectUri;
+    final result = await invokeNativeAuthentication(
+      authorizationUrl: authorizationUrl,
+      redirectUrl: redirectUrl,
+      preferEphemeralSession: preferEphemeralSession,
+    );
+
+    if (result == null || result.isEmpty) {
+      throw AuthenticationException(
+        'Native authentication completed without a redirect URL.',
+      );
+    }
+
     return result.toString();
-  } on NativeAuthCanceledException {
-    throw AuthenticationException(ERROR_USER_CLOSED);
-  } on NativeAuthException catch (e) {
+  } on PlatformException catch (e) {
+    if (e.code == 'user_cancelled') {
+      throw AuthenticationException(ERROR_USER_CLOSED);
+    }
+
     throw AuthenticationException(e.message);
   }
 }
+
+class AndroidAuthenticationRedirect {
+  const AndroidAuthenticationRedirect._({
+    required this.kind,
+    required this.uri,
+    required this.path,
+    this.host,
+    this.scheme,
+  });
+
+  const AndroidAuthenticationRedirect.https({
+    required Uri uri,
+    required String host,
+    required String path,
+  }) : this._(
+         kind: AndroidAuthenticationRedirectKind.https,
+         uri: uri,
+         host: host,
+         path: path,
+       );
+
+  const AndroidAuthenticationRedirect.custom({
+    required Uri uri,
+    required String scheme,
+    required String host,
+    required String path,
+  }) : this._(
+         kind: AndroidAuthenticationRedirectKind.custom,
+         uri: uri,
+         scheme: scheme,
+         host: host,
+         path: path,
+       );
+
+  final AndroidAuthenticationRedirectKind kind;
+  final Uri uri;
+  final String path;
+  final String? host;
+  final String? scheme;
+}
+
+enum AndroidAuthenticationRedirectKind { https, custom }

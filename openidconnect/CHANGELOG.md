@@ -1,8 +1,11 @@
 # Change Log
 
-## [Unreleased]
+## [2.0.1] - May 21st, 2026
 
 - Remove the external `native_authentication` dependency from the Darwin package and replace it with an in-repo Apple browser-session bridge while preserving macOS localhost callback support.
+- Remove the external `native_authentication` dependency from the Android, Linux, and Windows endorsed packages by moving their interactive-auth support into this repository.
+- Update the Android callback receiver documentation and sample manifests to use the in-repo `openidconnect_android` callback activity.
+- Update the endorsed Android, Linux, and Windows dependency constraints to their publish-ready in-repo interactive-auth patch releases.
 
 ## [2.0.0] - April 30th, 2026
 
