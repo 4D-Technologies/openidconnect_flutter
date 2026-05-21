@@ -12,9 +12,18 @@ import androidx.browser.auth.ExperimentalAuthTab
 import androidx.browser.customtabs.ExperimentalEphemeralBrowsing
 
 private sealed interface RedirectCallbackConfig {
-    data class CustomScheme(val scheme: String) : RedirectCallbackConfig
+    data class CustomScheme(
+            val scheme: String,
+            val host: String? = null,
+            val path: String? = null,
+            val port: Int? = null,
+    ) : RedirectCallbackConfig
 
-    data class Https(val host: String, val path: String) : RedirectCallbackConfig
+    data class Https(
+            val host: String,
+            val path: String,
+            val port: Int? = null,
+    ) : RedirectCallbackConfig
 }
 
 private fun parseRedirectCallbackConfig(redirectUrl: String): RedirectCallbackConfig {
@@ -40,10 +49,51 @@ private fun parseRedirectCallbackConfig(redirectUrl: String): RedirectCallbackCo
             )
         }
         val path = uri.path?.takeIf { it.isNotEmpty() } ?: "/"
-        return RedirectCallbackConfig.Https(host = host, path = path)
+        return RedirectCallbackConfig.Https(
+                host = host,
+                path = path,
+                port = uri.port.takeIf { uri.port != -1 },
+        )
     }
 
-    return RedirectCallbackConfig.CustomScheme(scheme)
+    return RedirectCallbackConfig.CustomScheme(
+            scheme = scheme,
+            host = uri.host.takeIf { it.isNotEmpty() },
+            path = uri.path.takeIf { it.isNotEmpty() },
+            port = uri.port.takeIf { uri.port != -1 },
+    )
+}
+
+private fun redirectUriMatchesConfig(
+        redirectUri: Uri,
+        callbackConfig: RedirectCallbackConfig,
+): Boolean {
+    val normalizedPath = redirectUri.path?.takeIf { it.isNotEmpty() } ?: "/"
+    val normalizedPort =
+            redirectUri.port.takeIf { it != -1 }
+                    ?: when (callbackConfig) {
+                        is RedirectCallbackConfig.CustomScheme -> null
+                        is RedirectCallbackConfig.Https -> 443
+                    }
+
+    if (redirectUri.scheme != when (callbackConfig) {
+        is RedirectCallbackConfig.CustomScheme -> callbackConfig.scheme
+        is RedirectCallbackConfig.Https -> "https"
+    }) {
+        return false
+    }
+
+    return when (callbackConfig) {
+        is RedirectCallbackConfig.CustomScheme ->
+                (callbackConfig.host == null || redirectUri.host == callbackConfig.host) &&
+                        (callbackConfig.path == null || normalizedPath == callbackConfig.path) &&
+                        (callbackConfig.port == null || normalizedPort == callbackConfig.port)
+
+        is RedirectCallbackConfig.Https ->
+                redirectUri.host == callbackConfig.host &&
+                        normalizedPath == callbackConfig.path &&
+                        normalizedPort == (callbackConfig.port ?: 443)
+    }
 }
 
 @OptIn(ExperimentalAuthTab::class, ExperimentalEphemeralBrowsing::class)
@@ -133,7 +183,7 @@ class OpenIdConnectCallbackManagerActivity : AppCompatActivity() {
 
         val redirectUri = intent.data
         if (redirectUri != null) {
-            finishWithSuccess(redirectUri.toString())
+            finishWithValidatedSuccess(redirectUri)
         } else {
             finishWithCanceled()
         }
@@ -171,7 +221,7 @@ class OpenIdConnectCallbackManagerActivity : AppCompatActivity() {
                                     "Interactive authentication completed without a redirect URL.",
                     )
                 } else {
-                    finishWithSuccess(redirectUri)
+                    finishWithValidatedSuccess(Uri.parse(redirectUri))
                 }
             }
             AuthTabIntent.RESULT_CANCELED -> finishWithCanceled()
@@ -211,6 +261,19 @@ class OpenIdConnectCallbackManagerActivity : AppCompatActivity() {
     private fun finishWithSuccess(redirectUrl: String) {
         OpenIdConnectSecureStoragePlugin.completeAuthorizationSuccess(redirectUrl)
         finish()
+    }
+
+    private fun finishWithValidatedSuccess(redirectUri: Uri) {
+        if (!redirectUriMatchesConfig(redirectUri, callbackConfig)) {
+            finishWithError(
+                    code = "invalid_redirect",
+                    message = "Interactive authentication returned an unexpected redirect URL.",
+                    details = redirectUri.toString(),
+            )
+            return
+        }
+
+        finishWithSuccess(redirectUri.toString())
     }
 
     private fun finishWithCanceled() {

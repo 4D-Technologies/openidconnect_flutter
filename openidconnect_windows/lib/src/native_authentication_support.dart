@@ -56,22 +56,21 @@ Future<String> startNativeAuthenticationFlow({
             request: request,
             redirect: redirect,
             redirectCompleter: redirectCompleter,
-          ),
+          ).catchError((Object error, StackTrace stackTrace) {
+            _completeRedirectError(redirectCompleter, error, stackTrace);
+          }),
         );
       },
       onError: (Object error, StackTrace stackTrace) {
-        if (!redirectCompleter.isCompleted) {
-          redirectCompleter.completeError(error, stackTrace);
-        }
+        _completeRedirectError(redirectCompleter, error, stackTrace);
       },
       onDone: () {
-        if (!redirectCompleter.isCompleted) {
-          redirectCompleter.completeError(
-            AuthenticationException(
-              'The browser authentication flow ended before a localhost redirect was received.',
-            ),
-          );
-        }
+        _completeRedirectError(
+          redirectCompleter,
+          AuthenticationException(
+            'The browser authentication flow ended before a localhost redirect was received.',
+          ),
+        );
       },
       cancelOnError: true,
     );
@@ -120,6 +119,26 @@ Future<void> _handleLoopbackRequest({
 
   if (!redirectCompleter.isCompleted) {
     redirectCompleter.complete(requestedUri.toString());
+  }
+}
+
+void _completeRedirectError(
+  Completer<String> redirectCompleter,
+  Object error, [
+  StackTrace? stackTrace,
+]) {
+  if (redirectCompleter.isCompleted) {
+    return;
+  }
+
+  try {
+    if (stackTrace == null) {
+      redirectCompleter.completeError(error);
+    } else {
+      redirectCompleter.completeError(error, stackTrace);
+    }
+  } on StateError {
+    // The redirect already completed via another callback, timeout, or error.
   }
 }
 
