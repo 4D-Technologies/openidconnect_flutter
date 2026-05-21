@@ -28,7 +28,7 @@
             </intent-filter>
         </activity>
         <activity
-            android:name="dev.celest.native_authentication.CallbackReceiverActivity"
+            android:name="io.concerti.openidconnect_android.OpenIdConnectCallbackReceiverActivity"
             android:exported="true">
             <intent-filter>
                 <action android:name="android.intent.action.VIEW" />

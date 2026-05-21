@@ -1,5 +1,10 @@
 # Changelog
 
+## 2.0.2 - May 21st 2026
+
+- Remove the external `native_authentication` dependency and replace it with an in-repo loopback-browser implementation for Linux interactive authentication.
+- Add direct tests for the Linux redirect parsing and loopback flow support helpers.
+
 ## 2.0.1 - May 5th 2026
 
 - Remove the package-local `pubspec_overrides.yaml` so publish and consumer resolution use hosted dependencies.

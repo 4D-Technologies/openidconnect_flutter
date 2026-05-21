@@ -39,7 +39,7 @@ Typical local redirect:
 The harness manifest includes:
 
 - `android.permission.INTERNET`
-- `dev.celest.native_authentication.CallbackReceiverActivity`
+- `io.concerti.openidconnect_android.OpenIdConnectCallbackReceiverActivity`
 - custom scheme: `openidconnect.harness://callback`
 
 ### iOS / macOS

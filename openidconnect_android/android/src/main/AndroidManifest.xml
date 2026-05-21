@@ -1,1 +1,23 @@
-<manifest />
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+
+	<uses-permission android:name="android.permission.INTERNET" />
+
+	<application>
+		<activity
+			android:name=".OpenIdConnectCallbackManagerActivity"
+			android:exported="false"
+			android:configChanges="screenSize|smallestScreenSize|screenLayout|orientation|keyboard|keyboardHidden"
+			android:theme="@style/Theme.OpenIdConnect.Translucent.NoTitleBar"
+			android:launchMode="singleTask" />
+		<activity
+			android:name=".OpenIdConnectCallbackReceiverActivity"
+			android:exported="true"
+			android:theme="@style/Theme.OpenIdConnect.NoDisplay" />
+	</application>
+
+	<queries>
+		<intent>
+			<action android:name="android.support.customtabs.action.CustomTabsService" />
+		</intent>
+	</queries>
+</manifest>

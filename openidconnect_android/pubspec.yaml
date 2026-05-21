@@ -1,6 +1,6 @@
 name: openidconnect_android
 description: Android implementation for OpenIdConnect.
-version: 2.0.1
+version: 2.0.2
 homepage: https://github.com/4D-Technologies/openidconnect_flutter/tree/main/openidconnect_android
 
 resolution: workspace
@@ -12,7 +12,6 @@ environment:
 dependencies:
   flutter:
     sdk: flutter
-  native_authentication: ^0.1.5
   openidconnect_platform_interface: ^2.0.1
 
 dev_dependencies:
@@ -26,6 +25,6 @@ flutter:
     platforms:
       android:
         package: io.concerti.openidconnect_android
-        pluginClass: OpenIdConnectSecureStoragePlugin
+        pluginClass: OpenIdConnectAndroidPlugin
         dartPluginClass: OpenIdConnectAndroid
         fileName: openidconnect_android.dart

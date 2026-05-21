@@ -1,6 +1,5 @@
 import 'package:flutter/services.dart';
 import 'package:flutter/widgets.dart';
-import 'package:native_authentication/native_authentication.dart';
 import 'package:openidconnect_linux/src/native_authentication_support.dart';
 import 'package:openidconnect_platform_interface/openidconnect_platform_interface.dart';
 
@@ -9,10 +8,10 @@ const MethodChannel _secureStorageChannel = MethodChannel(
 );
 
 class OpenIdConnectLinux extends OpenIdConnectPlatform {
-  OpenIdConnectLinux({NativeAuthentication? nativeAuthentication})
-    : _nativeAuthentication = nativeAuthentication ?? NativeAuthentication();
+  OpenIdConnectLinux({DesktopUrlLauncher? launchUrl})
+    : _launchUrl = launchUrl ?? launchUrlOnLinux;
 
-  final NativeAuthentication _nativeAuthentication;
+  final DesktopUrlLauncher _launchUrl;
 
   static void registerWith() {
     OpenIdConnectPlatform.instance = OpenIdConnectLinux();
@@ -29,9 +28,9 @@ class OpenIdConnectLinux extends OpenIdConnectPlatform {
     bool useWebRedirectLoop = false,
   }) {
     return startNativeAuthenticationFlow(
-      nativeAuthentication: _nativeAuthentication,
       authorizationUrl: authorizationUrl,
       redirectUrl: redirectUrl,
+      launchUrl: _launchUrl,
     );
   }
 

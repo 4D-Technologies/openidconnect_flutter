@@ -12,11 +12,11 @@ Because this project is endorsed by the openidconnect project, you need not add 
 
 ## Android configuration
 
-Interactive authentication is handled by `native_authentication`, so your host app must configure the callback activity for the redirect URI you register with your identity provider.
+Interactive authentication is handled by the in-repo Android bridge shipped with `openidconnect_android`, so your host app must configure the callback activity for the redirect URI you register with your identity provider.
 
 Required host-app setup:
 
-1. Add `dev.celest.native_authentication.CallbackReceiverActivity` to your Android manifest.
+1. Add `io.concerti.openidconnect_android.OpenIdConnectCallbackReceiverActivity` to your Android manifest.
 2. Add an intent filter matching your redirect URI.
 3. Add `android.permission.INTERNET` if your app does not already declare it.
 4. If you use HTTPS redirects instead of a custom scheme, configure Android App Links as well.

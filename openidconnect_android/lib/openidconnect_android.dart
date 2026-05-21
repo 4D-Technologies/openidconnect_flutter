@@ -1,18 +1,22 @@
 import 'package:flutter/services.dart';
 import 'package:flutter/widgets.dart';
-import 'package:native_authentication/native_authentication.dart';
 import 'package:openidconnect_android/src/native_authentication_support.dart';
 import 'package:openidconnect_platform_interface/openidconnect_platform_interface.dart';
 
 const MethodChannel _secureStorageChannel = MethodChannel(
   'plugins.concerti.io/openidconnect_secure_storage',
 );
+const MethodChannel _authenticationChannel = MethodChannel(
+  'plugins.concerti.io/openidconnect_android_auth',
+);
 
 class OpenIdConnectAndroid extends OpenIdConnectPlatform {
-  OpenIdConnectAndroid({NativeAuthentication? nativeAuthentication})
-    : _nativeAuthentication = nativeAuthentication ?? NativeAuthentication();
+  OpenIdConnectAndroid({
+    AndroidNativeAuthenticationInvoker? invokeNativeAuthentication,
+  }) : _invokeNativeAuthentication =
+           invokeNativeAuthentication ?? _defaultNativeAuthenticationInvoker;
 
-  final NativeAuthentication _nativeAuthentication;
+  final AndroidNativeAuthenticationInvoker _invokeNativeAuthentication;
 
   static void registerWith() {
     OpenIdConnectPlatform.instance = OpenIdConnectAndroid();
@@ -29,9 +33,9 @@ class OpenIdConnectAndroid extends OpenIdConnectPlatform {
     bool useWebRedirectLoop = false,
   }) {
     return startNativeAuthenticationFlow(
-      nativeAuthentication: _nativeAuthentication,
       authorizationUrl: authorizationUrl,
       redirectUrl: redirectUrl,
+      invokeNativeAuthentication: _invokeNativeAuthentication,
     );
   }
 
@@ -70,5 +74,17 @@ class OpenIdConnectAndroid extends OpenIdConnectPlatform {
           'key': key,
         }) ??
         false;
+  }
+
+  static Future<String?> _defaultNativeAuthenticationInvoker({
+    required String authorizationUrl,
+    required String redirectUrl,
+    bool preferEphemeralSession = false,
+  }) {
+    return _authenticationChannel.invokeMethod<String>('authorizeInteractive', {
+      'authorizationUrl': authorizationUrl,
+      'redirectUrl': redirectUrl,
+      'preferEphemeralSession': preferEphemeralSession,
+    });
   }
 }

@@ -6,7 +6,6 @@ import 'dart:typed_data';
 
 import 'package:ffi/ffi.dart';
 import 'package:flutter/widgets.dart';
-import 'package:native_authentication/native_authentication.dart';
 import 'package:openidconnect_platform_interface/openidconnect_platform_interface.dart';
 import 'package:openidconnect_windows/src/native_authentication_support.dart';
 
@@ -91,10 +90,10 @@ final class _Credential extends Struct {
 class OpenIdConnectWindows extends OpenIdConnectPlatform {
   static const _credentialNamePrefix = 'io.concerti.openidconnect.';
 
-  OpenIdConnectWindows({NativeAuthentication? nativeAuthentication})
-    : _nativeAuthentication = nativeAuthentication ?? NativeAuthentication();
+  OpenIdConnectWindows({DesktopUrlLauncher? launchUrl})
+    : _launchUrl = launchUrl ?? launchUrlOnWindows;
 
-  final NativeAuthentication _nativeAuthentication;
+  final DesktopUrlLauncher _launchUrl;
 
   static void registerWith() {
     OpenIdConnectPlatform.instance = OpenIdConnectWindows();
@@ -116,9 +115,9 @@ class OpenIdConnectWindows extends OpenIdConnectPlatform {
     bool useWebRedirectLoop = false,
   }) {
     return startNativeAuthenticationFlow(
-      nativeAuthentication: _nativeAuthentication,
       authorizationUrl: authorizationUrl,
       redirectUrl: redirectUrl,
+      launchUrl: _launchUrl,
     );
   }
 
