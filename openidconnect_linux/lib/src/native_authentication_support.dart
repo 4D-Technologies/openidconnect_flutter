@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:io';
 
 import 'package:openidconnect_platform_interface/openidconnect_platform_interface.dart';
@@ -38,9 +39,11 @@ Future<String> startNativeAuthenticationFlow({
   required String redirectUrl,
   required DesktopUrlLauncher launchUrl,
   bool preferEphemeralSession = false,
+  Duration authenticationTimeout = _interactiveAuthenticationTimeout,
 }) async {
   final redirect = redirectDetailsForUrl(redirectUrl);
   HttpServer? server;
+  StreamSubscription<HttpRequest>? requestSubscription;
 
   try {
     server = await HttpServer.bind(
@@ -48,31 +51,38 @@ Future<String> startNativeAuthenticationFlow({
       redirect.port,
     );
 
+    final redirectCompleter = Completer<String>();
+    requestSubscription = server.listen(
+      (request) {
+        unawaited(
+          _handleLoopbackRequest(
+            request: request,
+            redirect: redirect,
+            redirectCompleter: redirectCompleter,
+          ),
+        );
+      },
+      onError: (Object error, StackTrace stackTrace) {
+        if (!redirectCompleter.isCompleted) {
+          redirectCompleter.completeError(error, stackTrace);
+        }
+      },
+      onDone: () {
+        if (!redirectCompleter.isCompleted) {
+          redirectCompleter.completeError(
+            AuthenticationException(
+              'The browser authentication flow ended before a localhost redirect was received.',
+            ),
+          );
+        }
+      },
+      cancelOnError: true,
+    );
+
     await launchUrl(authorizationUrl);
-
-    await for (final request in server) {
-      if (request.method != 'GET') {
-        request.response.statusCode = HttpStatus.methodNotAllowed;
-        await request.response.close();
-        continue;
-      }
-
-      final requestedUri = request.requestedUri;
-      if (redirect.path != '/*' && requestedUri.path != redirect.path) {
-        request.response.statusCode = HttpStatus.notFound;
-        await request.response.close();
-        continue;
-      }
-
-      request.response.statusCode = HttpStatus.ok;
-      request.response.headers.contentType = ContentType.html;
-      request.response.write(_loopbackAuthenticationCompleteHtml);
-      await request.response.close();
-      return requestedUri.toString();
-    }
-
-    throw AuthenticationException(
-      'The browser authentication flow ended before a localhost redirect was received.',
+    return await redirectCompleter.future.timeout(
+      authenticationTimeout,
+      onTimeout: () => throw AuthenticationException(ERROR_USER_CLOSED),
     );
   } on SocketException catch (e) {
     throw AuthenticationException(
@@ -83,7 +93,36 @@ Future<String> startNativeAuthenticationFlow({
       'Unable to launch the system browser for interactive authentication. ${e.message}',
     );
   } finally {
+    await requestSubscription?.cancel();
     await server?.close(force: true);
+  }
+}
+
+Future<void> _handleLoopbackRequest({
+  required HttpRequest request,
+  required DesktopAuthenticationRedirect redirect,
+  required Completer<String> redirectCompleter,
+}) async {
+  if (request.method != 'GET') {
+    request.response.statusCode = HttpStatus.methodNotAllowed;
+    await request.response.close();
+    return;
+  }
+
+  final requestedUri = request.requestedUri;
+  if (redirect.path != '/*' && requestedUri.path != redirect.path) {
+    request.response.statusCode = HttpStatus.notFound;
+    await request.response.close();
+    return;
+  }
+
+  request.response.statusCode = HttpStatus.ok;
+  request.response.headers.contentType = ContentType.html;
+  request.response.write(_loopbackAuthenticationCompleteHtml);
+  await request.response.close();
+
+  if (!redirectCompleter.isCompleted) {
+    redirectCompleter.complete(requestedUri.toString());
   }
 }
 
@@ -110,6 +149,8 @@ class DesktopAuthenticationRedirect {
   final int port;
   final String path;
 }
+
+const _interactiveAuthenticationTimeout = Duration(minutes: 5);
 
 const _loopbackAuthenticationCompleteHtml = '''
 <!DOCTYPE html>

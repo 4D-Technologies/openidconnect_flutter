@@ -1,4 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
+import 'package:openidconnect_platform_interface/openidconnect_platform_interface.dart';
 import 'package:openidconnect_windows/src/native_authentication_support.dart';
 
 void main() {
@@ -32,5 +33,23 @@ void main() {
         throwsA(isA<StateError>()),
       );
     });
+  });
+
+  test('times out loopback auth and maps it to user closed', () async {
+    await expectLater(
+      startNativeAuthenticationFlow(
+        authorizationUrl: 'https://issuer.example.com/authorize',
+        redirectUrl: 'http://localhost:0/callback.html',
+        launchUrl: (_) async {},
+        authenticationTimeout: const Duration(milliseconds: 1),
+      ),
+      throwsA(
+        isA<AuthenticationException>().having(
+          (exception) => exception.toString(),
+          'error message',
+          contains(ERROR_USER_CLOSED),
+        ),
+      ),
+    );
   });
 }

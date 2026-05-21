@@ -58,6 +58,10 @@ class OpenIdConnectSecureStoragePlugin : FlutterPlugin, ActivityAware {
     override fun onDetachedFromEngine(binding: FlutterPlugin.FlutterPluginBinding) {
         storageChannel.setMethodCallHandler(null)
         authChannel.setMethodCallHandler(null)
+        completeAuthorizationFailure(
+                "engine_detached",
+                "Interactive authentication was interrupted because the plugin detached from the Flutter engine.",
+        )
     }
 
     private fun onStorageMethodCall(call: MethodCall, result: Result) {
