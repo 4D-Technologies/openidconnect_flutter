@@ -25,6 +25,6 @@ flutter:
     platforms:
       android:
         package: io.concerti.openidconnect_android
-        pluginClass: OpenIdConnectSecureStoragePlugin
+        pluginClass: OpenIdConnectAndroidPlugin
         dartPluginClass: OpenIdConnectAndroid
         fileName: openidconnect_android.dart

@@ -13,12 +13,6 @@ AndroidAuthenticationRedirect redirectDetailsForUrl(String redirectUrl) {
   final path = uri.path.isEmpty ? '/*' : uri.path;
 
   if (uri.scheme == 'http') {
-    if (uri.host != 'localhost') {
-      throw StateError(
-        'Native interactive authentication only supports http://localhost callbacks for HTTP redirect URLs. Received: $redirectUrl',
-      );
-    }
-
     throw UnsupportedError(
       'Android interactive authentication only supports custom-scheme and HTTPS redirect URLs. Received: $redirectUrl',
     );

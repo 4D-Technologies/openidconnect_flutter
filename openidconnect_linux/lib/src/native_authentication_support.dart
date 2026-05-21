@@ -16,9 +16,15 @@ DesktopAuthenticationRedirect redirectDetailsForUrl(String redirectUrl) {
       );
     }
 
+    if (!uri.hasPort || uri.port <= 0) {
+      throw StateError(
+        'Loopback redirect URLs for Linux interactive authentication must include an explicit port greater than 0. Received: $redirectUrl',
+      );
+    }
+
     return DesktopAuthenticationRedirect.localhost(
       uri: uri,
-      port: uri.hasPort ? uri.port : 0,
+      port: uri.port,
       path: path,
     );
   }

@@ -7,12 +7,12 @@
 			android:name=".OpenIdConnectCallbackManagerActivity"
 			android:exported="false"
 			android:configChanges="screenSize|smallestScreenSize|screenLayout|orientation|keyboard|keyboardHidden"
-			android:theme="@style/Theme.AppCompat.Translucent.NoTitleBar"
+			android:theme="@style/Theme.OpenIdConnect.Translucent.NoTitleBar"
 			android:launchMode="singleTask" />
 		<activity
 			android:name=".OpenIdConnectCallbackReceiverActivity"
 			android:exported="true"
-			android:theme="@style/Theme.AppCompat.NoDisplay" />
+			android:theme="@style/Theme.OpenIdConnect.NoDisplay" />
 	</application>
 
 	<queries>

@@ -1,6 +1,15 @@
+import 'dart:io';
+
 import 'package:flutter_test/flutter_test.dart';
 import 'package:openidconnect_platform_interface/openidconnect_platform_interface.dart';
 import 'package:openidconnect_windows/src/native_authentication_support.dart';
+
+Future<int> _reserveLoopbackPort() async {
+  final server = await ServerSocket.bind('127.0.0.1', 0);
+  final port = server.port;
+  await server.close();
+  return port;
+}
 
 void main() {
   group('redirectDetailsForUrl', () {
@@ -33,13 +42,22 @@ void main() {
         throwsA(isA<StateError>()),
       );
     });
+
+    test('requires an explicit port on localhost redirects', () {
+      expect(
+        () => redirectDetailsForUrl('http://localhost/callback'),
+        throwsA(isA<StateError>()),
+      );
+    });
   });
 
   test('times out loopback auth and maps it to user closed', () async {
+    final port = await _reserveLoopbackPort();
+
     await expectLater(
       startNativeAuthenticationFlow(
         authorizationUrl: 'https://issuer.example.com/authorize',
-        redirectUrl: 'http://localhost:0/callback.html',
+        redirectUrl: 'http://localhost:$port/callback.html',
         launchUrl: (_) async {},
         authenticationTimeout: const Duration(milliseconds: 1),
       ),

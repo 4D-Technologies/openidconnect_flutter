@@ -8,37 +8,43 @@ import io.flutter.embedding.engine.plugins.activity.ActivityPluginBinding
 import io.flutter.plugin.common.MethodCall
 import io.flutter.plugin.common.MethodChannel
 import io.flutter.plugin.common.MethodChannel.Result
+import java.util.UUID
+import java.util.concurrent.ConcurrentHashMap
 
-class OpenIdConnectSecureStoragePlugin : FlutterPlugin, ActivityAware {
+class OpenIdConnectAndroidPlugin : FlutterPlugin, ActivityAware {
     companion object {
         private const val STORAGE_CHANNEL_NAME = "plugins.concerti.io/openidconnect_secure_storage"
         private const val AUTH_CHANNEL_NAME = "plugins.concerti.io/openidconnect_android_auth"
 
-        private var pendingAuthorizationResult: Result? = null
+        private val pendingAuthorizationSessions =
+                ConcurrentHashMap<String, PendingAuthorizationSession>()
 
-        internal fun completeAuthorizationSuccess(redirectUrl: String) {
-            pendingAuthorizationResult?.success(redirectUrl)
-            pendingAuthorizationResult = null
+        internal fun completeAuthorizationSuccess(requestId: String, redirectUrl: String) {
+            pendingAuthorizationSessions.remove(requestId)?.result?.success(redirectUrl)
         }
 
-        internal fun completeAuthorizationCanceled() {
-            pendingAuthorizationResult?.error(
+        internal fun completeAuthorizationCanceled(requestId: String) {
+            pendingAuthorizationSessions.remove(requestId)?.result?.error(
                     "user_cancelled",
                     "The user canceled interactive authentication.",
                     null,
             )
-            pendingAuthorizationResult = null
         }
 
         internal fun completeAuthorizationFailure(
+                requestId: String,
                 code: String,
                 message: String,
                 details: String? = null,
         ) {
-            pendingAuthorizationResult?.error(code, message, details)
-            pendingAuthorizationResult = null
+            pendingAuthorizationSessions.remove(requestId)?.result?.error(code, message, details)
         }
     }
+
+    private data class PendingAuthorizationSession(
+            val plugin: OpenIdConnectAndroidPlugin,
+            val result: Result,
+    )
 
     private lateinit var applicationContext: Context
     private lateinit var storageChannel: MethodChannel
@@ -58,10 +64,19 @@ class OpenIdConnectSecureStoragePlugin : FlutterPlugin, ActivityAware {
     override fun onDetachedFromEngine(binding: FlutterPlugin.FlutterPluginBinding) {
         storageChannel.setMethodCallHandler(null)
         authChannel.setMethodCallHandler(null)
-        completeAuthorizationFailure(
-                "engine_detached",
-                "Interactive authentication was interrupted because the plugin detached from the Flutter engine.",
-        )
+
+        val interruptedRequestIds =
+                pendingAuthorizationSessions.entries
+                        .filter { it.value.plugin === this }
+                        .map { it.key }
+
+        interruptedRequestIds.forEach { requestId ->
+            completeAuthorizationFailure(
+                    requestId,
+                    "engine_detached",
+                    "Interactive authentication was interrupted because the plugin detached from the Flutter engine.",
+            )
+        }
     }
 
     private fun onStorageMethodCall(call: MethodCall, result: Result) {
@@ -108,7 +123,7 @@ class OpenIdConnectSecureStoragePlugin : FlutterPlugin, ActivityAware {
             return
         }
 
-        if (pendingAuthorizationResult != null) {
+        if (pendingAuthorizationSessions.values.any { it.plugin === this }) {
             result.error(
                     "auth_in_progress",
                     "An interactive authentication flow is already in progress.",
@@ -138,11 +153,13 @@ class OpenIdConnectSecureStoragePlugin : FlutterPlugin, ActivityAware {
                             return
                         }
         val preferEphemeralSession = call.argument<Boolean>("preferEphemeralSession") ?: false
+        val requestId = UUID.randomUUID().toString()
 
-        pendingAuthorizationResult = result
+        pendingAuthorizationSessions[requestId] = PendingAuthorizationSession(this, result)
         currentActivity.startActivity(
                 OpenIdConnectCallbackManagerActivity.createStartIntent(
                         context = currentActivity,
+                        requestId = requestId,
                         authorizationUrl = authorizationUrl,
                         redirectUrl = redirectUrl,
                         preferEphemeralSession = preferEphemeralSession,

@@ -99,6 +99,7 @@ private fun redirectUriMatchesConfig(
 @OptIn(ExperimentalAuthTab::class, ExperimentalEphemeralBrowsing::class)
 class OpenIdConnectCallbackManagerActivity : AppCompatActivity() {
     companion object {
+        private const val KEY_REQUEST_ID = "OpenIdConnect.REQUEST_ID"
         private const val KEY_AUTHORIZATION_STARTED = "OpenIdConnect.AUTHORIZATION_STARTED"
         private const val KEY_AUTHORIZATION_URL = "OpenIdConnect.AUTHORIZATION_URL"
         private const val KEY_REDIRECT_URL = "OpenIdConnect.REDIRECT_URL"
@@ -106,17 +107,20 @@ class OpenIdConnectCallbackManagerActivity : AppCompatActivity() {
 
         fun createStartIntent(
                 context: Context,
+                requestId: String,
                 authorizationUrl: String,
                 redirectUrl: String,
                 preferEphemeralSession: Boolean,
         ): Intent =
                 Intent(context, OpenIdConnectCallbackManagerActivity::class.java).apply {
+                    putExtra(KEY_REQUEST_ID, requestId)
                     putExtra(KEY_AUTHORIZATION_URL, authorizationUrl)
                     putExtra(KEY_REDIRECT_URL, redirectUrl)
                     putExtra(KEY_PREFER_EPHEMERAL_SESSION, preferEphemeralSession)
                 }
     }
 
+    private lateinit var requestId: String
     private var authorizationStarted = false
     private lateinit var authorizationUrl: String
     private lateinit var redirectUrl: String
@@ -139,6 +143,11 @@ class OpenIdConnectCallbackManagerActivity : AppCompatActivity() {
         }
 
         try {
+            requestId =
+                state.getString(KEY_REQUEST_ID)
+                    ?: throw IllegalArgumentException(
+                        "Missing request ID for interactive authentication.",
+                    )
             authorizationStarted = state.getBoolean(KEY_AUTHORIZATION_STARTED, false)
             authorizationUrl =
                     state.getString(KEY_AUTHORIZATION_URL)
@@ -253,13 +262,14 @@ class OpenIdConnectCallbackManagerActivity : AppCompatActivity() {
     override fun onSaveInstanceState(outState: Bundle) {
         super.onSaveInstanceState(outState)
         outState.putBoolean(KEY_AUTHORIZATION_STARTED, authorizationStarted)
+        outState.putString(KEY_REQUEST_ID, requestId)
         outState.putString(KEY_AUTHORIZATION_URL, authorizationUrl)
         outState.putString(KEY_REDIRECT_URL, redirectUrl)
         outState.putBoolean(KEY_PREFER_EPHEMERAL_SESSION, preferEphemeralSession)
     }
 
     private fun finishWithSuccess(redirectUrl: String) {
-        OpenIdConnectSecureStoragePlugin.completeAuthorizationSuccess(redirectUrl)
+        OpenIdConnectAndroidPlugin.completeAuthorizationSuccess(requestId, redirectUrl)
         finish()
     }
 
@@ -277,12 +287,12 @@ class OpenIdConnectCallbackManagerActivity : AppCompatActivity() {
     }
 
     private fun finishWithCanceled() {
-        OpenIdConnectSecureStoragePlugin.completeAuthorizationCanceled()
+        OpenIdConnectAndroidPlugin.completeAuthorizationCanceled(requestId)
         finish()
     }
 
     private fun finishWithError(code: String, message: String, details: String? = null) {
-        OpenIdConnectSecureStoragePlugin.completeAuthorizationFailure(code, message, details)
+        OpenIdConnectAndroidPlugin.completeAuthorizationFailure(requestId, code, message, details)
         finish()
     }
 }

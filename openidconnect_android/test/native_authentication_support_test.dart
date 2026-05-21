@@ -8,7 +8,13 @@ void main() {
     test('rejects localhost redirects on Android', () {
       expect(
         () => redirectDetailsForUrl('http://localhost:15503/callback.html'),
-        throwsA(isA<UnsupportedError>()),
+        throwsA(
+          isA<UnsupportedError>().having(
+            (error) => error.message,
+            'message',
+            contains('custom-scheme and HTTPS redirect URLs'),
+          ),
+        ),
       );
     });
 
@@ -36,7 +42,13 @@ void main() {
     test('rejects non-localhost http redirects', () {
       expect(
         () => redirectDetailsForUrl('http://example.com/callback'),
-        throwsA(isA<StateError>()),
+        throwsA(
+          isA<UnsupportedError>().having(
+            (error) => error.message,
+            'message',
+            contains('custom-scheme and HTTPS redirect URLs'),
+          ),
+        ),
       );
     });
   });
