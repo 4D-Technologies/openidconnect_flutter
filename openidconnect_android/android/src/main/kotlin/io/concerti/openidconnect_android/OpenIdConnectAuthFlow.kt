@@ -76,10 +76,12 @@ private fun redirectUriMatchesConfig(
                         is RedirectCallbackConfig.Https -> 443
                     }
 
-    if (redirectUri.scheme != when (callbackConfig) {
-        is RedirectCallbackConfig.CustomScheme -> callbackConfig.scheme
-        is RedirectCallbackConfig.Https -> "https"
-    }) {
+    if (redirectUri.scheme !=
+                    when (callbackConfig) {
+                        is RedirectCallbackConfig.CustomScheme -> callbackConfig.scheme
+                        is RedirectCallbackConfig.Https -> "https"
+                    }
+    ) {
         return false
     }
 
@@ -88,7 +90,6 @@ private fun redirectUriMatchesConfig(
                 (callbackConfig.host == null || redirectUri.host == callbackConfig.host) &&
                         (callbackConfig.path == null || normalizedPath == callbackConfig.path) &&
                         (callbackConfig.port == null || normalizedPort == callbackConfig.port)
-
         is RedirectCallbackConfig.Https ->
                 redirectUri.host == callbackConfig.host &&
                         normalizedPath == callbackConfig.path &&
@@ -144,10 +145,10 @@ class OpenIdConnectCallbackManagerActivity : AppCompatActivity() {
 
         try {
             requestId =
-                state.getString(KEY_REQUEST_ID)
-                    ?: throw IllegalArgumentException(
-                        "Missing request ID for interactive authentication.",
-                    )
+                    state.getString(KEY_REQUEST_ID)
+                            ?: throw IllegalArgumentException(
+                                    "Missing request ID for interactive authentication.",
+                            )
             authorizationStarted = state.getBoolean(KEY_AUTHORIZATION_STARTED, false)
             authorizationUrl =
                     state.getString(KEY_AUTHORIZATION_URL)
