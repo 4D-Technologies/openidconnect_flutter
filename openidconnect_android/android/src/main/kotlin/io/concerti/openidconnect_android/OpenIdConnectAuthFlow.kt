@@ -58,8 +58,8 @@ private fun parseRedirectCallbackConfig(redirectUrl: String): RedirectCallbackCo
 
     return RedirectCallbackConfig.CustomScheme(
             scheme = scheme,
-            host = uri.host.takeIf { it.isNotEmpty() },
-            path = uri.path.takeIf { it.isNotEmpty() },
+            host = uri.host?.takeIf { it.isNotEmpty() },
+            path = uri.path?.takeIf { it.isNotEmpty() },
             port = uri.port.takeIf { uri.port != -1 },
     )
 }
