@@ -46,10 +46,7 @@ Future<String> startNativeAuthenticationFlow({
   StreamSubscription<HttpRequest>? requestSubscription;
 
   try {
-    server = await HttpServer.bind(
-      InternetAddress.loopbackIPv4,
-      redirect.port,
-    );
+    server = await HttpServer.bind(InternetAddress.loopbackIPv4, redirect.port);
 
     final redirectCompleter = Completer<String>();
     requestSubscription = server.listen(

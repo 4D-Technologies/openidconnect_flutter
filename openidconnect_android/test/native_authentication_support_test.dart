@@ -46,11 +46,12 @@ void main() {
       final result = await startNativeAuthenticationFlow(
         authorizationUrl: 'https://issuer.example.com/authorize',
         redirectUrl: 'openidconnect.example://callback',
-        invokeNativeAuthentication: ({
-          required authorizationUrl,
-          required redirectUrl,
-          preferEphemeralSession = false,
-        }) async => 'openidconnect.example://callback?code=1234',
+        invokeNativeAuthentication:
+            ({
+              required authorizationUrl,
+              required redirectUrl,
+              preferEphemeralSession = false,
+            }) async => 'openidconnect.example://callback?code=1234',
       );
 
       expect(result, 'openidconnect.example://callback?code=1234');
@@ -61,13 +62,14 @@ void main() {
         () => startNativeAuthenticationFlow(
           authorizationUrl: 'https://issuer.example.com/authorize',
           redirectUrl: 'openidconnect.example://callback',
-          invokeNativeAuthentication: ({
-            required authorizationUrl,
-            required redirectUrl,
-            preferEphemeralSession = false,
-          }) => Future<String?>.error(
-            PlatformException(code: 'user_cancelled'),
-          ),
+          invokeNativeAuthentication:
+              ({
+                required authorizationUrl,
+                required redirectUrl,
+                preferEphemeralSession = false,
+              }) => Future<String?>.error(
+                PlatformException(code: 'user_cancelled'),
+              ),
         ),
         throwsA(isA<AuthenticationException>()),
       );

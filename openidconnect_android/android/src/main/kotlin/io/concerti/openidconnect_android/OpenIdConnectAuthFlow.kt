@@ -52,8 +52,7 @@ class OpenIdConnectCallbackManagerActivity : AppCompatActivity() {
         private const val KEY_AUTHORIZATION_STARTED = "OpenIdConnect.AUTHORIZATION_STARTED"
         private const val KEY_AUTHORIZATION_URL = "OpenIdConnect.AUTHORIZATION_URL"
         private const val KEY_REDIRECT_URL = "OpenIdConnect.REDIRECT_URL"
-        private const val KEY_PREFER_EPHEMERAL_SESSION =
-                "OpenIdConnect.PREFER_EPHEMERAL_SESSION"
+        private const val KEY_PREFER_EPHEMERAL_SESSION = "OpenIdConnect.PREFER_EPHEMERAL_SESSION"
 
         fun createStartIntent(
                 context: Context,
@@ -124,7 +123,8 @@ class OpenIdConnectCallbackManagerActivity : AppCompatActivity() {
             } catch (error: ActivityNotFoundException) {
                 finishWithError(
                         code = "browser_unavailable",
-                        message = "Unable to launch the Android browser for interactive authentication.",
+                        message =
+                                "Unable to launch the Android browser for interactive authentication.",
                         details = error.stackTraceToString(),
                 )
             }
@@ -141,9 +141,7 @@ class OpenIdConnectCallbackManagerActivity : AppCompatActivity() {
 
     private fun launchAuthTab() {
         val authTabIntent =
-                AuthTabIntent.Builder()
-                        .setEphemeralBrowsingEnabled(preferEphemeralSession)
-                        .build()
+                AuthTabIntent.Builder().setEphemeralBrowsingEnabled(preferEphemeralSession).build()
 
         when (val config = callbackConfig) {
             is RedirectCallbackConfig.CustomScheme ->
@@ -152,7 +150,6 @@ class OpenIdConnectCallbackManagerActivity : AppCompatActivity() {
                             Uri.parse(authorizationUrl),
                             config.scheme,
                     )
-
             is RedirectCallbackConfig.Https ->
                     authTabIntent.launch(
                             authLauncher,
@@ -170,26 +167,26 @@ class OpenIdConnectCallbackManagerActivity : AppCompatActivity() {
                 if (redirectUri.isNullOrEmpty()) {
                     finishWithError(
                             code = "empty_redirect",
-                            message = "Interactive authentication completed without a redirect URL.",
+                            message =
+                                    "Interactive authentication completed without a redirect URL.",
                     )
                 } else {
                     finishWithSuccess(redirectUri)
                 }
             }
-
             AuthTabIntent.RESULT_CANCELED -> finishWithCanceled()
             AuthTabIntent.RESULT_VERIFICATION_FAILED ->
                     finishWithError(
                             code = "verification_failed",
-                            message = "Android App Link verification failed for the configured HTTPS redirect URL.",
+                            message =
+                                    "Android App Link verification failed for the configured HTTPS redirect URL.",
                     )
-
             AuthTabIntent.RESULT_VERIFICATION_TIMED_OUT ->
                     finishWithError(
                             code = "verification_timed_out",
-                            message = "Android App Link verification timed out for the configured HTTPS redirect URL.",
+                            message =
+                                    "Android App Link verification timed out for the configured HTTPS redirect URL.",
                     )
-
             else ->
                     finishWithError(
                             code = "android_auth_error",
