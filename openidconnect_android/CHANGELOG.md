@@ -1,5 +1,10 @@
 # Changelog
 
+## 2.0.3 - August 21st 2026
+
+- Migrates to built-in Kotlin to support AGP 9. (#75)
+- Updates the minimum supported SDK version to Flutter 3.44/Dart 3.12.
+
 ## 2.0.2 - May 21st 2026
 
 - Remove the external `native_authentication` dependency and replace it with an in-repo Android browser-session/auth-tab bridge.
