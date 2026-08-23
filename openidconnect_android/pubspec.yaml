@@ -1,13 +1,13 @@
 name: openidconnect_android
 description: Android implementation for OpenIdConnect.
-version: 2.0.2
+version: 2.0.3
 homepage: https://github.com/4D-Technologies/openidconnect_flutter/tree/main/openidconnect_android
 
 resolution: workspace
 
 environment:
-  sdk: ">=3.8.0 <4.0.0"
-  flutter: ">=3.27.0"
+  sdk: ">=3.12.0 <4.0.0"
+  flutter: ">=3.44.0"
 
 dependencies:
   flutter:

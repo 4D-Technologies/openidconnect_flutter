@@ -6,8 +6,8 @@ Because this project is endorsed by the openidconnect project, you need not add 
 
 ## Requirements
 
-- Dart SDK: `>=3.8.0 <4.0.0`
-- Flutter SDK: `>=3.27.0`
+- Dart SDK: `>=3.12.0 <4.0.0`
+- Flutter SDK: `>=3.44.0`
 - Android `minSdkVersion 23`
 
 ## Android configuration
