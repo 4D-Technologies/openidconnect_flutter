@@ -1,5 +1,9 @@
 # Changelog
 
+## [2.0.3] - August 24th, 2026
+
+- Log Windows loopback authentication bind and browser-launch failures through the shared `openIdConnectLogger`.
+
 ## [2.0.2] - May 21st, 2026
 
 - Remove the external `native_authentication` dependency and replace it with an in-repo loopback-browser implementation for Windows interactive authentication.

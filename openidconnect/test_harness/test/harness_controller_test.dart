@@ -162,17 +162,27 @@ class _FakeHarnessSession implements HarnessSession {
   }
 
   @override
-  Future<void> logout() => clearIdentity();
+  Future<LogoutResult> logout() async {
+    await clearIdentity();
+    return const LogoutResult(
+      status: LogoutStatus.success,
+      message: 'Local logout completed.',
+    );
+  }
 
   @override
-  Future<String?> logoutInteractive({
+  Future<LogoutResult> logoutInteractive({
     required BuildContext context,
     required String title,
     required String? postLogoutRedirectUri,
     required bool useWebPopup,
   }) async {
     await clearIdentity();
-    return 'https://rp.example.com/logout-complete';
+    return const LogoutResult(
+      status: LogoutStatus.success,
+      message: 'RP-initiated logout completed with redirect.',
+      redirectUrl: 'https://rp.example.com/logout-complete',
+    );
   }
 }
 

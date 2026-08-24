@@ -1,5 +1,9 @@
 # Change Log
 
+## [2.0.2] - August 24th 2026
+
+- Replace `debugPrint` secure-storage failure logging with the shared `openIdConnectLogger`.
+
 ## [2.0.1] - May 5th 2026
 
 - Remove the package-local `pubspec_overrides.yaml` so publish and consumer resolution use hosted dependencies.

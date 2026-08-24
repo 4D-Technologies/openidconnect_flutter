@@ -87,7 +87,7 @@ class HarnessController extends ChangeNotifier {
     await _runBusy(() async {
       final session = await _ensureSession(config);
       if (!context.mounted) return;
-      final redirect = await session.logoutInteractive(
+      final result = await session.logoutInteractive(
         context: context,
         title: config.effectiveLoginTitle,
         postLogoutRedirectUri: config.effectivePostLogoutRedirectUrl,
@@ -96,10 +96,8 @@ class HarnessController extends ChangeNotifier {
 
       _snapshot = _snapshot.copyWith(
         identity: session.identity,
-        lastRedirect: redirect,
-        statusMessage: redirect == null
-            ? 'RP-initiated logout completed without a redirect response.'
-            : 'RP-initiated logout completed with redirect: $redirect',
+        lastRedirect: result.redirectUrl,
+        statusMessage: result.message,
         clearIdentity: session.identity == null,
       );
     });
@@ -112,10 +110,10 @@ class HarnessController extends ChangeNotifier {
     }
 
     await _runBusy(() async {
-      await _session!.logout();
+      final result = await _session!.logout();
       _snapshot = _snapshot.copyWith(
         identity: _session!.identity,
-        statusMessage: 'Local logout completed.',
+        statusMessage: result.message,
         clearIdentity: _session!.identity == null,
       );
     });
@@ -234,7 +232,8 @@ class HarnessController extends ChangeNotifier {
 
     try {
       await action();
-    } catch (error) {
+    } catch (error, stackTrace) {
+      logOpenIdConnectError('Test harness action failed', error, stackTrace);
       _snapshot = _snapshot.copyWith(statusMessage: error.toString());
     } finally {
       _snapshot = _snapshot.copyWith(

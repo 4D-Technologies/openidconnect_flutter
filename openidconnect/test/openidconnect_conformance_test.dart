@@ -396,15 +396,65 @@ void main() {
         final subscription = client.changes.listen(events.add);
         addTearDown(subscription.cancel);
 
-        await client.logout();
+        final result = await client.logout();
         await Future<void>.delayed(Duration.zero);
 
+        expect(result.status, LogoutStatus.success);
+        expect(result.message, contains('local identity was cleared'));
         expect(client.identity, isNull);
         final eventTypes = events.map((event) => event.type).toList();
         expect(eventTypes.sublist(eventTypes.length - 2), [
           AuthEventTypes.LoggingOut,
           AuthEventTypes.NotLoggedIn,
         ]);
+      },
+    );
+
+    test(
+      'logout clears persisted identity even when token revocation fails',
+      () async {
+        await _saveIdentity(
+          expiresAt: DateTime.now().toUtc().add(const Duration(hours: 1)),
+          refreshToken: 'refresh-token',
+        );
+
+        server.listen((httpRequest) async {
+          switch (httpRequest.uri.path) {
+            case '/.well-known/openid-configuration':
+              await _writeJson(
+                httpRequest.response,
+                _discoveryDocument(baseUri),
+              );
+              break;
+            case '/revoke':
+              httpRequest.response.statusCode = HttpStatus.internalServerError;
+              await _writeJson(httpRequest.response, {
+                'error': 'server_error',
+                'error_description': 'revocation unavailable',
+              }, statusCode: HttpStatus.internalServerError);
+              break;
+            default:
+              fail('Unexpected request to ${httpRequest.uri.path}');
+          }
+        });
+
+        final client = await OpenIdConnectClient.create(
+          discoveryDocumentUrl: baseUri
+              .resolve('/.well-known/openid-configuration')
+              .toString(),
+          clientId: 'client-id',
+          encryptionKey: 'unused',
+          autoRefresh: false,
+        );
+        addTearDown(client.dispose);
+
+        final result = await client.logout();
+
+        expect(result.status, LogoutStatus.remoteFailure);
+        expect(result.message, contains('revocation unavailable'));
+        expect(client.identity, isNull);
+        expect(await OpenIdIdentity.load(), isNull);
+        expect(client.currentEvent?.type, AuthEventTypes.NotLoggedIn);
       },
     );
 
@@ -476,7 +526,11 @@ void main() {
           'com.example.app:/logout',
         );
         expect(client.identity, isNull);
-        expect(response, 'com.example.app:/logout?state=logout-state');
+        expect(response.status, LogoutStatus.success);
+        expect(
+          response.redirectUrl,
+          'com.example.app:/logout?state=logout-state',
+        );
       },
     );
 
@@ -521,13 +575,66 @@ void main() {
           postLogoutRedirectUri: 'com.example.app:/logout',
         );
 
-        expect(response, isNull);
+        expect(response.status, LogoutStatus.success);
+        expect(response.redirectUrl, isNull);
         expect(fakePlatform.lastAuthorizeArguments, isNull);
         expect(client.identity, isNull);
         expect(
           client.currentEvent,
           const AuthEvent(AuthEventTypes.NotLoggedIn),
         );
+      },
+    );
+
+    test(
+      'logoutInteractive clears persisted identity even when token revocation fails',
+      () async {
+        await _saveIdentity(
+          expiresAt: DateTime.now().toUtc().add(const Duration(hours: 1)),
+          refreshToken: 'refresh-token',
+        );
+
+        server.listen((httpRequest) async {
+          switch (httpRequest.uri.path) {
+            case '/.well-known/openid-configuration':
+              await _writeJson(
+                httpRequest.response,
+                _discoveryDocument(baseUri, includeEndSessionEndpoint: false),
+              );
+              break;
+            case '/revoke':
+              httpRequest.response.statusCode = HttpStatus.internalServerError;
+              await _writeJson(httpRequest.response, {
+                'error': 'server_error',
+                'error_description': 'revocation unavailable',
+              }, statusCode: HttpStatus.internalServerError);
+              break;
+            default:
+              fail('Unexpected request to ${httpRequest.uri.path}');
+          }
+        });
+
+        final client = await OpenIdConnectClient.create(
+          discoveryDocumentUrl: baseUri
+              .resolve('/.well-known/openid-configuration')
+              .toString(),
+          clientId: 'client-id',
+          encryptionKey: 'unused',
+          autoRefresh: false,
+        );
+        addTearDown(client.dispose);
+
+        final result = await client.logoutInteractive(
+          context: _FakeBuildContext(),
+          title: 'Sign out',
+          postLogoutRedirectUri: 'com.example.app:/logout',
+        );
+
+        expect(result.status, LogoutStatus.remoteFailure);
+        expect(result.message, contains('revocation unavailable'));
+        expect(client.identity, isNull);
+        expect(await OpenIdIdentity.load(), isNull);
+        expect(client.currentEvent?.type, AuthEventTypes.NotLoggedIn);
       },
     );
 
