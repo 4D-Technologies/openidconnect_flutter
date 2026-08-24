@@ -1,6 +1,6 @@
 name: openidconnect_platform_interface
 description: Platform interface for OpenIdConnect.
-version: 2.0.1
+version: 2.0.2
 homepage: https://github.com/4D-Technologies/openidconnect_flutter/tree/main/openidconnect_platform_interface
 
 resolution: workspace
@@ -12,6 +12,7 @@ environment:
 dependencies:
   flutter:
     sdk: flutter
+  logger: ">=1.0.0 <3.0.0"
   plugin_platform_interface: ^2.1.8
 
 dev_dependencies:

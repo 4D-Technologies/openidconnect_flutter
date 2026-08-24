@@ -1,5 +1,9 @@
 # Changelog
 
+## 2.0.2 - August 24th 2026
+
+- Log Darwin interactive authentication failures through the shared `openIdConnectLogger`.
+
 ## 2.0.1 - May 5th 2026
 
 - Remove the `native_authentication` dependency from `openidconnect_darwin` and replace it with an in-repo Apple interactive-auth bridge.

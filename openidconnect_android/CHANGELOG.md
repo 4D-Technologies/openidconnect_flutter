@@ -1,5 +1,9 @@
 # Changelog
 
+## 2.0.4 - August 24th 2026
+
+- Log Android interactive authentication failures through the shared `openIdConnectLogger`.
+
 ## 2.0.3 - August 21st 2026
 
 - Migrates to built-in Kotlin to support AGP 9. (#75)

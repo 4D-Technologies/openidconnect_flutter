@@ -68,11 +68,19 @@ Future<String> startNativeAuthenticationFlow({
     }
 
     return result.toString();
-  } on PlatformException catch (e) {
+  } on PlatformException catch (e, stackTrace) {
     if (e.code == 'user_cancelled') {
+      openIdConnectLogger.i(
+        'Android interactive authentication was cancelled.',
+      );
       throw AuthenticationException(ERROR_USER_CLOSED);
     }
 
+    logOpenIdConnectError(
+      'Android interactive authentication failed',
+      e,
+      stackTrace,
+    );
     throw AuthenticationException(e.message);
   }
 }

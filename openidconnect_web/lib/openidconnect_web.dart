@@ -2,8 +2,8 @@ import 'dart:async';
 import 'dart:convert';
 import 'dart:js_interop' as js_interop;
 import 'dart:js_interop_unsafe';
+import 'dart:typed_data';
 
-import 'package:flutter/foundation.dart';
 import 'package:web/web.dart' as html;
 
 // In order to *not* need this ignore, consider extracting the "web" version
@@ -159,10 +159,11 @@ class _OpenIdConnectWebSecureStorage {
         (decrypted! as js_interop.JSArrayBuffer).toDart.asUint8List(),
       );
     } on Exception catch (error, stackTrace) {
-      if (kDebugMode) {
-        debugPrint('$error');
-        debugPrintStack(stackTrace: stackTrace);
-      }
+      logOpenIdConnectWarning(
+        'Failed to decrypt web secure storage value',
+        error,
+        stackTrace,
+      );
       return null;
     }
   }

@@ -2,8 +2,10 @@ import 'dart:async';
 
 import 'package:flutter/services.dart';
 import 'package:flutter/widgets.dart';
+import 'package:logger/logger.dart';
 import 'package:plugin_platform_interface/plugin_platform_interface.dart';
 
+part './src/logging.dart';
 part './src/method_channel_openidconnect.dart';
 part './src/exceptions/authentication_exception.dart';
 part './src/exceptions/http_response_exception.dart';

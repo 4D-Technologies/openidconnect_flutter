@@ -13,11 +13,15 @@ import 'package:flutter/foundation.dart';
 import 'package:retry/retry.dart';
 import 'package:url_launcher/url_launcher.dart';
 
+export 'package:openidconnect_platform_interface/openidconnect_platform_interface.dart'
+    show openIdConnectLogger, logOpenIdConnectError, logOpenIdConnectWarning;
+
 part 'openidconnect_client.dart';
 part './src/helpers.dart';
 
 part './src/models/identity.dart';
 part './src/models/event.dart';
+part './src/models/logout_result.dart';
 
 part 'src/config/openidconfiguration.dart';
 
@@ -110,9 +114,11 @@ class OpenIdConnect {
       () => http.get(Uri.parse(discoveryDocumentUri)),
     );
     if (response == null) {
-      throw ArgumentError(
+      final error = ArgumentError(
         "The discovery document could not be found at: $discoveryDocumentUri",
       );
+      logOpenIdConnectError('OpenID discovery document was empty', error);
+      throw error;
     }
 
     const requiredFields = <String>[
@@ -132,9 +138,11 @@ class OpenIdConnect {
         .toList(growable: false);
 
     if (missingFields.isNotEmpty) {
-      throw ArgumentError(
+      final error = ArgumentError(
         'The discovery document was invalid and missing: ${missingFields.join(', ')}',
       );
+      logOpenIdConnectError('OpenID discovery document was invalid', error);
+      throw error;
     }
 
     return OpenIdConfiguration.fromJson(response);
@@ -504,7 +512,8 @@ class OpenIdConnect {
 
     try {
       await httpRetry(() => http.get(url));
-    } on HttpResponseException catch (e) {
+    } on HttpResponseException catch (e, stackTrace) {
+      logOpenIdConnectError('End-session logout request failed', e, stackTrace);
       throw LogoutException(e.toString());
     }
   }
@@ -570,7 +579,12 @@ class OpenIdConnect {
     required RevokeTokenRequest request,
     bool useBasicAuth = true,
   }) async {
-    if (request.configuration.revocationEndpoint == null) return;
+    if (request.configuration.revocationEndpoint == null) {
+      openIdConnectLogger.i(
+        'Token revocation skipped because the provider does not advertise a revocation endpoint.',
+      );
+      return;
+    }
 
     final uri = Uri.parse(request.configuration.revocationEndpoint!);
     final headers = <String, String>{
@@ -593,7 +607,8 @@ class OpenIdConnect {
           headers: headers,
         ),
       );
-    } on HttpResponseException catch (e) {
+    } on HttpResponseException catch (e, stackTrace) {
+      logOpenIdConnectError('Token revocation request failed', e, stackTrace);
       throw RevokeException(e.toString());
     }
   }
@@ -616,7 +631,8 @@ class OpenIdConnect {
       if (response == null) throw UserInfoException(ERROR_INVALID_RESPONSE);
 
       return response;
-    } on Exception catch (e) {
+    } on Exception catch (e, stackTrace) {
+      logOpenIdConnectError('UserInfo request failed', e, stackTrace);
       throw UserInfoException(e.toString());
     }
   }
@@ -636,7 +652,12 @@ class OpenIdConnect {
       );
 
       if (response == null) throw UserInfoException(ERROR_INVALID_RESPONSE);
-    } on Exception catch (e) {
+    } on Exception catch (e, stackTrace) {
+      logOpenIdConnectError(
+        'Dynamic client registration failed',
+        e,
+        stackTrace,
+      );
       throw UserInfoException(e.toString());
     }
   }

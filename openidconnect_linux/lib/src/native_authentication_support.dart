@@ -86,11 +86,21 @@ Future<String> startNativeAuthenticationFlow({
       authenticationTimeout,
       onTimeout: () => throw AuthenticationException(ERROR_USER_CLOSED),
     );
-  } on SocketException catch (e) {
+  } on SocketException catch (e, stackTrace) {
+    logOpenIdConnectError(
+      'Linux interactive authentication failed to bind localhost',
+      e,
+      stackTrace,
+    );
     throw AuthenticationException(
       'Failed to bind to http://localhost:${redirect.port}. ${e.message}',
     );
-  } on ProcessException catch (e) {
+  } on ProcessException catch (e, stackTrace) {
+    logOpenIdConnectError(
+      'Linux interactive authentication failed to launch the browser',
+      e,
+      stackTrace,
+    );
     throw AuthenticationException(
       'Unable to launch the system browser for interactive authentication. ${e.message}',
     );

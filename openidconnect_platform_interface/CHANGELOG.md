@@ -1,5 +1,9 @@
 # Change Log
 
+## [2.0.2] - August 24th 2026
+
+- Add a shared `openIdConnectLogger` that host apps can replace, using a `logger` 1.x/2.x-compatible constraint so upstream projects are not pinned to a single logger release.
+
 ## [2.0.1] - May 5th 2026
 
 - Align the interface package on the `2.0.1` patch line for the federated publish flow.

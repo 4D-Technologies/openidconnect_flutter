@@ -1,5 +1,12 @@
 # Change Log
 
+## [2.0.2] - August 24th, 2026
+
+- Breaking change: `logout()` and `logoutInteractive()` now return a `LogoutResult` with `status` and `message` instead of throwing or returning only a redirect URL.
+- Clear persisted identity during `logout()` and `logoutInteractive()` even when remote logout or token revocation fails, logging the remote failure and reporting it as `LogoutStatus.remoteFailure`.
+- Route package logging through the shared `openIdConnectLogger`, replacing ad-hoc `debugPrint` usage and covering login, refresh, logout, and HTTP failure paths.
+- Depend on `logger` `>=1.0.0 <3.0.0` via the platform interface so host apps can keep either logger 1.x or 2.x.
+
 ## [2.0.1] - May 21st, 2026
 
 - Remove the external `native_authentication` dependency from the Darwin package and replace it with an in-repo Apple browser-session bridge while preserving macOS localhost callback support.

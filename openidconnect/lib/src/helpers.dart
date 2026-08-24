@@ -41,17 +41,29 @@ Future<Map<String, dynamic>?> httpRetry<T extends http.Response>(
     var result = await options.retry(
       fn,
       retryIf: retryIf ?? (e) => e is IOException || e is TimeoutException,
-      onRetry: onRetry,
+      onRetry: (e) async {
+        logOpenIdConnectWarning('Retrying OpenID Connect HTTP request', e);
+        await onRetry?.call(e);
+      },
     );
 
     if (result.statusCode == 503 ||
         result.statusCode == 502 ||
         result.statusCode == 504) {
       if (attempt >= maxAttempts) {
+        logOpenIdConnectError(
+          'OpenID Connect HTTP ${result.statusCode} persisted after $maxAttempts attempts',
+          HttpException(
+            'The server could not be reached. Please try again later.',
+          ),
+        );
         throw HttpException(
           "The server could not be reached. Please try again later.",
         );
       }
+      openIdConnectLogger.w(
+        'OpenID Connect HTTP ${result.statusCode}; retrying ($attempt/$maxAttempts).',
+      );
       await Future<void>.delayed(options.delay(attempt));
       attempt++;
       continue;
@@ -73,13 +85,23 @@ Future<Map<String, dynamic>?> httpRetry<T extends http.Response>(
         if (jsonResponse["error_description"] != null) {
           error += ": ${jsonResponse["error_description"]}";
         }
-        throw HttpResponseException(
+        final exception = HttpResponseException(
           ERROR_MESSAGE_FORMAT.replaceAll("%2", error),
         );
+        logOpenIdConnectError(
+          'OpenID Connect HTTP ${result.statusCode}',
+          exception,
+        );
+        throw exception;
       } else {
-        throw HttpResponseException(
+        final exception = HttpResponseException(
           ERROR_MESSAGE_FORMAT.replaceAll("%2", "unknown_error"),
         );
+        logOpenIdConnectError(
+          'OpenID Connect HTTP ${result.statusCode}',
+          exception,
+        );
+        throw exception;
       }
     }
 

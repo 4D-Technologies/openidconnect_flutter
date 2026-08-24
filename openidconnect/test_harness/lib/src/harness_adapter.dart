@@ -15,14 +15,14 @@ abstract class HarnessSession {
     required bool useWebPopup,
   });
 
-  Future<String?> logoutInteractive({
+  Future<LogoutResult> logoutInteractive({
     required BuildContext context,
     required String title,
     required String? postLogoutRedirectUri,
     required bool useWebPopup,
   });
 
-  Future<void> logout();
+  Future<LogoutResult> logout();
   Future<void> clearIdentity();
   void dispose();
 }
@@ -88,7 +88,7 @@ class _OpenIdConnectHarnessSession implements HarnessSession {
   }
 
   @override
-  Future<String?> logoutInteractive({
+  Future<LogoutResult> logoutInteractive({
     required BuildContext context,
     required String title,
     required String? postLogoutRedirectUri,
@@ -103,7 +103,7 @@ class _OpenIdConnectHarnessSession implements HarnessSession {
   }
 
   @override
-  Future<void> logout() => _client.logout();
+  Future<LogoutResult> logout() => _client.logout();
 
   @override
   Future<void> clearIdentity() => _client.clearIdentity();

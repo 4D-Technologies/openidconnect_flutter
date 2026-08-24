@@ -195,7 +195,8 @@ class OpenIdConnectClient {
       _raiseEvent(AuthEvent(AuthEventTypes.Success));
 
       return _identity!;
-    } on Exception catch (e) {
+    } on Exception catch (e, stackTrace) {
+      logOpenIdConnectError('Password login failed', e, stackTrace);
       await _clearIdentityIgnoringErrors();
       _raiseEvent(AuthEvent(AuthEventTypes.Error, message: e.toString()));
       throw AuthenticationException(e.toString());
@@ -226,7 +227,8 @@ class OpenIdConnectClient {
 
       _raiseEvent(AuthEvent(AuthEventTypes.Success));
       return _identity!;
-    } on Exception catch (e) {
+    } on Exception catch (e, stackTrace) {
+      logOpenIdConnectError('Device-code login failed', e, stackTrace);
       await _clearIdentityIgnoringErrors();
       _raiseEvent(AuthEvent(AuthEventTypes.Error, message: e.toString()));
       throw AuthenticationException(e.toString());
@@ -290,7 +292,8 @@ class OpenIdConnectClient {
       _raiseEvent(AuthEvent(AuthEventTypes.Success));
 
       return _identity!;
-    } on Exception catch (e) {
+    } on Exception catch (e, stackTrace) {
+      logOpenIdConnectError('Interactive login failed', e, stackTrace);
       await _clearIdentityIgnoringErrors();
       _raiseEvent(AuthEvent(AuthEventTypes.Error, message: e.toString()));
       throw AuthenticationException(e.toString());
@@ -299,37 +302,37 @@ class OpenIdConnectClient {
 
   /// Revokes the current tokens, clears persisted identity state, and raises a
   /// not-logged-in event.
-  Future<void> logout() async {
+  ///
+  /// Local identity is always cleared when one was present. Remote
+  /// logout/revocation failures are logged and returned as
+  /// [LogoutStatus.remoteFailure] instead of blocking local cleanup.
+  Future<LogoutResult> logout() async {
     _cancelAutoRenewTimer();
 
-    if (_identity == null) return;
-
-    try {
-      //Make sure we have the discovery information
-      await _verifyDiscoveryDocument();
-
-      _raiseEvent(AuthEvent(AuthEventTypes.LoggingOut));
-
-      await revokeTokens();
-
-      await clearIdentity();
-    } on Exception catch (e) {
-      _raiseEvent(
-        AuthEvent(
-          AuthEventTypes.Error,
-          message: "Error during logout: ${e.toString()}",
-        ),
+    if (_identity == null) {
+      const result = LogoutResult(
+        status: LogoutStatus.skipped,
+        message: 'Logout skipped because no identity is loaded.',
       );
-
-      rethrow;
+      openIdConnectLogger.i(result.message);
+      return result;
     }
 
-    _raiseEvent(AuthEvent(AuthEventTypes.NotLoggedIn));
+    return _completeLogout(() async {
+      await _verifyDiscoveryDocument();
+      _raiseEvent(AuthEvent(AuthEventTypes.LoggingOut));
+      await revokeTokens();
+      return null;
+    });
   }
 
   /// Performs RP-initiated logout when supported, while also revoking local
   /// tokens and clearing persisted identity state.
-  Future<String?> logoutInteractive({
+  ///
+  /// Local identity is always cleared when one was present. Remote
+  /// logout/revocation failures are logged and returned as
+  /// [LogoutStatus.remoteFailure] instead of blocking local cleanup.
+  Future<LogoutResult> logoutInteractive({
     required BuildContext context,
     required String title,
     String? userNameHint,
@@ -341,65 +344,118 @@ class OpenIdConnectClient {
     String? postLogoutRedirectUri,
     bool useBasicAuth = true,
   }) async {
-    if (_identity == null) return null;
-
-    await _verifyDiscoveryDocument();
-    final endSession = configuration?.endSessionEndpoint;
-    _raiseEvent(AuthEvent(AuthEventTypes.LoggingOut));
-
-    // If provider doesn't support end_session, just revoke and clear locally
-    if (endSession == null) {
-      await revokeTokens(
-        useBasicAuth: useBasicAuth,
-      ); // keep existing revoke logic (revokes refresh/access)
-      await clearIdentity();
-      _raiseEvent(AuthEvent(AuthEventTypes.NotLoggedIn));
-      return null;
+    if (_identity == null) {
+      const result = LogoutResult(
+        status: LogoutStatus.skipped,
+        message: 'Interactive logout skipped because no identity is loaded.',
+      );
+      openIdConnectLogger.i(result.message);
+      return result;
     }
 
-    final request = InteractiveLogoutRequest(
-      configuration: configuration!,
-      postLogoutRedirectUrl:
-          postLogoutRedirectUri ??
-          redirectUrl ??
-          (throw StateError(
-            'When using logout interactive, you must provide a postLogoutRedirectUri or create the client with a redirect url.',
-          )),
-      useWebPopup: useWebPopup,
-      popupHeight: popupHeight,
-      popupWidth: popupWidth,
-      idToken: _identity!.idToken,
-    );
+    return _completeLogout(() async {
+      await _verifyDiscoveryDocument();
+      final endSession = configuration?.endSessionEndpoint;
+      _raiseEvent(AuthEvent(AuthEventTypes.LoggingOut));
 
-    if (!context.mounted) return null;
+      if (endSession == null) {
+        openIdConnectLogger.i(
+          'Provider does not advertise an end-session endpoint; revoking tokens locally.',
+        );
+        await revokeTokens(useBasicAuth: useBasicAuth);
+        return null;
+      }
 
-    String? response;
-    if (kIsWeb) {
-      response = await OpenIdConnect.logoutInteractive(
+      final request = InteractiveLogoutRequest(
+        configuration: configuration!,
+        postLogoutRedirectUrl:
+            postLogoutRedirectUri ??
+            redirectUrl ??
+            (throw StateError(
+              'When using logout interactive, you must provide a postLogoutRedirectUri or create the client with a redirect url.',
+            )),
+        useWebPopup: useWebPopup,
+        popupHeight: popupHeight,
+        popupWidth: popupWidth,
+        idToken: _identity!.idToken,
+      );
+
+      if (!context.mounted) {
+        openIdConnectLogger.w(
+          'Interactive logout aborted because the calling context is no longer mounted.',
+        );
+        return null;
+      }
+
+      if (kIsWeb) {
+        final response = await OpenIdConnect.logoutInteractive(
+          context: context,
+          title: title,
+          request: request,
+        );
+        await revokeTokens(useBasicAuth: useBasicAuth);
+        return response;
+      }
+
+      await revokeTokens(useBasicAuth: useBasicAuth);
+      if (!context.mounted) {
+        openIdConnectLogger.w(
+          'Interactive logout aborted after token revocation because the calling context is no longer mounted.',
+        );
+        return null;
+      }
+
+      return OpenIdConnect.logoutInteractive(
         context: context,
         title: title,
         request: request,
       );
+    });
+  }
 
-      await revokeTokens(
-        useBasicAuth: useBasicAuth,
-      ); // keep existing revoke logic (revokes refresh/access)
-    } else {
-      await revokeTokens(
-        useBasicAuth: useBasicAuth,
-      ); // keep existing revoke logic (revokes refresh/access)
-      if (!context.mounted) return null;
-      response = await OpenIdConnect.logoutInteractive(
-        context: context,
-        title: title,
-        request: request,
+  Future<LogoutResult> _completeLogout(
+    Future<String?> Function() remoteLogout,
+  ) async {
+    String? redirectUrl;
+    Object? remoteError;
+
+    try {
+      redirectUrl = await remoteLogout();
+    } on Object catch (e, stackTrace) {
+      remoteError = e;
+      logOpenIdConnectError(
+        'Remote logout or token revocation failed; continuing with local cleanup',
+        e,
+        stackTrace,
       );
+      _raiseEvent(
+        AuthEvent(
+          AuthEventTypes.Error,
+          message: 'Error during logout: ${e.toString()}',
+        ),
+      );
+    } finally {
+      await _clearIdentityIgnoringErrors();
     }
 
-    await clearIdentity();
     _raiseEvent(AuthEvent(AuthEventTypes.NotLoggedIn));
 
-    return response;
+    if (remoteError != null) {
+      return LogoutResult(
+        status: LogoutStatus.remoteFailure,
+        message:
+            'Local identity was cleared, but remote logout or token revocation failed: $remoteError',
+        redirectUrl: redirectUrl,
+      );
+    }
+
+    return LogoutResult(
+      status: LogoutStatus.success,
+      message: redirectUrl == null
+          ? 'Logout completed and local identity was cleared.'
+          : 'Logout completed and local identity was cleared with redirect: $redirectUrl',
+      redirectUrl: redirectUrl,
+    );
   }
 
   /// Revokes the current refresh token when available, otherwise the access
@@ -438,8 +494,10 @@ class OpenIdConnectClient {
           useBasicAuth: useBasicAuth,
         );
       }
-    } on Exception catch (e) {
+    } on Exception catch (e, stackTrace) {
+      logOpenIdConnectError('Token revocation failed', e, stackTrace);
       _raiseEvent(AuthEvent(AuthEventTypes.Error, message: e.toString()));
+      rethrow;
     }
   }
 
@@ -540,7 +598,7 @@ class OpenIdConnectClient {
       if (raiseEvents) _raiseEvent(AuthEvent(AuthEventTypes.Refresh));
 
       return true;
-    } on Exception catch (e) {
+    } on Exception catch (e, stackTrace) {
       // In case when refresh request fails but we know that identity is present
       // and the token has not expired, we can keep the identity and raise an
       // error event to notify the app that there is an issue while refreshing
@@ -549,6 +607,11 @@ class OpenIdConnectClient {
       // There is no need to clear the identity in this case because it is still
       // valid.
       if (identity != null && !hasTokenExpired) {
+        logOpenIdConnectWarning(
+          'Token refresh failed while the current identity is still valid',
+          e,
+          stackTrace,
+        );
         _raiseEvent(AuthEvent(AuthEventTypes.Error, message: e.toString()));
         return false;
       }
@@ -556,6 +619,11 @@ class OpenIdConnectClient {
       // Otherwise, if the identity has already expired, then we clear it and
       // raise the AuthEventTypes.NotLoggedIn to notify the app that the user
       // should log in again.
+      logOpenIdConnectError(
+        'Token refresh failed and the identity has expired; clearing local identity',
+        e,
+        stackTrace,
+      );
       await _clearIdentityIgnoringErrors();
       _raiseEvent(AuthEvent(AuthEventTypes.NotLoggedIn, message: e.toString()));
       return false;
@@ -575,8 +643,12 @@ class OpenIdConnectClient {
   Future<void> _clearIdentityIgnoringErrors() async {
     try {
       await clearIdentity();
-    } on Exception {
-      // Best-effort cleanup only. Preserve the original authentication error.
+    } on Exception catch (e, stackTrace) {
+      logOpenIdConnectWarning(
+        'Best-effort identity cleanup failed; discarding in-memory identity',
+        e,
+        stackTrace,
+      );
       _identity = null;
     }
   }

@@ -86,10 +86,23 @@ class OpenIdIdentity extends AuthorizationResponse {
         refreshToken: refreshToken,
         state: state,
       );
-    } on Exception {
-      await clear(
-        tenantId: tenantId,
-      ).onError<Object>((Object error, StackTrace stackTrace) => null);
+    } on Exception catch (e, stackTrace) {
+      logOpenIdConnectWarning(
+        'Persisted identity could not be loaded; clearing stored credentials',
+        e,
+        stackTrace,
+      );
+      await clear(tenantId: tenantId).onError<Object>((
+        Object error,
+        StackTrace clearStackTrace,
+      ) {
+        logOpenIdConnectWarning(
+          'Failed to clear invalid persisted identity',
+          error,
+          clearStackTrace,
+        );
+        return null;
+      });
       return null; //Invalid values, flush.
     }
   }
