@@ -1,6 +1,6 @@
 # Change Log
 
-## [2.0.2] - August 24th, 2026
+## [3.0.0] - August 24th, 2026
 
 - Breaking change: `logout()` and `logoutInteractive()` now return a `LogoutResult` with `status` and `message` instead of throwing or returning only a redirect URL.
 - Clear persisted identity during `logout()` and `logoutInteractive()` even when remote logout or token revocation fails, logging the remote failure and reporting it as `LogoutStatus.remoteFailure`.
