@@ -381,10 +381,9 @@ class OpenIdConnectClient {
       );
 
       if (!context.mounted) {
-        openIdConnectLogger.w(
+        throw StateError(
           'Interactive logout aborted because the calling context is no longer mounted.',
         );
-        return null;
       }
 
       if (kIsWeb) {
@@ -399,10 +398,9 @@ class OpenIdConnectClient {
 
       await revokeTokens(useBasicAuth: useBasicAuth);
       if (!context.mounted) {
-        openIdConnectLogger.w(
+        throw StateError(
           'Interactive logout aborted after token revocation because the calling context is no longer mounted.',
         );
-        return null;
       }
 
       return OpenIdConnect.logoutInteractive(
@@ -431,7 +429,8 @@ class OpenIdConnectClient {
       _raiseEvent(
         AuthEvent(
           AuthEventTypes.Error,
-          message: 'Error during logout: ${e.toString()}',
+          message:
+              'Remote logout or token revocation failed; local identity will still be cleared: ${e.toString()}',
         ),
       );
     } finally {

@@ -51,15 +51,14 @@ Future<Map<String, dynamic>?> httpRetry<T extends http.Response>(
         result.statusCode == 502 ||
         result.statusCode == 504) {
       if (attempt >= maxAttempts) {
+        final exception = HttpException(
+          'The server could not be reached. Please try again later.',
+        );
         logOpenIdConnectError(
           'OpenID Connect HTTP ${result.statusCode} persisted after $maxAttempts attempts',
-          HttpException(
-            'The server could not be reached. Please try again later.',
-          ),
+          exception,
         );
-        throw HttpException(
-          "The server could not be reached. Please try again later.",
-        );
+        throw exception;
       }
       openIdConnectLogger.w(
         'OpenID Connect HTTP ${result.statusCode}; retrying ($attempt/$maxAttempts).',
