@@ -1,5 +1,9 @@
 # Changelog
 
+## [3.1.0] - October 16th, 2026
+
+- Align package version with `openidconnect` 3.1.x.
+
 ## [2.0.4] - October 16th, 2026
 
 - Raise the minimum supported SDK to Flutter 3.47 / Dart 3.13 ([#86](https://github.com/4D-Technologies/openidconnect_flutter/issues/86)).

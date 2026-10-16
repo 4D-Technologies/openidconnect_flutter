@@ -1,5 +1,9 @@
 # Changelog
 
+## 3.1.0 - October 16th 2026
+
+- Align package version with `openidconnect` 3.1.x.
+
 ## 2.0.5 - October 16th 2026
 
 - Publish this implementation as `openidconnect_flutter_android`. The previous pub.dev name is not owned by this publisher.
