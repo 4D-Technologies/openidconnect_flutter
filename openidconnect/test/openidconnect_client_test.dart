@@ -493,7 +493,7 @@ class _FakeTokenHttpClientResponse extends Fake implements HttpClientResponse {
 }
 
 class _FakeHttpHeaders extends Fake implements HttpHeaders {
-  _FakeHttpHeaders({ContentType? contentType}) : _contentType = contentType;
+  _FakeHttpHeaders({this._contentType});
 
   final Map<String, List<String>> _values = <String, List<String>>{};
   ContentType? _contentType;

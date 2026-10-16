@@ -7,7 +7,7 @@ import 'harness_adapter.dart';
 import 'harness_models.dart';
 
 class HarnessController extends ChangeNotifier {
-  HarnessController({required HarnessAdapter adapter}) : _adapter = adapter;
+  HarnessController({required this._adapter});
 
   final HarnessAdapter _adapter;
 

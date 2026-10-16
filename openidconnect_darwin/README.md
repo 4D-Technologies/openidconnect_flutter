@@ -10,8 +10,8 @@ You should not add `openidconnect_darwin` to Xcode manually. Add the root `openi
 
 ## Requirements
 
-- Dart SDK: `>=3.8.0 <4.0.0`
-- Flutter SDK: `>=3.27.0`
+- Dart SDK: `>=3.13.0 <4.0.0`
+- Flutter SDK: `>=3.47.0`
 - iOS deployment target: `13.0`
 - macOS deployment target: `10.15`
 
