@@ -499,6 +499,7 @@ class OpenIdConnect {
     return AuthorizationResponse.fromJson(
       response,
       fallbackIdToken: request.currentIdToken,
+      fallbackRefreshToken: request.refreshToken,
     );
   }
 

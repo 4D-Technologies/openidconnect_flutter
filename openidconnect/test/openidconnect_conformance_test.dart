@@ -1291,6 +1291,167 @@ void main() {
     );
 
     test(
+      'logout revokes the original refresh token when refresh omits a replacement',
+      () async {
+        await _saveIdentity(
+          expiresAt: DateTime.now().toUtc().add(const Duration(hours: 1)),
+          refreshToken: 'original-refresh-token',
+        );
+
+        final refreshStarted = Completer<void>();
+        final allowRefreshToFinish = Completer<void>();
+        String? revokedToken;
+
+        server.listen((httpRequest) async {
+          switch (httpRequest.uri.path) {
+            case '/.well-known/openid-configuration':
+              await _writeJson(
+                httpRequest.response,
+                _discoveryDocument(baseUri),
+              );
+              break;
+            case '/token':
+              refreshStarted.complete();
+              await allowRefreshToFinish.future;
+              await _writeJson(httpRequest.response, {
+                'access_token': 'renewed-access-token',
+                'token_type': 'Bearer',
+                'expires_in': 3600,
+                'id_token': _testIdToken,
+              });
+              break;
+            case '/revoke':
+              final body = Uri.splitQueryString(
+                await utf8.decoder.bind(httpRequest).join(),
+              );
+              revokedToken = body['token'];
+              httpRequest.response.statusCode = HttpStatus.ok;
+              await httpRequest.response.close();
+              break;
+            default:
+              fail('Unexpected request to ${httpRequest.uri.path}');
+          }
+        });
+
+        final client = await OpenIdConnectClient.create(
+          discoveryDocumentUrl: baseUri
+              .resolve('/.well-known/openid-configuration')
+              .toString(),
+          clientId: 'client-id',
+          clientSecret: 'client-secret',
+          encryptionKey: 'unused',
+          autoRefresh: false,
+        );
+        addTearDown(client.dispose);
+
+        final refreshFuture = client.refresh();
+        await refreshStarted.future;
+        final logoutFuture = client.logout();
+        allowRefreshToFinish.complete();
+
+        expect(await refreshFuture, isTrue);
+        final result = await logoutFuture;
+
+        expect(result.status, LogoutStatus.success);
+        expect(revokedToken, 'original-refresh-token');
+        expect(client.identity, isNull);
+      },
+    );
+
+    test(
+      'refresh keeps the original refresh token when the response omits one',
+      () async {
+        await _saveIdentity(
+          expiresAt: DateTime.now().toUtc().add(const Duration(hours: 1)),
+          refreshToken: 'original-refresh-token',
+        );
+
+        server.listen((httpRequest) async {
+          switch (httpRequest.uri.path) {
+            case '/.well-known/openid-configuration':
+              await _writeJson(
+                httpRequest.response,
+                _discoveryDocument(baseUri),
+              );
+              break;
+            case '/token':
+              await _writeJson(httpRequest.response, {
+                'access_token': 'renewed-access-token',
+                'token_type': 'Bearer',
+                'expires_in': 3600,
+                'id_token': _testIdToken,
+              });
+              break;
+            default:
+              fail('Unexpected request to ${httpRequest.uri.path}');
+          }
+        });
+
+        final client = await OpenIdConnectClient.create(
+          discoveryDocumentUrl: baseUri
+              .resolve('/.well-known/openid-configuration')
+              .toString(),
+          clientId: 'client-id',
+          clientSecret: 'client-secret',
+          encryptionKey: 'unused',
+          autoRefresh: false,
+        );
+        addTearDown(client.dispose);
+
+        expect(await client.refresh(), isTrue);
+        expect(client.identity?.refreshToken, 'original-refresh-token');
+        expect(client.identity?.accessToken, 'renewed-access-token');
+        expect(
+          (await OpenIdIdentity.load())?.refreshToken,
+          'original-refresh-token',
+        );
+      },
+    );
+
+    test(
+      'clearIdentity retries storage deletion after a previous failure',
+      () async {
+        await _saveIdentity(
+          expiresAt: DateTime.now().toUtc().add(const Duration(hours: 1)),
+          refreshToken: 'refresh-token',
+        );
+
+        server.listen((httpRequest) async {
+          switch (httpRequest.uri.path) {
+            case '/.well-known/openid-configuration':
+              await _writeJson(
+                httpRequest.response,
+                _discoveryDocument(baseUri),
+              );
+              break;
+            default:
+              fail('Unexpected request to ${httpRequest.uri.path}');
+          }
+        });
+
+        final client = await OpenIdConnectClient.create(
+          discoveryDocumentUrl: baseUri
+              .resolve('/.well-known/openid-configuration')
+              .toString(),
+          clientId: 'client-id',
+          encryptionKey: 'unused',
+          autoRefresh: false,
+        );
+        addTearDown(client.dispose);
+
+        fakePlatform.deleteShouldFail = true;
+        await expectLater(client.clearIdentity(), throwsA(isA<Exception>()));
+        expect(client.identity, isNull);
+        expect(await OpenIdIdentity.load(), isNotNull);
+
+        fakePlatform.deleteShouldFail = false;
+        await client.clearIdentity();
+        expect(client.identity, isNull);
+        expect(await OpenIdIdentity.load(), isNull);
+      },
+    );
+
+    test(
       'refresh started during clearIdentity does not restore the session',
       () async {
         await _saveIdentity(
@@ -1427,6 +1588,7 @@ class _FakeOpenIdConnectPlatform extends OpenIdConnectPlatform
   String? authorizeInteractiveResponse;
   String? processStartupResponse;
   _AuthorizeInteractiveHandler? authorizeInteractiveHandler;
+  bool deleteShouldFail = false;
 
   @override
   Future<String?> authorizeInteractive({
@@ -1466,6 +1628,9 @@ class _FakeOpenIdConnectPlatform extends OpenIdConnectPlatform
 
   @override
   Future<void> secureStorageDelete({required String key}) async {
+    if (deleteShouldFail) {
+      throw Exception('secure storage unavailable');
+    }
     storage.remove(key);
   }
 

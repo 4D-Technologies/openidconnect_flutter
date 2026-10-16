@@ -9,12 +9,16 @@ class RefreshRequest extends TokenRequest {
   /// remain available if the token endpoint omits `id_token` during refresh.
   final String? currentIdToken;
 
+  /// The refresh token sent to the token endpoint. Also used as a fallback
+  /// when the provider omits `refresh_token` from a successful response.
+  final String refreshToken;
+
   /// Creates a refresh-token request.
   RefreshRequest({
     required super.clientId,
     super.clientSecret,
     required super.scopes,
-    required String refreshToken,
+    required this.refreshToken,
     this.currentIdToken,
     required super.configuration,
     Map<String, String>? additionalParameters,

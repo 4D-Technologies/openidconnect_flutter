@@ -707,12 +707,15 @@ class OpenIdConnectClient {
   }
 
   Future<bool> _clearCurrentIdentity() async {
-    if (_identity == null) return false;
-    final generation = ++_sessionGeneration;
-    _cancelAutoRenewTimer();
-    _identity = null;
+    final generation = _identity == null
+        ? _sessionGeneration
+        : ++_sessionGeneration;
+    if (_identity != null) {
+      _cancelAutoRenewTimer();
+      _identity = null;
+    }
     await _enqueueIdentityWrite(() async {
-      if (_sessionGeneration != generation) return;
+      if (_sessionGeneration != generation || _identity != null) return;
       await OpenIdIdentity.clear(tenantId: tenantId);
     });
     return _sessionGeneration == generation && _identity == null;

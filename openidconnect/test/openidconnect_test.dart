@@ -258,6 +258,17 @@ void main() {
       expect(response.refreshToken, 'refresh-token');
     });
 
+    test('uses fallback refresh token when the refresh response omits one', () {
+      final response = AuthorizationResponse.fromJson({
+        'access_token': 'access-token',
+        'token_type': 'Bearer',
+        'expires_in': 3600,
+        'id_token': TEST_ID_TOKEN,
+      }, fallbackRefreshToken: 'original-refresh-token');
+
+      expect(response.refreshToken, 'original-refresh-token');
+    });
+
     test('throws when id token is missing and no fallback is available', () {
       expect(
         () => AuthorizationResponse.fromJson({

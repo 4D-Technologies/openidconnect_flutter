@@ -23,14 +23,19 @@ class AuthorizationResponse extends TokenResponse {
   /// Some providers omit `id_token` from refresh-token responses after the
   /// initial login completes. In that case, [fallbackIdToken] preserves the
   /// existing `id_token` instead of treating the response as malformed.
+  ///
+  /// RFC 6749 allows a refresh response to omit `refresh_token`; the original
+  /// refresh token remains valid. [fallbackRefreshToken] preserves it.
   factory AuthorizationResponse.fromJson(
     Map<String, dynamic> json, {
     String? state,
     String? fallbackIdToken,
+    String? fallbackRefreshToken,
   }) => (() {
     final accessToken = json['access_token']?.toString();
     final tokenType = json['token_type']?.toString();
     final idToken = json['id_token']?.toString() ?? fallbackIdToken;
+    final refreshToken = json['refresh_token']?.toString();
     final expiresIn = int.tryParse(json['expires_in']?.toString() ?? '') ?? 0;
 
     if (accessToken == null || accessToken.isEmpty) {
@@ -49,7 +54,9 @@ class AuthorizationResponse extends TokenResponse {
       accessToken: accessToken,
       tokenType: tokenType,
       idToken: idToken,
-      refreshToken: json['refresh_token']?.toString(),
+      refreshToken: (refreshToken != null && refreshToken.isNotEmpty)
+          ? refreshToken
+          : fallbackRefreshToken,
       expiresAt: DateTime.now().add(Duration(seconds: expiresIn)),
       additionalProperties: json,
       state: state,

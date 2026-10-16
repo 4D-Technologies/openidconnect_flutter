@@ -114,6 +114,7 @@ void main() {
 
     expect(response.accessToken, 'updated-access-token');
     expect(response.idToken, _testIdToken);
+    expect(response.refreshToken, 'refresh-token');
   });
 
   test(
