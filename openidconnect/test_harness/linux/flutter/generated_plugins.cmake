@@ -3,7 +3,7 @@
 #
 
 list(APPEND FLUTTER_PLUGIN_LIST
-  openidconnect_linux
+  openidconnect_flutter_linux
   url_launcher_linux
 )
 

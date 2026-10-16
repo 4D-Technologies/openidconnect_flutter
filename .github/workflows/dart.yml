@@ -16,9 +16,9 @@ jobs:
       matrix:
         package:
           - openidconnect_platform_interface
-          - openidconnect_android
-          - openidconnect_darwin
-          - openidconnect_linux
+          - openidconnect_flutter_android
+          - openidconnect_flutter_darwin
+          - openidconnect_flutter_linux
           - openidconnect_web
           - openidconnect_windows
           - openidconnect
@@ -51,9 +51,9 @@ jobs:
       matrix:
         package:
           - openidconnect_platform_interface
-          - openidconnect_android
-          - openidconnect_darwin
-          - openidconnect_linux
+          - openidconnect_flutter_android
+          - openidconnect_flutter_darwin
+          - openidconnect_flutter_linux
           - openidconnect_windows
           - openidconnect
           - openidconnect/example

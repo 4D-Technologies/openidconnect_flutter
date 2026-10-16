@@ -37,7 +37,7 @@ Currently supports:
    - a custom scheme such as `my.app://callback` for Android / iOS / macOS
    - an HTTPS callback you own and have configured for App Links / Universal Links where supported
 
-3. On Android, if you use a custom scheme or HTTPS callback, add the `openidconnect_android` callback receiver entries shown below.
+3. On Android, if you use a custom scheme or HTTPS callback, add the `openidconnect_flutter_android` callback receiver entries shown below.
 
 4. Token persistence now uses the in-repo endorsed platform implementations instead of `flutter_secure_storage`. On native platforms this uses the platform secure store directly (Android Keystore-backed AES-GCM, Apple Keychain, libsecret, and Windows Credential Manager). `OpenIdConnect.initalizeEncryption(...)` and the `encryptionKey` parameter on `OpenIdConnectClient.create(...)` remain available for backward compatibility, but are no longer used to derive storage encryption.
 
@@ -92,7 +92,7 @@ If you use HTTPS deep links / universal links instead of a custom scheme, you mu
 
 ### Android
 
-Interactive Android authentication uses the endorsed `openidconnect_android` package backed by the in-repo Android browser-session bridge.
+Interactive Android authentication uses the endorsed `openidconnect_flutter_android` package backed by the in-repo Android browser-session bridge.
 
 Required setup:
 
