@@ -26,6 +26,9 @@ class OpenIdConnectClient {
   OpenIdIdentity? _identity;
   int _sessionGeneration = 0;
   bool _refreshing = false;
+  String? _inFlightRefreshToken;
+  OpenIdIdentity? _rotatedTokensForRevocation;
+  String? _rotatedFromRefreshToken;
   Future<void> _identityWriteQueue = Future<void>.value();
   bool _isInitializationComplete = false;
 
@@ -612,27 +615,33 @@ class OpenIdConnectClient {
       _refreshing = true;
       _cancelAutoRenewTimer();
       final generation = _sessionGeneration;
-
-      if (_identity == null ||
-          _identity!.refreshToken == null ||
-          _identity!.refreshToken!.isEmpty) {
+      final refreshToken = _identity?.refreshToken;
+      final idToken = _identity?.idToken;
+      if (refreshToken == null || refreshToken.isEmpty || idToken == null) {
         return false;
       }
+      _inFlightRefreshToken = refreshToken;
 
       await _verifyDiscoveryDocument();
+      if (_sessionGeneration != generation) {
+        return false;
+      }
 
       final response = await OpenIdConnect.refreshToken(
         request: RefreshRequest(
           clientId: clientId,
           clientSecret: clientSecret,
           scopes: _getScopes(scopes),
-          refreshToken: _identity!.refreshToken!,
-          currentIdToken: _identity!.idToken,
+          refreshToken: refreshToken,
+          currentIdToken: idToken,
           configuration: configuration!,
         ),
       );
 
+      final rotated = OpenIdIdentity.fromAuthorizationResponse(response);
       if (_sessionGeneration != generation) {
+        _rotatedFromRefreshToken = refreshToken;
+        _rotatedTokensForRevocation = rotated;
         return false;
       }
 
@@ -684,6 +693,7 @@ class OpenIdConnectClient {
       _raiseEvent(AuthEvent(AuthEventTypes.NotLoggedIn, message: e.toString()));
       return false;
     } finally {
+      _inFlightRefreshToken = null;
       _refreshing = false;
     }
   }
@@ -748,16 +758,38 @@ class OpenIdConnectClient {
   }
 
   Future<OpenIdIdentity?> _identitySnapshot(OpenIdIdentity? identity) async {
-    if (identity != null) return identity;
-    final captured = _identity;
+    final captured = identity ?? _identity;
+    if (captured == null) return null;
     final generation = _sessionGeneration;
-    while (_refreshing) {
-      await Future<void>.delayed(const Duration(milliseconds: 200));
-    }
+    await _waitForMatchingRefresh(captured);
+    final rotated = _rotatedTokensFor(captured);
+    if (rotated != null) return rotated;
+    if (identity != null) return identity;
     if (_sessionGeneration == generation) {
       return _identity ?? captured;
     }
     return captured;
+  }
+
+  Future<void> _waitForMatchingRefresh(OpenIdIdentity snapshot) async {
+    final refreshToken = snapshot.refreshToken;
+    if (refreshToken == null || refreshToken.isEmpty) return;
+    final deadline = DateTime.now().add(const Duration(seconds: 15));
+    while (_refreshing &&
+        _inFlightRefreshToken == refreshToken &&
+        DateTime.now().isBefore(deadline)) {
+      await Future<void>.delayed(const Duration(milliseconds: 200));
+    }
+  }
+
+  OpenIdIdentity? _rotatedTokensFor(OpenIdIdentity snapshot) {
+    final from = _rotatedFromRefreshToken;
+    final rotated = _rotatedTokensForRevocation;
+    if (from == null || rotated == null) return null;
+    if (snapshot.refreshToken != from) return null;
+    _rotatedFromRefreshToken = null;
+    _rotatedTokensForRevocation = null;
+    return rotated;
   }
 
   Future<T> _enqueueIdentityWrite<T>(Future<T> Function() write) {
