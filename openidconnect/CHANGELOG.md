@@ -1,5 +1,11 @@
 # Change Log
 
+## [3.0.1] - October 16th, 2026
+
+- Fixes [#85](https://github.com/4D-Technologies/openidconnect_flutter/issues/85): `logout()`, `logoutInteractive()`, and `revokeTokens()` accept an optional identity snapshot so revocation still runs after `clearIdentity()`.
+- In-flight logout clears local identity only when it still belongs to that session, so a detached logout cannot wipe a newer login.
+- RFC 7009 revocation sends the refresh token when present, otherwise the access token, and never the ID token. `unsupported_token_type` is treated as a successful skip for that token.
+
 ## [3.0.0] - August 24th, 2026
 
 - Breaking change: `logout()` and `logoutInteractive()` now return a `LogoutResult` with `status` and `message` instead of throwing or returning only a redirect URL.

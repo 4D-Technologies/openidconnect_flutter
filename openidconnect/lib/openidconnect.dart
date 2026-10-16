@@ -608,6 +608,12 @@ class OpenIdConnect {
         ),
       );
     } on HttpResponseException catch (e, stackTrace) {
+      if (e.error == 'unsupported_token_type') {
+        openIdConnectLogger.i(
+          'Token revocation skipped because the authorization server does not support this token type.',
+        );
+        return;
+      }
       logOpenIdConnectError('Token revocation request failed', e, stackTrace);
       throw RevokeException(e.toString());
     }
