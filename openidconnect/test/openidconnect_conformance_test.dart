@@ -927,6 +927,141 @@ void main() {
       expect(client.identity?.refreshToken, 'new-refresh-token');
       expect((await OpenIdIdentity.load())?.refreshToken, 'new-refresh-token');
     });
+
+    test(
+      'logout of an old snapshot does not cancel the current session timer',
+      () async {
+        await _saveIdentity(
+          expiresAt: DateTime.now().toUtc().add(const Duration(seconds: 62)),
+          refreshToken: 'current-refresh-token',
+        );
+
+        var refreshed = false;
+        server.listen((httpRequest) async {
+          switch (httpRequest.uri.path) {
+            case '/.well-known/openid-configuration':
+              await _writeJson(
+                httpRequest.response,
+                _discoveryDocument(baseUri),
+              );
+              break;
+            case '/revoke':
+              httpRequest.response.statusCode = HttpStatus.ok;
+              await httpRequest.response.close();
+              break;
+            case '/token':
+              refreshed = true;
+              await _writeJson(httpRequest.response, {
+                'access_token': 'renewed-access-token',
+                'token_type': 'Bearer',
+                'expires_in': 3600,
+                'refresh_token': 'renewed-refresh-token',
+                'id_token': _testIdToken,
+              });
+              break;
+            default:
+              fail('Unexpected request to ${httpRequest.uri.path}');
+          }
+        });
+
+        final client = await OpenIdConnectClient.create(
+          discoveryDocumentUrl: baseUri
+              .resolve('/.well-known/openid-configuration')
+              .toString(),
+          clientId: 'client-id',
+          clientSecret: 'client-secret',
+          encryptionKey: 'unused',
+        );
+        addTearDown(client.dispose);
+
+        final oldSnapshot = OpenIdIdentity(
+          accessToken: 'old-access-token',
+          expiresAt: DateTime.now().toUtc().add(const Duration(hours: 1)),
+          idToken: _testIdToken,
+          tokenType: 'Bearer',
+          refreshToken: 'old-refresh-token',
+        );
+
+        final result = await client.logout(identity: oldSnapshot);
+
+        expect(result.status, LogoutStatus.success);
+        expect(client.identity?.refreshToken, 'current-refresh-token');
+
+        await Future<void>.delayed(const Duration(seconds: 4));
+
+        expect(refreshed, isTrue);
+        expect(client.identity?.refreshToken, 'renewed-refresh-token');
+      },
+    );
+
+    test(
+      'logout waits for an in-flight same-session refresh before revoking',
+      () async {
+        await _saveIdentity(
+          expiresAt: DateTime.now().toUtc().add(const Duration(hours: 1)),
+          refreshToken: 'old-refresh-token',
+        );
+
+        final refreshStarted = Completer<void>();
+        final allowRefreshToFinish = Completer<void>();
+        String? revokedToken;
+
+        server.listen((httpRequest) async {
+          switch (httpRequest.uri.path) {
+            case '/.well-known/openid-configuration':
+              await _writeJson(
+                httpRequest.response,
+                _discoveryDocument(baseUri),
+              );
+              break;
+            case '/token':
+              refreshStarted.complete();
+              await allowRefreshToFinish.future;
+              await _writeJson(httpRequest.response, {
+                'access_token': 'rotated-access-token',
+                'token_type': 'Bearer',
+                'expires_in': 3600,
+                'refresh_token': 'rotated-refresh-token',
+                'id_token': _testIdToken,
+              });
+              break;
+            case '/revoke':
+              final body = Uri.splitQueryString(
+                await utf8.decoder.bind(httpRequest).join(),
+              );
+              revokedToken = body['token'];
+              httpRequest.response.statusCode = HttpStatus.ok;
+              await httpRequest.response.close();
+              break;
+            default:
+              fail('Unexpected request to ${httpRequest.uri.path}');
+          }
+        });
+
+        final client = await OpenIdConnectClient.create(
+          discoveryDocumentUrl: baseUri
+              .resolve('/.well-known/openid-configuration')
+              .toString(),
+          clientId: 'client-id',
+          clientSecret: 'client-secret',
+          encryptionKey: 'unused',
+          autoRefresh: false,
+        );
+        addTearDown(client.dispose);
+
+        final refreshFuture = client.refresh();
+        await refreshStarted.future;
+        final logoutFuture = client.logout();
+        allowRefreshToFinish.complete();
+
+        expect(await refreshFuture, isTrue);
+        final result = await logoutFuture;
+
+        expect(result.status, LogoutStatus.success);
+        expect(revokedToken, 'rotated-refresh-token');
+        expect(client.identity, isNull);
+      },
+    );
   });
 }
 

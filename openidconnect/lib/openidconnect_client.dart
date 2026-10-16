@@ -26,6 +26,7 @@ class OpenIdConnectClient {
   OpenIdIdentity? _identity;
   int _sessionGeneration = 0;
   bool _refreshing = false;
+  Future<void> _identityWriteQueue = Future<void>.value();
   bool _isInitializationComplete = false;
 
   /// The most recently raised authentication event, if any.
@@ -314,8 +315,7 @@ class OpenIdConnectClient {
   /// cleanup. RFC 7009 `unsupported_token_type` is treated as a successful
   /// skip for that token.
   Future<LogoutResult> logout({OpenIdIdentity? identity}) async {
-    _cancelAutoRenewTimer();
-
+    final generation = _sessionGeneration;
     final snapshot = await _identitySnapshot(identity);
     if (snapshot == null) {
       const result = LogoutResult(
@@ -326,9 +326,14 @@ class OpenIdConnectClient {
       return result;
     }
 
+    final shouldClearLocal = _shouldClearIdentity(snapshot);
+    if (shouldClearLocal) {
+      _cancelAutoRenewTimer();
+    }
+
     return _completeLogout(
-      generation: _sessionGeneration,
-      shouldClearLocal: _shouldClearIdentity(snapshot),
+      generation: generation,
+      shouldClearLocal: shouldClearLocal,
       remoteLogout: () async {
         await _verifyDiscoveryDocument();
         await revokeTokens(identity: snapshot);
@@ -361,8 +366,7 @@ class OpenIdConnectClient {
     String? postLogoutRedirectUri,
     bool useBasicAuth = true,
   }) async {
-    _cancelAutoRenewTimer();
-
+    final generation = _sessionGeneration;
     final snapshot = await _identitySnapshot(identity);
     if (snapshot == null) {
       const result = LogoutResult(
@@ -373,9 +377,14 @@ class OpenIdConnectClient {
       return result;
     }
 
+    final shouldClearLocal = _shouldClearIdentity(snapshot);
+    if (shouldClearLocal) {
+      _cancelAutoRenewTimer();
+    }
+
     return _completeLogout(
-      generation: _sessionGeneration,
-      shouldClearLocal: _shouldClearIdentity(snapshot),
+      generation: generation,
+      shouldClearLocal: shouldClearLocal,
       remoteLogout: () async {
         await _verifyDiscoveryDocument();
         final endSession = configuration?.endSessionEndpoint;
@@ -464,9 +473,10 @@ class OpenIdConnectClient {
       );
     } finally {
       if (shouldClearLocal && _sessionGeneration == generation) {
-        await _clearIdentityIgnoringErrors();
-        didClearLocal = true;
-        _raiseEvent(AuthEvent(AuthEventTypes.NotLoggedIn));
+        didClearLocal = await _clearIdentityIgnoringErrors();
+        if (didClearLocal) {
+          _raiseEvent(AuthEvent(AuthEventTypes.NotLoggedIn));
+        }
       }
     }
 
@@ -504,10 +514,11 @@ class OpenIdConnectClient {
     OpenIdIdentity? identity,
     bool useBasicAuth = true,
   }) async {
-    _cancelAutoRenewTimer();
-
     final snapshot = await _identitySnapshot(identity);
     if (snapshot == null) return;
+    if (_shouldClearIdentity(snapshot)) {
+      _cancelAutoRenewTimer();
+    }
 
     try {
       await _verifyDiscoveryDocument();
@@ -600,6 +611,7 @@ class OpenIdConnectClient {
     try {
       _refreshing = true;
       _cancelAutoRenewTimer();
+      final generation = _sessionGeneration;
 
       if (_identity == null ||
           _identity!.refreshToken == null ||
@@ -620,7 +632,15 @@ class OpenIdConnectClient {
         ),
       );
 
+      if (_sessionGeneration != generation) {
+        return false;
+      }
+
       await _completeLogin(response);
+
+      if (_sessionGeneration != generation || _identity == null) {
+        return false;
+      }
 
       if (autoRefresh) {
         var refreshTime = _identity!.expiresAt.difference(
@@ -673,25 +693,36 @@ class OpenIdConnectClient {
   /// Increments the session generation so an in-flight [logout] for the
   /// previous identity will not clear a later login.
   Future<void> clearIdentity() async {
-    if (_identity == null) return;
-    _sessionGeneration++;
-    try {
-      await OpenIdIdentity.clear(tenantId: tenantId);
-    } finally {
-      _identity = null;
-    }
+    await _clearCurrentIdentity();
   }
 
-  Future<void> _clearIdentityIgnoringErrors() async {
+  Future<bool> _clearCurrentIdentity() async {
+    if (_identity == null) return false;
+    final generation = ++_sessionGeneration;
     try {
-      await clearIdentity();
+      await _enqueueIdentityWrite(() async {
+        if (_sessionGeneration != generation) return;
+        await OpenIdIdentity.clear(tenantId: tenantId);
+      });
+    } finally {
+      if (_sessionGeneration == generation) {
+        _cancelAutoRenewTimer();
+        _identity = null;
+      }
+    }
+    return _sessionGeneration == generation && _identity == null;
+  }
+
+  Future<bool> _clearIdentityIgnoringErrors() async {
+    try {
+      return await _clearCurrentIdentity();
     } on Exception catch (e, stackTrace) {
       logOpenIdConnectWarning(
         'Best-effort identity cleanup failed; discarding in-memory identity',
         e,
         stackTrace,
       );
-      _identity = null;
+      return _identity == null;
     }
   }
 
@@ -708,16 +739,41 @@ class OpenIdConnectClient {
     if (beginSession) {
       _sessionGeneration++;
     }
-    await identity.save(tenantId: tenantId);
+    final generation = _sessionGeneration;
     _identity = identity;
+    await _enqueueIdentityWrite(() async {
+      if (_sessionGeneration != generation) return;
+      await identity.save(tenantId: tenantId);
+    });
   }
 
   Future<OpenIdIdentity?> _identitySnapshot(OpenIdIdentity? identity) async {
     if (identity != null) return identity;
+    final captured = _identity;
+    final generation = _sessionGeneration;
     while (_refreshing) {
       await Future<void>.delayed(const Duration(milliseconds: 200));
     }
-    return _identity;
+    if (_sessionGeneration == generation) {
+      return _identity ?? captured;
+    }
+    return captured;
+  }
+
+  Future<T> _enqueueIdentityWrite<T>(Future<T> Function() write) {
+    final previous = _identityWriteQueue;
+    final gate = Completer<void>();
+    _identityWriteQueue = gate.future;
+    return () async {
+      try {
+        await previous;
+      } catch (_) {}
+      try {
+        return await write();
+      } finally {
+        if (!gate.isCompleted) gate.complete();
+      }
+    }();
   }
 
   bool _shouldClearIdentity(OpenIdIdentity snapshot) {
