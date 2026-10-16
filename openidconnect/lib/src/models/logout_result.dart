@@ -2,21 +2,25 @@ part of '../../openidconnect.dart';
 
 /// Outcome of a client logout attempt.
 enum LogoutStatus {
-  /// No persisted identity was present, so logout was a no-op.
+  /// No identity snapshot was available, so logout was a no-op.
   skipped,
 
-  /// Local identity was cleared and remote logout/revocation succeeded.
+  /// Remote logout/revocation succeeded or was correctly skipped, and local
+  /// identity for that session was cleared when it was still present.
   success,
 
-  /// Local identity was cleared, but remote logout or token revocation failed.
+  /// Remote logout or token revocation failed after a real revoke attempt.
+  /// Local identity for that session is still cleared when it was present.
   remoteFailure,
 }
 
 /// Result returned by [OpenIdConnectClient.logout] and
 /// [OpenIdConnectClient.logoutInteractive].
 ///
-/// Local identity is always cleared when one was present. [status] and
-/// [message] report whether remote logout/revocation also succeeded.
+/// Local identity is cleared when it still belongs to the session being
+/// logged out. [status] and [message] report whether remote
+/// logout/revocation also succeeded. RFC 7009 `unsupported_token_type` is
+/// reported as [LogoutStatus.success].
 @immutable
 class LogoutResult {
   /// Creates a logout result.

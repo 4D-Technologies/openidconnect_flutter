@@ -114,6 +114,7 @@ void main() {
 
     expect(response.accessToken, 'updated-access-token');
     expect(response.idToken, _testIdToken);
+    expect(response.refreshToken, 'refresh-token');
   });
 
   test(
@@ -200,6 +201,29 @@ void main() {
           configuration: _configuration(baseUri),
           token: 'refresh-token',
           tokenType: TokenType.refreshToken,
+        ),
+      );
+    },
+  );
+
+  test(
+    'treats unsupported_token_type as a successful revocation skip',
+    () async {
+      server.listen((request) async {
+        expect(request.uri.path, '/revoke');
+        await _writeJson(request.response, {
+          'error': 'unsupported_token_type',
+          'error_description': 'Token type cannot be revoked',
+        }, statusCode: HttpStatus.badRequest);
+      });
+
+      await OpenIdConnect.revokeToken(
+        request: RevokeTokenRequest(
+          clientId: 'client-id',
+          clientSecret: 'secret',
+          configuration: _configuration(baseUri),
+          token: 'access-token',
+          tokenType: TokenType.accessToken,
         ),
       );
     },

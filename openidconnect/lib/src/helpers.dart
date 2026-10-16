@@ -79,18 +79,26 @@ Future<Map<String, dynamic>?> httpRetry<T extends http.Response>(
     final jsonResponse = jsonDecode(body) as Map<String, dynamic>?;
 
     if (result.statusCode < 200 || result.statusCode >= 300) {
-      if (jsonResponse!["error"] != null) {
-        var error = jsonResponse["error"].toString();
+      final errorCode = jsonResponse!["error"]?.toString();
+      if (errorCode != null) {
+        var error = errorCode;
         if (jsonResponse["error_description"] != null) {
           error += ": ${jsonResponse["error_description"]}";
         }
         final exception = HttpResponseException(
           ERROR_MESSAGE_FORMAT.replaceAll("%2", error),
+          errorCode,
         );
-        logOpenIdConnectError(
-          'OpenID Connect HTTP ${result.statusCode}',
-          exception,
-        );
+        if (errorCode == 'unsupported_token_type') {
+          openIdConnectLogger.i(
+            'Authorization server does not support revoking this token type.',
+          );
+        } else {
+          logOpenIdConnectError(
+            'OpenID Connect HTTP ${result.statusCode}',
+            exception,
+          );
+        }
         throw exception;
       } else {
         final exception = HttpResponseException(
