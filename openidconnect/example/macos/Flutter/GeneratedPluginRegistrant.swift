@@ -5,7 +5,7 @@
 import FlutterMacOS
 import Foundation
 
-import openidconnect_darwin
+import openidconnect_flutter_darwin
 import url_launcher_macos
 
 func RegisterGeneratedPlugins(registry: FlutterPluginRegistry) {

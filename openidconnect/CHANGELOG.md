@@ -5,6 +5,7 @@
 - Raise the minimum supported SDK to Flutter 3.47 / Dart 3.13 ([#86](https://github.com/4D-Technologies/openidconnect_flutter/issues/86)).
 - Import `package:flutter/widgets.dart` instead of `package:flutter/material.dart`. The plugin does not depend on `material_ui`.
 - Migrate the example app and test harness to `package:material_ui`.
+- Endorsed Android, Darwin, and Linux implementations now publish as `openidconnect_flutter_android`, `openidconnect_flutter_darwin`, and `openidconnect_flutter_linux`. Host apps that depend only on `openidconnect` do not need extra dependency changes. The Android callback activity remains `io.concerti.openidconnect_android.OpenIdConnectCallbackReceiverActivity`.
 
 ## [3.0.1] - October 16th, 2026
 
@@ -24,7 +25,7 @@
 
 - Remove the external `native_authentication` dependency from the Darwin package and replace it with an in-repo Apple browser-session bridge while preserving macOS localhost callback support.
 - Remove the external `native_authentication` dependency from the Android, Linux, and Windows endorsed packages by moving their interactive-auth support into this repository.
-- Update the Android callback receiver documentation and sample manifests to use the in-repo `openidconnect_android` callback activity.
+- Update the Android callback receiver documentation and sample manifests to use the in-repo `openidconnect_flutter_android` callback activity.
 - Update the endorsed Android, Linux, and Windows dependency constraints to their publish-ready in-repo interactive-auth patch releases.
 
 ## [2.0.0] - April 30th, 2026

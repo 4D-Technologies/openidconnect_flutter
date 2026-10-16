@@ -14,9 +14,9 @@ dependencies:
     sdk: flutter
   flutter_web_plugins:
     sdk: flutter
-  openidconnect_android: ^2.0.5
-  openidconnect_darwin: ^2.0.3
-  openidconnect_linux: ^2.0.4
+  openidconnect_flutter_android: ^2.0.5
+  openidconnect_flutter_darwin: ^2.0.3
+  openidconnect_flutter_linux: ^2.0.4
   openidconnect_platform_interface: ^2.0.4
   openidconnect_web: ^2.0.3
   openidconnect_windows: ^2.0.4
@@ -40,13 +40,13 @@ flutter:
   plugin:
     platforms:
       android:
-        default_package: openidconnect_android
+        default_package: openidconnect_flutter_android
       ios:
-        default_package: openidconnect_darwin
+        default_package: openidconnect_flutter_darwin
       macos:
-        default_package: openidconnect_darwin
+        default_package: openidconnect_flutter_darwin
       linux:
-        default_package: openidconnect_linux
+        default_package: openidconnect_flutter_linux
       web:
         default_package: openidconnect_web
       windows:
