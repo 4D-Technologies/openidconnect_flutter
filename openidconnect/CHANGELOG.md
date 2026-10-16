@@ -1,5 +1,11 @@
 # Change Log
 
+## [3.1.0] - October 16th, 2026
+
+- Raise the minimum supported SDK to Flutter 3.47 / Dart 3.13 ([#86](https://github.com/4D-Technologies/openidconnect_flutter/issues/86)).
+- Import `package:flutter/widgets.dart` instead of `package:flutter/material.dart`. The plugin does not depend on `material_ui`.
+- Migrate the example app and test harness to `package:material_ui`.
+
 ## [3.0.1] - October 16th, 2026
 
 - Fixes [#85](https://github.com/4D-Technologies/openidconnect_flutter/issues/85): `logout()`, `logoutInteractive()`, and `revokeTokens()` accept an optional identity snapshot so revocation still runs after `clearIdentity()`.

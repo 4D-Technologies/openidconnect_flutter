@@ -6,8 +6,8 @@ Because this project is endorsed by the openidconnect project, you need not add 
 
 ## Requirements
 
-- Dart SDK: `>=3.5.3 <4.0.0`
-- Flutter SDK: `>=3.4.0`
+- Dart SDK: `>=3.13.0 <4.0.0`
+- Flutter SDK: `>=3.47.0`
 - A secure browser context (`https:` or `http://localhost`) for secure storage support
 
 ## Web configuration

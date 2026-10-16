@@ -1,5 +1,9 @@
 # Change Log
 
+## [2.0.3] - October 16th 2026
+
+- Raise the minimum supported SDK to Flutter 3.47 / Dart 3.13 ([#86](https://github.com/4D-Technologies/openidconnect_flutter/issues/86)).
+
 ## [2.0.2] - August 24th 2026
 
 - Replace `debugPrint` secure-storage failure logging with the shared `openIdConnectLogger`.
