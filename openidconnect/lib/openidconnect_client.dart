@@ -639,9 +639,9 @@ class OpenIdConnectClient {
       );
 
       final rotated = OpenIdIdentity.fromAuthorizationResponse(response);
+      _rotatedFromRefreshToken = refreshToken;
+      _rotatedTokensForRevocation = rotated;
       if (_sessionGeneration != generation) {
-        _rotatedFromRefreshToken = refreshToken;
-        _rotatedTokensForRevocation = rotated;
         return false;
       }
 
@@ -709,17 +709,12 @@ class OpenIdConnectClient {
   Future<bool> _clearCurrentIdentity() async {
     if (_identity == null) return false;
     final generation = ++_sessionGeneration;
-    try {
-      await _enqueueIdentityWrite(() async {
-        if (_sessionGeneration != generation) return;
-        await OpenIdIdentity.clear(tenantId: tenantId);
-      });
-    } finally {
-      if (_sessionGeneration == generation) {
-        _cancelAutoRenewTimer();
-        _identity = null;
-      }
-    }
+    _cancelAutoRenewTimer();
+    _identity = null;
+    await _enqueueIdentityWrite(() async {
+      if (_sessionGeneration != generation) return;
+      await OpenIdIdentity.clear(tenantId: tenantId);
+    });
     return _sessionGeneration == generation && _identity == null;
   }
 
@@ -764,7 +759,6 @@ class OpenIdConnectClient {
     await _waitForMatchingRefresh(captured);
     final rotated = _rotatedTokensFor(captured);
     if (rotated != null) return rotated;
-    if (identity != null) return identity;
     if (_sessionGeneration == generation) {
       return _identity ?? captured;
     }

@@ -1133,6 +1133,130 @@ void main() {
         expect(client.identity, isNull);
       },
     );
+
+    test(
+      'explicit snapshot logout without clearIdentity revokes rotated tokens and clears locally',
+      () async {
+        await _saveIdentity(
+          expiresAt: DateTime.now().toUtc().add(const Duration(hours: 1)),
+          refreshToken: 'old-refresh-token',
+        );
+
+        final refreshStarted = Completer<void>();
+        final allowRefreshToFinish = Completer<void>();
+        String? revokedToken;
+
+        server.listen((httpRequest) async {
+          switch (httpRequest.uri.path) {
+            case '/.well-known/openid-configuration':
+              await _writeJson(
+                httpRequest.response,
+                _discoveryDocument(baseUri),
+              );
+              break;
+            case '/token':
+              refreshStarted.complete();
+              await allowRefreshToFinish.future;
+              await _writeJson(httpRequest.response, {
+                'access_token': 'rotated-access-token',
+                'token_type': 'Bearer',
+                'expires_in': 3600,
+                'refresh_token': 'rotated-refresh-token',
+                'id_token': _testIdToken,
+              });
+              break;
+            case '/revoke':
+              final body = Uri.splitQueryString(
+                await utf8.decoder.bind(httpRequest).join(),
+              );
+              revokedToken = body['token'];
+              httpRequest.response.statusCode = HttpStatus.ok;
+              await httpRequest.response.close();
+              break;
+            default:
+              fail('Unexpected request to ${httpRequest.uri.path}');
+          }
+        });
+
+        final client = await OpenIdConnectClient.create(
+          discoveryDocumentUrl: baseUri
+              .resolve('/.well-known/openid-configuration')
+              .toString(),
+          clientId: 'client-id',
+          clientSecret: 'client-secret',
+          encryptionKey: 'unused',
+          autoRefresh: false,
+        );
+        addTearDown(client.dispose);
+
+        final snapshot = client.identity;
+        final refreshFuture = client.refresh();
+        await refreshStarted.future;
+        final logoutFuture = client.logout(identity: snapshot);
+        allowRefreshToFinish.complete();
+
+        expect(await refreshFuture, isTrue);
+        final result = await logoutFuture;
+
+        expect(result.status, LogoutStatus.success);
+        expect(revokedToken, 'rotated-refresh-token');
+        expect(client.identity, isNull);
+      },
+    );
+
+    test(
+      'refresh started during clearIdentity does not restore the session',
+      () async {
+        await _saveIdentity(
+          expiresAt: DateTime.now().toUtc().add(const Duration(hours: 1)),
+          refreshToken: 'refresh-token',
+        );
+
+        var tokenRequests = 0;
+        server.listen((httpRequest) async {
+          switch (httpRequest.uri.path) {
+            case '/.well-known/openid-configuration':
+              await _writeJson(
+                httpRequest.response,
+                _discoveryDocument(baseUri),
+              );
+              break;
+            case '/token':
+              tokenRequests++;
+              await _writeJson(httpRequest.response, {
+                'access_token': 'restored-access-token',
+                'token_type': 'Bearer',
+                'expires_in': 3600,
+                'refresh_token': 'restored-refresh-token',
+                'id_token': _testIdToken,
+              });
+              break;
+            default:
+              fail('Unexpected request to ${httpRequest.uri.path}');
+          }
+        });
+
+        final client = await OpenIdConnectClient.create(
+          discoveryDocumentUrl: baseUri
+              .resolve('/.well-known/openid-configuration')
+              .toString(),
+          clientId: 'client-id',
+          clientSecret: 'client-secret',
+          encryptionKey: 'unused',
+          autoRefresh: false,
+        );
+        addTearDown(client.dispose);
+
+        final clearFuture = client.clearIdentity();
+        final refreshFuture = client.refresh();
+        await Future.wait([clearFuture, refreshFuture]);
+
+        expect(await refreshFuture, isFalse);
+        expect(client.identity, isNull);
+        expect(await OpenIdIdentity.load(), isNull);
+        expect(tokenRequests, 0);
+      },
+    );
   });
 }
 
