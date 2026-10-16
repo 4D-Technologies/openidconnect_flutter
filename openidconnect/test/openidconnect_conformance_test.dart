@@ -1205,6 +1205,92 @@ void main() {
     );
 
     test(
+      'retrying logout after a failed revocation still revokes rotated tokens',
+      () async {
+        await _saveIdentity(
+          expiresAt: DateTime.now().toUtc().add(const Duration(hours: 1)),
+          refreshToken: 'old-refresh-token',
+        );
+
+        final refreshStarted = Completer<void>();
+        final allowRefreshToFinish = Completer<void>();
+        final revokedTokens = <String>[];
+        var revokeAttempts = 0;
+
+        server.listen((httpRequest) async {
+          switch (httpRequest.uri.path) {
+            case '/.well-known/openid-configuration':
+              await _writeJson(
+                httpRequest.response,
+                _discoveryDocument(baseUri),
+              );
+              break;
+            case '/token':
+              refreshStarted.complete();
+              await allowRefreshToFinish.future;
+              await _writeJson(httpRequest.response, {
+                'access_token': 'rotated-access-token',
+                'token_type': 'Bearer',
+                'expires_in': 3600,
+                'refresh_token': 'rotated-refresh-token',
+                'id_token': _testIdToken,
+              });
+              break;
+            case '/revoke':
+              final body = Uri.splitQueryString(
+                await utf8.decoder.bind(httpRequest).join(),
+              );
+              revokedTokens.add(body['token']!);
+              revokeAttempts++;
+              if (revokeAttempts == 1) {
+                await _writeJson(httpRequest.response, {
+                  'error': 'server_error',
+                  'error_description': 'revocation unavailable',
+                }, statusCode: HttpStatus.internalServerError);
+              } else {
+                httpRequest.response.statusCode = HttpStatus.ok;
+                await httpRequest.response.close();
+              }
+              break;
+            default:
+              fail('Unexpected request to ${httpRequest.uri.path}');
+          }
+        });
+
+        final client = await OpenIdConnectClient.create(
+          discoveryDocumentUrl: baseUri
+              .resolve('/.well-known/openid-configuration')
+              .toString(),
+          clientId: 'client-id',
+          clientSecret: 'client-secret',
+          encryptionKey: 'unused',
+          autoRefresh: false,
+        );
+        addTearDown(client.dispose);
+
+        final snapshot = client.identity;
+        final refreshFuture = client.refresh();
+        await refreshStarted.future;
+        await client.clearIdentity();
+        final firstLogout = client.logout(identity: snapshot);
+        allowRefreshToFinish.complete();
+
+        expect(await refreshFuture, isFalse);
+        final firstResult = await firstLogout;
+        expect(firstResult.status, LogoutStatus.remoteFailure);
+        expect(revokedTokens, ['rotated-refresh-token']);
+
+        final secondResult = await client.logout(identity: snapshot);
+        expect(secondResult.status, LogoutStatus.success);
+        expect(revokedTokens, [
+          'rotated-refresh-token',
+          'rotated-refresh-token',
+        ]);
+        expect(client.identity, isNull);
+      },
+    );
+
+    test(
       'refresh started during clearIdentity does not restore the session',
       () async {
         await _saveIdentity(

@@ -752,6 +752,13 @@ class OpenIdConnectClient {
     });
   }
 
+  /// Tokens to revoke for [identity], or for the current session when omitted.
+  ///
+  /// An explicit snapshot is not replaced by `_identity` just because
+  /// generation is unchanged: that snapshot may already belong to an older
+  /// session. Adopt the current identity only for an implicit snapshot or when
+  /// the explicit snapshot still owns this session. Prefer a matching
+  /// rotation result so logout revokes the replacement refresh token.
   Future<OpenIdIdentity?> _identitySnapshot(OpenIdIdentity? identity) async {
     final captured = identity ?? _identity;
     if (captured == null) return null;
@@ -759,8 +766,13 @@ class OpenIdConnectClient {
     await _waitForMatchingRefresh(captured);
     final rotated = _rotatedTokensFor(captured);
     if (rotated != null) return rotated;
-    if (_sessionGeneration == generation) {
-      return _identity ?? captured;
+    if (_sessionGeneration != generation) {
+      return captured;
+    }
+    final current = _identity;
+    if (current != null &&
+        (identity == null || _sameSessionTokens(current, captured))) {
+      return current;
     }
     return captured;
   }
@@ -781,8 +793,6 @@ class OpenIdConnectClient {
     final rotated = _rotatedTokensForRevocation;
     if (from == null || rotated == null) return null;
     if (snapshot.refreshToken != from) return null;
-    _rotatedFromRefreshToken = null;
-    _rotatedTokensForRevocation = null;
     return rotated;
   }
 
