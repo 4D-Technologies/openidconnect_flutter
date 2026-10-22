@@ -2,7 +2,7 @@
 name: ship-pr-review-loop
 description: >-
   Ship a completed change: branch, validate, open/update PR, watch CI, request
-  Copilot review, fix every Copilot finding, squash-merge, then publish
+  Copilot review, address every Copilot finding, squash-merge, then publish
   federated packages to pub.dev. Use when the user says /ship-pr-review-loop,
   wants a PR review loop, squash-merge after Copilot is clean, or publish to
   pub.dev.
@@ -19,7 +19,7 @@ User-invoked delivery loop for this federated Flutter plugin. Prefer repo conven
 2. Local validation
 3. PR → CI green on **latest head**
 4. Copilot reviewer assigned
-5. Fix **every** Copilot finding until the latest Copilot review has zero open issues
+5. Address **every** Copilot finding until the latest Copilot review has zero open issues
 6. Squash-merge and delete the branch
 7. Publish `openidconnect_platform_interface` first, then `openidconnect`
 
@@ -34,17 +34,16 @@ python3 ~/.grok/bundled/skills/long-running-background-tasks/watch_pr.py \
 
 Wake on CI failure, new Copilot threads, merge conflicts, mergeable, merged, or closed. Always compare against the **latest PR head SHA**.
 
-## Copilot findings are defects
+## Copilot findings are blocking
 
-Treat every Copilot comment, thread, and overview “open issue” as a real bug. Do not dismiss it as speculative, out of contract, extra, or a race that “cannot happen on the main path.”
+Every Copilot comment, thread, and overview “open issue” is blocking until Copilot’s **latest** review has zero open issues.
 
-For each finding:
+For each finding, reproduce it against current code.
 
-1. Reproduce it against current code.
-2. Fix it with the narrowest correct change and a regression test.
-3. Reply, resolve, re-request Copilot, and watch the **new** head.
+- If it is right, or you are not sure: fix it with the narrowest correct change and a regression test. Reply, resolve, re-request Copilot, watch the **new** head.
+- If it is just wrong: reply on the thread with why (cite the code), then **re-request Copilot**. Do not resolve-and-skip. Copilot must drop the issue on a later review; arguing once is not clearance.
 
-Do not resolve a thread by arguing. Do not merge because GitHub `mergeable` is true while Copilot still lists open issues. Resolving a thread after a pushback does not count as addressing the finding.
+Do not merge because GitHub `mergeable` is true while Copilot still lists open issues.
 
 ## Copilot via `gh`, not GitHub MCP
 
@@ -105,9 +104,9 @@ Body: summary, `Fixes #<n>`, test plan. After push, start `watch_pr.py`.
 Until Copilot’s **latest** review has zero open issues, unresolved threads == 0, **and** CI is green on the latest SHA:
 
 1. Collect threads (`gh api` GraphQL `reviewThreads`) and the latest Copilot review overview
-2. Fix each finding (see above)
+2. Address each finding (see above)
 3. Small commits, restore `analysis_options.yaml`, local tests, push
-4. Reply + resolve; re-request Copilot after code changes
+4. Reply; re-request Copilot after a fix **or** after a written rebuttal
 5. Watch the **new** head
 
 ### 6. Squash-merge
