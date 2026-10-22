@@ -108,6 +108,8 @@ class _OpenIdConnectWebSecureStorage {
   static const _storagePrefix = 'openidconnect_secure_storage';
   static const _masterKeyName = '$_storagePrefix.master_key';
 
+  Future<html.CryptoKey>? _masterKeyFuture;
+
   html.Crypto get _crypto {
     if (html.window.isSecureContext) {
       return html.window.crypto;
@@ -235,7 +237,23 @@ class _OpenIdConnectWebSecureStorage {
     return generated;
   }
 
-  Future<html.CryptoKey> _getOrCreateMasterKey() async {
+  Future<html.CryptoKey> _getOrCreateMasterKey() {
+    final existing = _masterKeyFuture;
+    if (existing != null) {
+      return existing;
+    }
+
+    late final Future<html.CryptoKey> inFlight;
+    inFlight = _loadOrCreateMasterKey().whenComplete(() {
+      if (identical(_masterKeyFuture, inFlight)) {
+        _masterKeyFuture = null;
+      }
+    });
+    _masterKeyFuture = inFlight;
+    return inFlight;
+  }
+
+  Future<html.CryptoKey> _loadOrCreateMasterKey() async {
     if (_storage.has(_masterKeyName)) {
       try {
         final rawKey = base64Decode(_storage.getItem(_masterKeyName)!);

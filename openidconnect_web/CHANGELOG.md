@@ -3,6 +3,7 @@
 ## [3.1.1] - October 21st 2026
 
 - Fixes [#91](https://github.com/4D-Technologies/openidconnect_flutter/issues/91): recover from WebCrypto `DOMException` (`OperationError`/`DataError`) when importing the secure-storage master key or decrypting ciphertext. Unreadable `localStorage` entries under `openidconnect_secure_storage.` are cleared and a new master key is generated. Use a legal AES-GCM algorithm dictionary per operation.
+- Share in-flight master-key recovery so concurrent writes after a corrupt key encrypt with the same replacement key.
 
 ## [3.1.0] - October 16th 2026
 
