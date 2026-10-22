@@ -87,6 +87,9 @@ class OpenIdIdentity extends AuthorizationResponse {
         state: state,
       );
     } on Object catch (e, stackTrace) {
+      if (e is UnsupportedError) {
+        rethrow;
+      }
       logOpenIdConnectWarning(
         'Persisted identity could not be loaded; clearing stored credentials',
         e,

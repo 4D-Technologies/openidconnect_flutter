@@ -166,6 +166,27 @@ void main() {
     );
 
     test(
+      'load rethrows UnsupportedError without clearing stored credentials',
+      () async {
+        final original = OpenIdConnectPlatform.instance;
+        final fake = _NonExceptionSecureStoragePlatform();
+        OpenIdConnectPlatform.instance = fake;
+        addTearDown(() {
+          OpenIdConnectPlatform.instance = original;
+        });
+
+        fake.storage['ACCESS_TOKEN'] = 'stale-access-token';
+        fake.storage['ID_TOKEN'] = TEST_ID_TOKEN;
+        fake.readError = UnsupportedError(
+          'OpenIdConnect web secure storage requires a secure context.',
+        );
+
+        await expectLater(OpenIdIdentity.load(), throwsUnsupportedError);
+        expect(fake.storage, isNotEmpty);
+      },
+    );
+
+    test(
       'awaits clearing invalid stored identity values before returning',
       () async {
         deleteDelay = const Duration(milliseconds: 10);
