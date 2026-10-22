@@ -59,6 +59,25 @@ void main() {
     },
   );
 
+  test('concurrent writes with a corrupt master key remain readable', () async {
+    html.window.localStorage.setItem(
+      _masterKeyName,
+      base64Encode(Uint8List.fromList([1, 2, 3])),
+    );
+
+    await Future.wait([
+      plugin.secureStorageWrite(key: 'ACCESS_TOKEN', value: 'access'),
+      plugin.secureStorageWrite(key: 'ID_TOKEN', value: 'id'),
+      plugin.secureStorageWrite(key: 'TOKEN_TYPE', value: 'Bearer'),
+      plugin.secureStorageWrite(key: 'EXPIRES_ON', value: '123'),
+    ]);
+
+    expect(await plugin.secureStorageRead(key: 'ACCESS_TOKEN'), 'access');
+    expect(await plugin.secureStorageRead(key: 'ID_TOKEN'), 'id');
+    expect(await plugin.secureStorageRead(key: 'TOKEN_TYPE'), 'Bearer');
+    expect(await plugin.secureStorageRead(key: 'EXPIRES_ON'), '123');
+  });
+
   test('decrypt rejection with a WebCrypto DOMException makes read return null', () async {
     await plugin.secureStorageInitialize();
 

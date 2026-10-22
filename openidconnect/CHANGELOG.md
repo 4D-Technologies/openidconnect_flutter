@@ -3,6 +3,7 @@
 ## [3.1.2] - October 21st, 2026
 
 - Fixes [#91](https://github.com/4D-Technologies/openidconnect_flutter/issues/91): `OpenIdConnectClient.create` no longer aborts when web secure storage rejects a persisted master key or ciphertext with a browser `DOMException`. Unreadable stored credentials are discarded and the client starts logged out.
+- Web secure storage shares in-flight master-key recovery so concurrent identity writes after a corrupt key stay readable.
 
 ## [3.1.1] - October 16th, 2026
 
