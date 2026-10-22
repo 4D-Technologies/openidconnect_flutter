@@ -2,10 +2,10 @@
 name: ship-pr-review-loop
 description: >-
   Ship a completed change: branch, validate, open/update PR, watch CI, request
-  Copilot review, evaluate feedback (do not assume Copilot is right), squash-merge,
-  then publish federated packages to pub.dev. Use when the user says
-  /ship-pr-review-loop, wants a PR review loop, squash-merge after Copilot is
-  clean, or publish to pub.dev.
+  Copilot review, fix every Copilot finding, squash-merge, then publish
+  federated packages to pub.dev. Use when the user says /ship-pr-review-loop,
+  wants a PR review loop, squash-merge after Copilot is clean, or publish to
+  pub.dev.
 disable-model-invocation: true
 ---
 
@@ -19,7 +19,7 @@ User-invoked delivery loop for this federated Flutter plugin. Prefer repo conven
 2. Local validation
 3. PR → CI green on **latest head**
 4. Copilot reviewer assigned
-5. Address **real** feedback until unresolved threads are empty
+5. Fix **every** Copilot finding until the latest Copilot review has zero open issues
 6. Squash-merge and delete the branch
 7. Publish `openidconnect_platform_interface` first, then `openidconnect`
 
@@ -34,15 +34,17 @@ python3 ~/.grok/bundled/skills/long-running-background-tasks/watch_pr.py \
 
 Wake on CI failure, new Copilot threads, merge conflicts, mergeable, merged, or closed. Always compare against the **latest PR head SHA**.
 
-## Evaluate Copilot; do not assume it is right
+## Copilot findings are defects
 
-For each unresolved thread:
+Treat every Copilot comment, thread, and overview “open issue” as a real bug. Do not dismiss it as speculative, out of contract, extra, or a race that “cannot happen on the main path.”
 
-1. Reproduce the claimed race or bug against current code and tests.
-2. If it is real, fix it with the narrowest change and a regression test. Reply, resolve, re-request Copilot.
-3. If it is speculative (unbounded ancestry maps, extra web-only iframe races, holding a snapshot across later auto-renewals), **push back in the thread**, resolve it, and **do not re-request**. Re-requesting restarts the invention of new races.
+For each finding:
 
-Do not expand the change to satisfy a finding that is not a bug in the stated contract.
+1. Reproduce it against current code.
+2. Fix it with the narrowest correct change and a regression test.
+3. Reply, resolve, re-request Copilot, and watch the **new** head.
+
+Do not resolve a thread by arguing. Do not merge because GitHub `mergeable` is true while Copilot still lists open issues. Resolving a thread after a pushback does not count as addressing the finding.
 
 ## Copilot via `gh`, not GitHub MCP
 
@@ -100,12 +102,12 @@ Body: summary, `Fixes #<n>`, test plan. After push, start `watch_pr.py`.
 
 ### 5. Review loop
 
-Until unresolved threads == 0 **and** CI is green on the latest SHA:
+Until Copilot’s **latest** review has zero open issues, unresolved threads == 0, **and** CI is green on the latest SHA:
 
-1. Collect threads (`gh api` GraphQL `reviewThreads`)
-2. Evaluate each (see above)
+1. Collect threads (`gh api` GraphQL `reviewThreads`) and the latest Copilot review overview
+2. Fix each finding (see above)
 3. Small commits, restore `analysis_options.yaml`, local tests, push
-4. Reply + resolve; re-request Copilot only when you changed code
+4. Reply + resolve; re-request Copilot after code changes
 5. Watch the **new** head
 
 ### 6. Squash-merge
@@ -116,7 +118,7 @@ git checkout main
 git pull --ff-only origin main
 ```
 
-Do not merge with open Copilot threads or red CI.
+Do not merge with open Copilot issues, unresolved threads, or red CI. GitHub `MERGEABLE` is not sufficient.
 
 ### 7. Publish to pub.dev
 
@@ -138,7 +140,6 @@ Do not publish platform implementations unless their versions also changed.
 
 - Missing pub.dev OAuth / credentials
 - Ambiguous version / breaking-change intent
-- Product judgment in a Copilot thread you cannot evaluate
 
 ## Completion
 
