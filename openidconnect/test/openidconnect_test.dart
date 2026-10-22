@@ -1,9 +1,11 @@
 import 'dart:convert';
 
 import 'package:flutter/services.dart';
+import 'package:flutter/widgets.dart';
 import 'package:flutter_test/flutter_test.dart';
-
 import 'package:openidconnect/openidconnect.dart';
+import 'package:openidconnect_platform_interface/openidconnect_platform_interface.dart';
+import 'package:plugin_platform_interface/plugin_platform_interface.dart';
 
 const TEST_ID_TOKEN =
     "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkwIiwibmFtZSI6IkpvaG4gRG9lIiwiaWF0IjoxNTE2MjM5MDIyfQ.SflKxwRJSMeKKF2QT4fwpMeJf36POk6yJV_adQssw5c";
@@ -141,6 +143,48 @@ void main() {
       expect(loaded, isNull);
       expect(storage, isEmpty);
     });
+
+    test(
+      'load discards stored credentials when read throws a non-Exception',
+      () async {
+        final original = OpenIdConnectPlatform.instance;
+        final fake = _NonExceptionSecureStoragePlatform();
+        OpenIdConnectPlatform.instance = fake;
+        addTearDown(() {
+          OpenIdConnectPlatform.instance = original;
+        });
+
+        fake.storage['ACCESS_TOKEN'] = 'stale-access-token';
+        fake.storage['ID_TOKEN'] = TEST_ID_TOKEN;
+        fake.readError = _DomExceptionLike('OperationError');
+
+        final loaded = await OpenIdIdentity.load();
+
+        expect(loaded, isNull);
+        expect(fake.storage, isEmpty);
+      },
+    );
+
+    test(
+      'load rethrows UnsupportedError without clearing stored credentials',
+      () async {
+        final original = OpenIdConnectPlatform.instance;
+        final fake = _NonExceptionSecureStoragePlatform();
+        OpenIdConnectPlatform.instance = fake;
+        addTearDown(() {
+          OpenIdConnectPlatform.instance = original;
+        });
+
+        fake.storage['ACCESS_TOKEN'] = 'stale-access-token';
+        fake.storage['ID_TOKEN'] = TEST_ID_TOKEN;
+        fake.readError = UnsupportedError(
+          'OpenIdConnect web secure storage requires a secure context.',
+        );
+
+        await expectLater(OpenIdIdentity.load(), throwsUnsupportedError);
+        expect(fake.storage, isNotEmpty);
+      },
+    );
 
     test(
       'awaits clearing invalid stored identity values before returning',
@@ -392,4 +436,63 @@ String _buildJwt(Map<String, Object?> payload) {
       base64Url.encode(utf8.encode(jsonEncode(value))).replaceAll('=', '');
 
   return '${encode({'alg': 'HS256', 'typ': 'JWT'})}.${encode(payload)}.sig';
+}
+
+class _DomExceptionLike {
+  _DomExceptionLike(this.name);
+
+  final String name;
+
+  @override
+  String toString() => name;
+}
+
+class _NonExceptionSecureStoragePlatform extends OpenIdConnectPlatform
+    with MockPlatformInterfaceMixin {
+  final Map<String, String> storage = <String, String>{};
+  Object? readError;
+
+  @override
+  Future<String?> authorizeInteractive({
+    required BuildContext context,
+    required String title,
+    required String authorizationUrl,
+    required String redirectUrl,
+    required int popupWidth,
+    required int popupHeight,
+    bool useWebRedirectLoop = false,
+  }) async => null;
+
+  @override
+  Future<String?> processStartup() async => null;
+
+  @override
+  Future<void> secureStorageInitialize() async {}
+
+  @override
+  Future<void> secureStorageWrite({
+    required String key,
+    required String value,
+  }) async {
+    storage[key] = value;
+  }
+
+  @override
+  Future<String?> secureStorageRead({required String key}) async {
+    final error = readError;
+    if (error != null) {
+      throw error;
+    }
+    return storage[key];
+  }
+
+  @override
+  Future<void> secureStorageDelete({required String key}) async {
+    storage.remove(key);
+  }
+
+  @override
+  Future<bool> secureStorageContainsKey({required String key}) async {
+    return storage.containsKey(key);
+  }
 }

@@ -34,8 +34,10 @@ class OpenIdConnectWeb extends OpenIdConnectPlatform {
   }) async {
     if (useWebRedirectLoop) {
       const authDestinationKey = "openidconnect_auth_destination_url";
-      html.window.sessionStorage
-          .setItem(authDestinationKey, html.window.location.toString());
+      html.window.sessionStorage.setItem(
+        authDestinationKey,
+        html.window.location.toString(),
+      );
       html.window.location.assign(authorizationUrl);
 
       // Same-tab redirect flows intentionally hand control to the browser and
@@ -44,9 +46,11 @@ class OpenIdConnectWeb extends OpenIdConnectPlatform {
       return Completer<String?>().future;
     }
 
-    final top = (html.window.outerHeight - popupHeight) / 2 +
+    final top =
+        (html.window.outerHeight - popupHeight) / 2 +
         (html.window.screen.availHeight);
-    final left = (html.window.outerWidth - popupWidth) / 2 +
+    final left =
+        (html.window.outerWidth - popupWidth) / 2 +
         (html.window.screen.availWidth);
 
     var options =
@@ -85,8 +89,7 @@ class OpenIdConnectWeb extends OpenIdConnectPlatform {
   Future<void> secureStorageWrite({
     required String key,
     required String value,
-  }) =>
-      _secureStorage.write(key: key, value: value);
+  }) => _secureStorage.write(key: key, value: value);
 
   @override
   Future<String?> secureStorageRead({required String key}) =>
@@ -149,7 +152,7 @@ class _OpenIdConnectWebSecureStorage {
 
       final decrypted = await _crypto.subtle
           .decrypt(
-            _algorithm(iv),
+            _encryptionAlgorithm(iv),
             keyHandle,
             Uint8List.fromList(ciphertext).toJS,
           )
@@ -158,7 +161,10 @@ class _OpenIdConnectWebSecureStorage {
       return utf8.decode(
         (decrypted! as js_interop.JSArrayBuffer).toDart.asUint8List(),
       );
-    } on Exception catch (error, stackTrace) {
+    } on Object catch (error, stackTrace) {
+      if (error is UnsupportedError) {
+        rethrow;
+      }
       logOpenIdConnectWarning(
         'Failed to decrypt web secure storage value',
         error,
@@ -169,13 +175,13 @@ class _OpenIdConnectWebSecureStorage {
   }
 
   Future<void> write({required String key, required String value}) async {
-    final iv =
-        (_crypto.getRandomValues(Uint8List(12).toJS) as js_interop.JSUint8Array)
-            .toDart;
+    final iv = (_crypto.getRandomValues(
+      Uint8List(12).toJS,
+    ) as js_interop.JSUint8Array).toDart;
     final keyHandle = await _getOrCreateMasterKey();
     final encrypted = await _crypto.subtle
         .encrypt(
-          _algorithm(iv),
+          _encryptionAlgorithm(iv),
           keyHandle,
           Uint8List.fromList(utf8.encode(value)).toJS,
         )
@@ -188,31 +194,37 @@ class _OpenIdConnectWebSecureStorage {
     );
   }
 
-  js_interop.JSAny _algorithm(Uint8List iv) {
-    return {
-      'name': 'AES-GCM',
-      'length': 256,
-      'iv': iv,
-    }.jsify()!;
+  js_interop.JSAny get _generateKeyAlgorithm {
+    return {'name': 'AES-GCM', 'length': 256}.jsify()!;
   }
 
-  Future<html.CryptoKey> _getOrCreateMasterKey() async {
-    if (_storage.has(_masterKeyName)) {
-      final rawKey = base64Decode(_storage.getItem(_masterKeyName)!);
-      return _crypto.subtle
-          .importKey(
-            'raw',
-            rawKey.toJS,
-            _algorithm(Uint8List(12)),
-            false,
-            _cryptoKeyUsages.toJS,
-          )
-          .toDart;
-    }
+  js_interop.JSAny get _importAlgorithm {
+    return {'name': 'AES-GCM'}.jsify()!;
+  }
 
-    final generated = (await _crypto.subtle
-        .generateKey(_algorithm(Uint8List(12)), true, _cryptoKeyUsages.toJS)
-        .toDart)! as html.CryptoKey;
+  js_interop.JSAny _encryptionAlgorithm(Uint8List iv) {
+    return {'name': 'AES-GCM', 'iv': iv}.jsify()!;
+  }
+
+  void _clearPrefixedStorage() {
+    final keysToRemove = <String>[];
+    for (var i = 0; i < _storage.length; i++) {
+      final key = _storage.key(i);
+      if (key != null && key.startsWith('$_storagePrefix.')) {
+        keysToRemove.add(key);
+      }
+    }
+    for (final key in keysToRemove) {
+      _storage.removeItem(key);
+    }
+  }
+
+  Future<html.CryptoKey> _generateAndStoreMasterKey() async {
+    final generated =
+        (await _crypto.subtle
+                .generateKey(_generateKeyAlgorithm, true, _cryptoKeyUsages.toJS)
+                .toDart)!
+            as html.CryptoKey;
     final exported = await _crypto.subtle.exportKey('raw', generated).toDart;
     _storage.setItem(
       _masterKeyName,
@@ -222,12 +234,40 @@ class _OpenIdConnectWebSecureStorage {
     );
     return generated;
   }
+
+  Future<html.CryptoKey> _getOrCreateMasterKey() async {
+    if (_storage.has(_masterKeyName)) {
+      try {
+        final rawKey = base64Decode(_storage.getItem(_masterKeyName)!);
+        return await _crypto.subtle
+            .importKey(
+              'raw',
+              rawKey.toJS,
+              _importAlgorithm,
+              false,
+              _cryptoKeyUsages.toJS,
+            )
+            .toDart;
+      } on Object catch (error, stackTrace) {
+        if (error is UnsupportedError) {
+          rethrow;
+        }
+        logOpenIdConnectWarning(
+          'Web secure storage master key could not be imported; resetting storage',
+          error,
+          stackTrace,
+        );
+        _clearPrefixedStorage();
+      }
+    }
+
+    return _generateAndStoreMasterKey();
+  }
 }
 
 extension on List<String> {
-  js_interop.JSArray<js_interop.JSString> get toJS => [
-        ...map((entry) => entry.toJS),
-      ].toJS;
+  js_interop.JSArray<js_interop.JSString> get toJS =>
+      [...map((entry) => entry.toJS)].toJS;
 }
 
 const _cryptoKeyUsages = <String>['encrypt', 'decrypt'];
