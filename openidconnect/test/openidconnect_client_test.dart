@@ -236,6 +236,43 @@ void main() {
       );
     });
 
+    test('delivers the same event to multiple listeners', () async {
+      final client = await OpenIdConnectClient.create(
+        discoveryDocumentUrl: 'https://issuer.example.com/.well-known/openid',
+        clientId: 'client-id',
+        encryptionKey: 'unused',
+        autoRefresh: false,
+      );
+      addTearDown(client.dispose);
+
+      final firstEvents = <AuthEvent>[];
+      final secondEvents = <AuthEvent>[];
+      final firstSubscription = client.changes.listen(firstEvents.add);
+      final secondSubscription = client.changes.listen(secondEvents.add);
+      addTearDown(firstSubscription.cancel);
+      addTearDown(secondSubscription.cancel);
+
+      client.reportError('shared');
+      await Future<void>.delayed(Duration.zero);
+
+      const expected = AuthEvent(AuthEventTypes.Error, message: 'shared');
+      expect(firstEvents, [expected]);
+      expect(secondEvents, [expected]);
+    });
+
+    test('listening after dispose completes without throwing', () async {
+      final client = await OpenIdConnectClient.create(
+        discoveryDocumentUrl: 'https://issuer.example.com/.well-known/openid',
+        clientId: 'client-id',
+        encryptionKey: 'unused',
+        autoRefresh: false,
+      );
+
+      client.dispose();
+
+      await expectLater(client.changes, emitsDone);
+    });
+
     test('executes queued requests when the identity is valid', () async {
       await _saveIdentity(
         expiresAt: DateTime.now().toUtc().add(const Duration(hours: 1)),
