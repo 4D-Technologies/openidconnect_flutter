@@ -3,6 +3,7 @@ import 'package:openidconnect/openidconnect.dart';
 
 import 'identity_view.dart';
 import 'credentials.dart';
+import 'idp_catalog.dart';
 
 class PasswordPage extends StatefulWidget {
   const PasswordPage({super.key});
@@ -16,14 +17,27 @@ class _PasswordPageState extends State<PasswordPage> {
   final _userFormKey = GlobalKey<FormState>();
 
   OpenIdConnectClient? client;
-  String discoveryUrl = defaultDiscoveryUrl;
+  late IdpProfile profile;
+  late String discoveryUrl;
   OpenIdConfiguration? discoveryDocument;
+  bool _loadedProfile = false;
 
-  String userName = "";
-  String password = "";
+  late String userName;
+  late String password;
   AuthorizationResponse? identity;
 
   String? errorMessage;
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    if (_loadedProfile) return;
+    _loadedProfile = true;
+    profile = IdpCatalog.of(context).selected;
+    discoveryUrl = profile.discoveryUrl;
+    userName = profile.usernameHint ?? '';
+    password = profile.passwordHint ?? '';
+  }
 
   Future<void> lookupSettings() async {
     _formKey.currentState!.save();
@@ -31,20 +45,18 @@ class _PasswordPageState extends State<PasswordPage> {
 
     try {
       final configuration = await OpenIdConnect.getConfiguration(discoveryUrl);
-      client = await OpenIdConnectClient.create(
-        clientId: defaultClientId,
-        discoveryDocumentUrl: discoveryUrl,
-        scopes: defaultscopes,
-        audiences: defaultAudience,
-        clientSecret: defaultClientSecret,
-        redirectUrl: defaultRedirectUrl,
-        webUseRefreshTokens: true,
-        autoRefresh: true,
-        encryptionKey: defaultEncryptionKey,
+      client = await createExampleClient(
+        profile: profile,
+        clientId: profile.resolvedPasswordClientId,
+        clientSecret: profile.resolvedPasswordClientSecret,
       );
       setState(() {
         discoveryDocument = configuration;
-        errorMessage = null;
+        errorMessage = profile.supportsPassword
+            ? null
+            : 'This IdP profile does not advertise password grant. '
+                  'You can still try it, or add an IdP whose client allows '
+                  'grant_type=password.';
       });
     } on Exception catch (e) {
       setState(() {
@@ -60,8 +72,10 @@ class _PasswordPageState extends State<PasswordPage> {
     if (!_userFormKey.currentState!.validate()) return;
 
     try {
-      final response = await client!
-          .loginWithPassword(userName: userName, password: password);
+      final response = await client!.loginWithPassword(
+        userName: userName,
+        password: password,
+      );
 
       setState(() {
         identity = response;
@@ -78,9 +92,7 @@ class _PasswordPageState extends State<PasswordPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('OpenIdConnect Password Flow Example'),
-      ),
+      appBar: AppBar(title: const Text('OpenIdConnect Password Flow Example')),
       body: Center(
         child: Column(
           children: [
@@ -91,13 +103,15 @@ class _PasswordPageState extends State<PasswordPage> {
                 children: [
                   TextFormField(
                     textInputAction: TextInputAction.done,
-                    decoration: InputDecoration(labelText: "Discovery Url"),
+                    decoration: const InputDecoration(
+                      labelText: 'Discovery Url',
+                    ),
                     keyboardType: TextInputType.url,
                     initialValue: discoveryUrl,
                     onChanged: (value) => discoveryUrl = value,
                     validator: (value) {
                       const errorMessage =
-                          "Please enter a valid openid discovery document url";
+                          'Please enter a valid openid discovery document url';
                       if (value == null || value.isEmpty) return errorMessage;
                       try {
                         Uri.parse(value);
@@ -109,8 +123,8 @@ class _PasswordPageState extends State<PasswordPage> {
                   ),
                   TextButton.icon(
                     onPressed: lookupSettings,
-                    icon: Icon(Icons.search),
-                    label: Text("Lookup OpenId Connect Configuration"),
+                    icon: const Icon(Icons.search),
+                    label: const Text('Lookup OpenId Connect Configuration'),
                   ),
                 ],
               ),
@@ -123,43 +137,47 @@ class _PasswordPageState extends State<PasswordPage> {
                   children: [
                     TextFormField(
                       textInputAction: TextInputAction.next,
-                      decoration: InputDecoration(labelText: "User Name"),
+                      decoration: const InputDecoration(labelText: 'User Name'),
                       keyboardType: TextInputType.emailAddress,
                       initialValue: userName,
                       onChanged: (value) => userName = value,
                       validator: (value) {
-                        const errorMessage = "Please enter a valid user name";
-                        if (value == null || value.isEmpty) return errorMessage;
+                        const errorMessage = 'Please enter a valid user name';
+                        if (value == null || value.isEmpty) {
+                          return errorMessage;
+                        }
 
                         return null;
                       },
                     ),
                     TextFormField(
                       textInputAction: TextInputAction.go,
-                      decoration: InputDecoration(labelText: "Password"),
+                      decoration: const InputDecoration(labelText: 'Password'),
                       keyboardType: TextInputType.visiblePassword,
                       initialValue: password,
                       onChanged: (value) => password = value,
                       validator: (value) {
-                        const errorMessage = "Please enter a valid password";
-                        if (value == null || value.isEmpty) return errorMessage;
+                        const errorMessage = 'Please enter a valid password';
+                        if (value == null || value.isEmpty) {
+                          return errorMessage;
+                        }
 
                         return null;
                       },
                     ),
                     TextButton.icon(
                       onPressed: authorize,
-                      icon: Icon(Icons.login),
-                      label: Text("Login"),
+                      icon: const Icon(Icons.login),
+                      label: const Text('Login'),
                     ),
                     Visibility(
                       visible: errorMessage != null,
-                      child: Text(errorMessage ?? "",
-                          style: Theme.of(context)
-                              .textTheme
-                              .bodyLarge!
-                              .copyWith(
-                                  color: Theme.of(context).colorScheme.error)),
+                      child: Text(
+                        errorMessage ?? '',
+                        style: Theme.of(context).textTheme.bodyLarge!.copyWith(
+                          color: Theme.of(context).colorScheme.error,
+                        ),
+                      ),
                     ),
                   ],
                 ),
@@ -183,8 +201,8 @@ class _PasswordPageState extends State<PasswordPage> {
                     identity = null;
                   });
                 },
-                icon: Icon(Icons.logout),
-                label: Text("Logout"),
+                icon: const Icon(Icons.logout),
+                label: const Text('Logout'),
               ),
             ),
           ],

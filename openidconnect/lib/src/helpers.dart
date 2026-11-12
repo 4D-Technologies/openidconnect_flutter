@@ -72,7 +72,7 @@ Future<Map<String, dynamic>?> httpRetry<T extends http.Response>(
         ? "{}"
         : result.body.startsWith("{")
         ? result.body
-        : result.body.startsWith("<html")
+        : result.body.startsWith("<html") || result.body.startsWith("<!DOCTYPE")
         ? "{}"
         : "{\"error\": \"${result.body.replaceAll("\"", "'")}\"}";
 

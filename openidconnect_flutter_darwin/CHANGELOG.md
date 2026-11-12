@@ -1,5 +1,10 @@
 # Changelog
 
+## 3.2.0 - November 12th 2026
+
+- Drive `ASWebAuthenticationSession` from Dart FFI on both iOS and macOS instead of a Swift method channel.
+- Keep macOS `http://localhost` callbacks on the existing loopback flow, which Apple’s session API cannot handle.
+
 ## 3.1.0 - October 16th 2026
 
 - Align package version with `openidconnect` 3.1.x.

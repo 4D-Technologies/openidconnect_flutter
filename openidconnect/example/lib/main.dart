@@ -1,13 +1,10 @@
 import 'package:material_ui/material_ui.dart';
 import 'package:openidconnect_example/choose.dart';
+import 'package:openidconnect_example/idp_catalog.dart';
 
 void main() {
-  runApp(MyApp());
+  runApp(const MyApp());
 }
-
-//Credentials gathered from the playground
-//login: dull-moth@example.com
-//password: Yawning-Octopus-58
 
 class MyApp extends StatefulWidget {
   const MyApp({super.key});
@@ -17,15 +14,13 @@ class MyApp extends StatefulWidget {
 }
 
 class _MyAppState extends State<MyApp> {
-  @override
-  void initState() {
-    super.initState();
-  }
+  final catalog = IdpCatalog();
 
   @override
   Widget build(BuildContext context) {
-    return MaterialApp(
-      home: ChoosePage(),
+    return IdpCatalogScope(
+      catalog: catalog,
+      child: const MaterialApp(home: ChoosePage()),
     );
   }
 }

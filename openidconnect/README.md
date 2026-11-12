@@ -33,9 +33,10 @@ Currently supports:
    This aligns the mobile/desktop interactive flow with the current OAuth 2.0 for Native Apps guidance in RFC 8252 by avoiding embedded user-agents for native platforms.
 
 2. Your `redirectUrl` must be compatible with the target platform:
-   - `http://localhost[:port]/path` for Linux / Windows (and optionally macOS)
-   - a custom scheme such as `my.app://callback` for Android / iOS / macOS
+   - `http://localhost[:port]/path` for Linux (and optionally macOS)
+   - a custom scheme such as `my.app://callback` for Android / iOS / macOS / Windows
    - an HTTPS callback you own and have configured for App Links / Universal Links where supported
+   - Windows also accepts `http://localhost[:port]/path` inside the WebView2 session
 
 3. On Android, if you use a custom scheme or HTTPS callback, add the `openidconnect_flutter_android` callback receiver entries shown below.
 
@@ -78,15 +79,24 @@ Currently supports:
    unawaited(client.logout(identity: snapshot));
    ```
 
+## Example
+
+The example app in `example/` defaults to the public [Duende IdentityServer demo](https://demo.duendesoftware.com) (`interactive.public`, authorization code + PKCE, no client secret). Sign in as `alice` / `alice` or `bob` / `bob`. Use **Choose IdP** / **Add IdP** to point the same flows at another issuer, including the built-in SondaHub playground for password grant. See [example/README.md](example/README.md).
+
+Live e2e tests in `test/openidconnect_live_duende_test.dart` hit Duende for discovery, authorization-code + PKCE, device-code metadata, refresh, userinfo, revocation, and logout, and SondaHub for a successful password grant. Set `SKIP_LIVE_OIDC=1` to skip them.
+
+[openidconnect.net](https://www.openidconnect.net/) and [oidcdebugger.com](https://oidcdebugger.com/) are web debuggers, not identity providers. oidcdebugger.com has no discovery document or token endpoint, so it cannot run password grant. They cannot be this example’s issuer.
+
 ## Platform configuration
 
 ### Redirect URI rules
 
 Use a redirect URI that matches the platform authentication model:
 
-- Android / iOS: usually a custom scheme such as `my.app://callback`
-- macOS: either a custom scheme such as `my.app://callback` or a loopback URL such as `http://localhost:14100/callback`
-- Linux / Windows: a loopback URL such as `http://localhost:14100/callback`
+- Android / iOS / macOS: usually a custom scheme such as `my.app://callback`, or HTTPS App Links / Universal Links
+- macOS: `http://localhost[:port]/path` also works via loopback because `ASWebAuthenticationSession` cannot bind HTTP localhost
+- Linux: a loopback URL such as `http://localhost:14100/callback`
+- Windows: a custom scheme, HTTPS callback, or `http://localhost[:port]/path` intercepted by the WebView2 session
 - Web: an HTTPS callback page you host, usually `/callback.html`
 
 If you use HTTPS deep links / universal links instead of a custom scheme, you must also configure the platform link-association files for your app and domain.
@@ -304,13 +314,13 @@ No extra manifest or plist-style configuration is required by this package on Li
 
 ### Windows
 
-Interactive Windows authentication uses a loopback redirect with the endorsed Windows implementation.
+Interactive Windows authentication uses a WebView2 window that intercepts the redirect URI. The Evergreen WebView2 Runtime is required (preinstalled on Windows 11).
 
 Required setup:
 
-1. Use a loopback redirect URI such as `http://localhost:14100/callback`.
+1. Use a custom scheme, HTTPS callback, or `http://localhost[:port]/path` redirect URI.
 2. Register that exact redirect URI with your identity provider.
-3. Ensure the app can open the system browser and receive the loopback callback on the local machine.
+3. Install the [WebView2 Runtime](https://developer.microsoft.com/microsoft-edge/webview2/) on Windows 10 machines that do not already include it.
 
 No Android/iOS-style manifest permission prompts are required by this package on Windows.
 

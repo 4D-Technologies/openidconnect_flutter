@@ -64,13 +64,18 @@ Currently supports:
 5. Review the platform configuration notes below before testing interactive sign-in.
 6. In 3.0.1, `logout()` / `logoutInteractive()` / `revokeTokens()` accept an optional identity snapshot so you can `clearIdentity()` first and still revoke. Revocation follows RFC 7009 (refresh token if present, otherwise access token). `unsupported_token_type` is treated as success for that token.
 
+The example app in `openidconnect/example` defaults to the public [Duende IdentityServer demo](https://demo.duendesoftware.com) (`interactive.public`, authorization code + PKCE). Sign in as `alice` / `alice` or `bob` / `bob`. Use **Choose IdP** / **Add IdP** to try another issuer, including the built-in SondaHub playground for password grant. See [openidconnect/example/README.md](openidconnect/example/README.md).
+
+[openidconnect.net](https://www.openidconnect.net/) and [oidcdebugger.com](https://oidcdebugger.com/) are web debuggers, not identity providers. oidcdebugger.com has no discovery document or token endpoint, so it cannot run password grant.
+
 ## Platform configuration
 
 ### Redirect URI rules
 
-- Android / iOS: usually a custom scheme such as `my.app://callback`
-- macOS: either a custom scheme or a loopback URL such as `http://localhost:14100/callback`
-- Linux / Windows: a loopback URL such as `http://localhost:14100/callback`
+- Android / iOS / macOS: usually a custom scheme such as `my.app://callback`, or HTTPS App Links / Universal Links
+- macOS: `http://localhost[:port]/path` also works via loopback because `ASWebAuthenticationSession` cannot bind HTTP localhost
+- Linux: a loopback URL such as `http://localhost:14100/callback`
+- Windows: a custom scheme, HTTPS callback, or `http://localhost[:port]/path` intercepted by the WebView2 session
 - Web: an HTTPS callback page you host, typically `/callback.html`
 
 ### Android
@@ -249,11 +254,17 @@ Sandboxed macOS apps that use localhost callbacks should typically enable:
 <true/>
 ```
 
-### Linux / Windows
+### Linux
 
 - Use a loopback redirect URI such as `http://localhost:14100/callback`
 - Register that exact redirect URI with your identity provider
-- No plist/manifest permission prompts are required by this package itself on these platforms
+- Linux has no platform secure-session API, so interactive login opens the system browser
+
+### Windows
+
+- Interactive login uses a WebView2 window; the Evergreen WebView2 Runtime is required
+- Use a custom scheme, HTTPS callback, or `http://localhost[:port]/path`
+- Register that exact redirect URI with your identity provider
 
 ## Web
 

@@ -51,6 +51,27 @@ void main() {
     });
   });
 
+  test(
+    'uses the system browser plus loopback as the Linux interactive path',
+    () async {
+      final port = await _reserveLoopbackPort();
+      var launched = false;
+
+      await expectLater(
+        startNativeAuthenticationFlow(
+          authorizationUrl: 'https://issuer.example.com/authorize',
+          redirectUrl: 'http://localhost:$port/callback.html',
+          launchUrl: (_) async {
+            launched = true;
+          },
+          authenticationTimeout: const Duration(milliseconds: 1),
+        ),
+        throwsA(isA<AuthenticationException>()),
+      );
+      expect(launched, isTrue);
+    },
+  );
+
   test('times out loopback auth and maps it to user closed', () async {
     final port = await _reserveLoopbackPort();
 

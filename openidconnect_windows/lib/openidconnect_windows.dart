@@ -8,45 +8,69 @@ import 'package:ffi/ffi.dart';
 import 'package:flutter/widgets.dart';
 import 'package:openidconnect_platform_interface/openidconnect_platform_interface.dart';
 import 'package:openidconnect_windows/src/native_authentication_support.dart';
+import 'package:openidconnect_windows/src/web_auth_ffi.dart';
 
 const _credTypeGeneric = 1;
 const _credPersistLocalMachine = 2;
 const _errorNotFound = 1168;
 
-final DynamicLibrary _advapi32 = DynamicLibrary.open('Advapi32.dll');
-final DynamicLibrary _kernel32 = DynamicLibrary.open('Kernel32.dll');
+DynamicLibrary? _advapi32Library;
+DynamicLibrary? _kernel32Library;
+int Function(Pointer<Utf16>, int, int)? _credDeleteFn;
+int Function(Pointer<Utf16>, int, int, Pointer<Pointer<_Credential>>)?
+_credReadFn;
+int Function(Pointer<_Credential>, int)? _credWriteFn;
+void Function(Pointer<Void>)? _credFreeFn;
+int Function()? _getLastErrorFn;
 
-final int Function(Pointer<Utf16>, int, int) _credDelete = _advapi32
-    .lookupFunction<
-      Int32 Function(Pointer<Utf16>, Uint32, Uint32),
-      int Function(Pointer<Utf16>, int, int)
-    >('CredDeleteW');
+DynamicLibrary get _advapi32 =>
+    _advapi32Library ??= DynamicLibrary.open('Advapi32.dll');
 
-final int Function(Pointer<Utf16>, int, int, Pointer<Pointer<_Credential>>)
-_credRead = _advapi32
-    .lookupFunction<
-      Int32 Function(
-        Pointer<Utf16>,
-        Uint32,
-        Uint32,
-        Pointer<Pointer<_Credential>>,
-      ),
-      int Function(Pointer<Utf16>, int, int, Pointer<Pointer<_Credential>>)
-    >('CredReadW');
+DynamicLibrary get _kernel32 =>
+    _kernel32Library ??= DynamicLibrary.open('Kernel32.dll');
 
-final int Function(Pointer<_Credential>, int) _credWrite = _advapi32
-    .lookupFunction<
-      Int32 Function(Pointer<_Credential>, Uint32),
-      int Function(Pointer<_Credential>, int)
-    >('CredWriteW');
+int Function(Pointer<Utf16>, int, int) get _credDelete {
+  return _credDeleteFn ??= _advapi32
+      .lookupFunction<
+        Int32 Function(Pointer<Utf16>, Uint32, Uint32),
+        int Function(Pointer<Utf16>, int, int)
+      >('CredDeleteW');
+}
 
-final void Function(Pointer<Void>) _credFree = _advapi32
-    .lookupFunction<Void Function(Pointer<Void>), void Function(Pointer<Void>)>(
-      'CredFree',
-    );
+int Function(Pointer<Utf16>, int, int, Pointer<Pointer<_Credential>>)
+get _credRead {
+  return _credReadFn ??= _advapi32
+      .lookupFunction<
+        Int32 Function(
+          Pointer<Utf16>,
+          Uint32,
+          Uint32,
+          Pointer<Pointer<_Credential>>,
+        ),
+        int Function(Pointer<Utf16>, int, int, Pointer<Pointer<_Credential>>)
+      >('CredReadW');
+}
 
-final int Function() _getLastError = _kernel32
-    .lookupFunction<Uint32 Function(), int Function()>('GetLastError');
+int Function(Pointer<_Credential>, int) get _credWrite {
+  return _credWriteFn ??= _advapi32
+      .lookupFunction<
+        Int32 Function(Pointer<_Credential>, Uint32),
+        int Function(Pointer<_Credential>, int)
+      >('CredWriteW');
+}
+
+void Function(Pointer<Void>) get _credFree {
+  return _credFreeFn ??= _advapi32
+      .lookupFunction<
+        Void Function(Pointer<Void>),
+        void Function(Pointer<Void>)
+      >('CredFree');
+}
+
+int Function() get _getLastError {
+  return _getLastErrorFn ??= _kernel32
+      .lookupFunction<Uint32 Function(), int Function()>('GetLastError');
+}
 
 final class _FileTime extends Struct {
   @Uint32()
@@ -90,10 +114,12 @@ final class _Credential extends Struct {
 class OpenIdConnectWindows extends OpenIdConnectPlatform {
   static const _credentialNamePrefix = 'io.concerti.openidconnect.';
 
-  OpenIdConnectWindows({DesktopUrlLauncher? launchUrl})
-    : _launchUrl = launchUrl ?? launchUrlOnWindows;
+  OpenIdConnectWindows({
+    WindowsSecureAuthenticationInvoker? invokeSecureAuthentication,
+  }) : _invokeSecureAuthentication =
+           invokeSecureAuthentication ?? startWindowsWebView2Auth;
 
-  final DesktopUrlLauncher _launchUrl;
+  final WindowsSecureAuthenticationInvoker _invokeSecureAuthentication;
 
   static void registerWith() {
     OpenIdConnectPlatform.instance = OpenIdConnectWindows();
@@ -117,7 +143,9 @@ class OpenIdConnectWindows extends OpenIdConnectPlatform {
     return startNativeAuthenticationFlow(
       authorizationUrl: authorizationUrl,
       redirectUrl: redirectUrl,
-      launchUrl: _launchUrl,
+      popupWidth: popupWidth,
+      popupHeight: popupHeight,
+      invokeSecureAuthentication: _invokeSecureAuthentication,
     );
   }
 

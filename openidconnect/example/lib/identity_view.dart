@@ -17,69 +17,38 @@ class IdentityView extends StatelessWidget {
           children: [
             Row(
               children: [
-                Text(
-                  "Access Token:",
-                  softWrap: true,
-                  style: captionTheme,
-                ),
-                Text(
-                  identity.accessToken,
-                )
+                Text("Access Token:", softWrap: true, style: captionTheme),
+                Text(identity.accessToken),
               ],
             ),
             Row(
               children: [
-                Text(
-                  "Identity Token:",
-                  style: captionTheme,
-                ),
-                Text(
-                  identity.idToken,
-                )
+                Text("Identity Token:", style: captionTheme),
+                Text(identity.idToken),
               ],
             ),
             Row(
               children: [
-                Text(
-                  "Token Type:",
-                  style: captionTheme,
-                ),
-                Text(
-                  identity.tokenType,
-                )
+                Text("Token Type:", style: captionTheme),
+                Text(identity.tokenType),
               ],
             ),
             Row(
               children: [
-                Text(
-                  "Expires At:",
-                  style: captionTheme,
-                ),
-                Text(
-                  identity.expiresAt.toIso8601String(),
-                )
+                Text("Expires At:", style: captionTheme),
+                Text(identity.expiresAt.toIso8601String()),
               ],
             ),
             Row(
               children: [
-                Text(
-                  "Refresh Token:",
-                  style: captionTheme,
-                ),
-                Text(
-                  identity.refreshToken ?? "Not included",
-                )
+                Text("Refresh Token:", style: captionTheme),
+                Text(identity.refreshToken ?? "Not included"),
               ],
             ),
             Row(
               children: [
-                Text(
-                  "State:",
-                  style: captionTheme,
-                ),
-                Text(
-                  identity.state ?? "Not Included",
-                )
+                Text("State:", style: captionTheme),
+                Text(identity.state ?? "Not Included"),
               ],
             ),
           ],

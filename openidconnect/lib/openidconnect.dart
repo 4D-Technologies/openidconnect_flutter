@@ -291,7 +291,7 @@ class OpenIdConnect {
     final error = resultUri.queryParameters['error'];
 
     if (error != null && error.isNotEmpty) {
-      throw ArgumentError(
+      throw AuthenticationException(
         AUTHORIZE_ERROR_MESSAGE_FORMAT
             .replaceAll("%1", AUTHORIZE_ERROR_CODE)
             .replaceAll("%2", error),

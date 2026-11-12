@@ -151,8 +151,8 @@ void main() {
             request: request,
           ),
           throwsA(
-            isA<ArgumentError>().having(
-              (error) => error.message.toString(),
+            isA<AuthenticationException>().having(
+              (error) => error.toString(),
               'message',
               contains('access_denied'),
             ),

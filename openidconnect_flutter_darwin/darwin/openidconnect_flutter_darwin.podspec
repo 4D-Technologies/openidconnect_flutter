@@ -20,9 +20,10 @@ Darwin implementation for OpenIdConnect.
 
   s.ios.dependency 'Flutter'
   s.osx.dependency 'FlutterMacOS'
+  s.frameworks = 'AuthenticationServices'
 
-  s.ios.pod_target_xcconfig = { 'DEFINES_MODULE' => 'YES', 'EXCLUDED_ARCHS[sdk=iphonesimulator*]' => 'i386' }
-  s.osx.pod_target_xcconfig = { 'DEFINES_MODULE' => 'YES' }
+  s.ios.pod_target_xcconfig = { 'DEFINES_MODULE' => 'YES', 'EXCLUDED_ARCHS[sdk=iphonesimulator*]' => 'i386', 'CLANG_ENABLE_MODULES' => 'YES' }
+  s.osx.pod_target_xcconfig = { 'DEFINES_MODULE' => 'YES', 'CLANG_ENABLE_MODULES' => 'YES' }
 
   s.swift_version = '5.0'
 end
