@@ -245,19 +245,14 @@ void main() {
       );
       addTearDown(client.dispose);
 
-      final firstEvents = <AuthEvent>[];
-      final secondEvents = <AuthEvent>[];
-      final firstSubscription = client.changes.listen(firstEvents.add);
-      final secondSubscription = client.changes.listen(secondEvents.add);
-      addTearDown(firstSubscription.cancel);
-      addTearDown(secondSubscription.cancel);
+      final firstEvent = client.changes.first;
+      final secondEvent = client.changes.first;
 
       client.reportError('shared');
-      await Future<void>.delayed(Duration.zero);
 
       const expected = AuthEvent(AuthEventTypes.Error, message: 'shared');
-      expect(firstEvents, [expected]);
-      expect(secondEvents, [expected]);
+      expect(await firstEvent, expected);
+      expect(await secondEvent, expected);
     });
 
     test('listening after dispose completes without throwing', () async {
