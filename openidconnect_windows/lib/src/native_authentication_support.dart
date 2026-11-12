@@ -5,6 +5,13 @@ import 'package:openidconnect_platform_interface/openidconnect_platform_interfac
 
 typedef DesktopUrlLauncher = Future<void> Function(String url);
 
+typedef WindowsSecureAuthenticationInvoker = Future<String> Function({
+  required String authorizationUrl,
+  required String redirectUrl,
+  int popupWidth,
+  int popupHeight,
+});
+
 DesktopAuthenticationRedirect redirectDetailsForUrl(String redirectUrl) {
   final uri = Uri.parse(redirectUrl);
   final path = uri.path.isEmpty ? '/*' : uri.path;
@@ -29,18 +36,76 @@ DesktopAuthenticationRedirect redirectDetailsForUrl(String redirectUrl) {
     );
   }
 
+  if (uri.scheme == 'https') {
+    if (uri.host.isEmpty) {
+      throw StateError(
+        'HTTPS redirect URLs must include a host. Received: $redirectUrl',
+      );
+    }
+
+    return DesktopAuthenticationRedirect.https(
+      uri: uri,
+      host: uri.host,
+      path: path,
+    );
+  }
+
   if (uri.scheme.isEmpty) {
     throw StateError(
       'Redirect URLs for native interactive authentication must include a URI scheme. Received: $redirectUrl',
     );
   }
 
-  throw UnsupportedError(
-    'Interactive authentication on Windows only supports http://localhost redirect URLs. Received: $redirectUrl',
+  return DesktopAuthenticationRedirect.custom(
+    uri: uri,
+    scheme: uri.scheme,
+    path: path,
   );
 }
 
+bool callbackMatchesRedirect({
+  required String callbackUrl,
+  required String redirectUrl,
+}) {
+  if (callbackUrl == redirectUrl) {
+    return true;
+  }
+  if (!callbackUrl.startsWith(redirectUrl) ||
+      callbackUrl.length <= redirectUrl.length) {
+    return false;
+  }
+  final next = callbackUrl[redirectUrl.length];
+  return next == '?' || next == '#' || next == '/';
+}
+
 Future<String> startNativeAuthenticationFlow({
+  required String authorizationUrl,
+  required String redirectUrl,
+  required WindowsSecureAuthenticationInvoker invokeSecureAuthentication,
+  int popupWidth = 640,
+  int popupHeight = 600,
+}) async {
+  redirectDetailsForUrl(redirectUrl);
+  final result = await invokeSecureAuthentication(
+    authorizationUrl: authorizationUrl,
+    redirectUrl: redirectUrl,
+    popupWidth: popupWidth,
+    popupHeight: popupHeight,
+  );
+  if (result.isEmpty) {
+    throw AuthenticationException(
+      'Native authentication completed without a redirect URL.',
+    );
+  }
+  if (!callbackMatchesRedirect(callbackUrl: result, redirectUrl: redirectUrl)) {
+    throw AuthenticationException(
+      'Interactive authentication returned an unexpected redirect URL.',
+    );
+  }
+  return result;
+}
+
+Future<String> startLoopbackAuthenticationFlow({
   required String authorizationUrl,
   required String redirectUrl,
   required DesktopUrlLauncher launchUrl,
@@ -48,11 +113,17 @@ Future<String> startNativeAuthenticationFlow({
   Duration authenticationTimeout = _interactiveAuthenticationTimeout,
 }) async {
   final redirect = redirectDetailsForUrl(redirectUrl);
+  if (redirect.kind != DesktopAuthenticationRedirectKind.localhost) {
+    throw UnsupportedError(
+      'Windows loopback authentication only supports http://localhost redirect URLs. Received: $redirectUrl',
+    );
+  }
   HttpServer? server;
   StreamSubscription<HttpRequest>? requestSubscription;
+  final port = redirect.port!;
 
   try {
-    server = await HttpServer.bind(InternetAddress.loopbackIPv4, redirect.port);
+    server = await HttpServer.bind(InternetAddress.loopbackIPv4, port);
 
     final redirectCompleter = Completer<String>();
     requestSubscription = server.listen(
@@ -93,7 +164,7 @@ Future<String> startNativeAuthenticationFlow({
       stackTrace,
     );
     throw AuthenticationException(
-      'Failed to bind to http://localhost:${redirect.port}. ${e.message}',
+      'Failed to bind to http://localhost:$port. ${e.message}',
     );
   } on ProcessException catch (e, stackTrace) {
     logOpenIdConnectError(
@@ -176,16 +247,57 @@ Future<void> launchUrlOnWindows(String url) async {
 }
 
 class DesktopAuthenticationRedirect {
-  const DesktopAuthenticationRedirect.localhost({
+  const DesktopAuthenticationRedirect._({
+    required this.kind,
     required this.uri,
-    required this.port,
     required this.path,
+    this.port,
+    this.host,
+    this.scheme,
   });
 
+  const DesktopAuthenticationRedirect.localhost({
+    required Uri uri,
+    required int port,
+    required String path,
+  }) : this._(
+         kind: DesktopAuthenticationRedirectKind.localhost,
+         uri: uri,
+         port: port,
+         path: path,
+       );
+
+  const DesktopAuthenticationRedirect.https({
+    required Uri uri,
+    required String host,
+    required String path,
+  }) : this._(
+         kind: DesktopAuthenticationRedirectKind.https,
+         uri: uri,
+         host: host,
+         path: path,
+       );
+
+  const DesktopAuthenticationRedirect.custom({
+    required Uri uri,
+    required String scheme,
+    required String path,
+  }) : this._(
+         kind: DesktopAuthenticationRedirectKind.custom,
+         uri: uri,
+         scheme: scheme,
+         path: path,
+       );
+
+  final DesktopAuthenticationRedirectKind kind;
   final Uri uri;
-  final int port;
   final String path;
+  final int? port;
+  final String? host;
+  final String? scheme;
 }
+
+enum DesktopAuthenticationRedirectKind { localhost, https, custom }
 
 const _interactiveAuthenticationTimeout = Duration(minutes: 5);
 

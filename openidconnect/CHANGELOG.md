@@ -1,5 +1,14 @@
 # Change Log
 
+## [3.2.0] - November 12th, 2026
+
+- Interactive login on iOS and macOS uses `ASWebAuthenticationSession` through in-repo Dart FFI. macOS `http://localhost` redirects remain on loopback.
+- Interactive login on Windows uses a WebView2 window through in-repo Dart FFI. Android Auth Tab and the Linux/Web browser flows are unchanged.
+- The example app defaults to the public Duende IdentityServer demo (`interactive.public`, authorization code + PKCE) and can switch or add other IdPs at runtime. A built-in SondaHub playground profile covers password grant, which Duende’s public clients and oidcdebugger.com do not enable.
+- Live e2e tests hit the Duende demo for discovery, authorization-code + PKCE, device-code metadata, refresh, userinfo, revocation, and logout, and SondaHub for a successful password grant.
+- Device-code responses accept RFC 8628 `verification_uri` in addition to `verification_url`.
+- HTML responses that start with `<!DOCTYPE` are treated as empty JSON instead of crashing token/logout parsing.
+
 ## [3.1.3] - November 12th, 2026
 
 - Fixes [#94](https://github.com/4D-Technologies/openidconnect_flutter/issues/94): `OpenIdConnectClient.changes` is a broadcast stream so multiple listeners can subscribe without throwing `Bad state: Stream has already been listened to`. The stream does not replay past events; use `currentEvent` for the latest event, including startup `NotLoggedIn` / `Success`.

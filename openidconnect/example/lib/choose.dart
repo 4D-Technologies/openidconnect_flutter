@@ -1,5 +1,7 @@
 import 'package:material_ui/material_ui.dart';
 import 'package:openidconnect_example/client.dart';
+import 'package:openidconnect_example/idp_picker.dart';
+
 import 'device.dart';
 import 'interactive.dart';
 import 'password.dart';
@@ -11,51 +13,50 @@ class ChoosePage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Choose Your OpenIdConnect Flow'),
-      ),
+      appBar: AppBar(title: const Text('Choose Your OpenIdConnect Flow')),
       body: Center(
         child: Column(
           children: [
+            const IdpPicker(),
             TextButton(
               onPressed: () => Navigator.of(context).push(
                 MaterialPageRoute<void>(
-                  builder: (context) => InteractivePage(),
+                  builder: (context) => const InteractivePage(),
                 ),
               ),
-              child: Text("Interactive Authorization Code PKCE"),
+              child: const Text('Interactive Authorization Code PKCE'),
             ),
             TextButton(
               onPressed: () => Navigator.of(context).push(
                 MaterialPageRoute<void>(
-                  builder: (context) => DeviceCodePage(),
+                  builder: (context) => const DeviceCodePage(),
                 ),
               ),
-              child: Text("Device Code"),
+              child: const Text('Device Code'),
             ),
             TextButton(
               onPressed: () => Navigator.of(context).push(
                 MaterialPageRoute<void>(
-                  builder: (context) => PasswordPage(),
+                  builder: (context) => const PasswordPage(),
                 ),
               ),
-              child: Text("Password"),
+              child: const Text('Password'),
             ),
             TextButton(
               onPressed: () => Navigator.of(context).push(
                 MaterialPageRoute<void>(
-                  builder: (context) => ClientPage(),
+                  builder: (context) => const ClientPage(),
                 ),
               ),
-              child: Text("Client Usage Example"),
+              child: const Text('Client Usage Example'),
             ),
             TextButton(
               onPressed: () => Navigator.of(context).push(
                 MaterialPageRoute<void>(
-                  builder: (context) => RedirectLoopResultPage(),
+                  builder: (context) => const RedirectLoopResultPage(),
                 ),
               ),
-              child: Text("Redirect Loop Result Page"),
+              child: const Text('Redirect Loop Result Page'),
             ),
           ],
         ),

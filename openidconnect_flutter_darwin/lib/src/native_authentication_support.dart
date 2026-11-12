@@ -4,18 +4,16 @@ import 'dart:io';
 import 'package:flutter/services.dart';
 import 'package:openidconnect_platform_interface/openidconnect_platform_interface.dart';
 
-typedef DarwinNativeAuthenticationInvoker =
-    Future<String?> Function({
-      required String authorizationUrl,
-      required String redirectUrl,
-      bool preferEphemeralSession,
-    });
+typedef DarwinNativeAuthenticationInvoker = Future<String?> Function({
+  required String authorizationUrl,
+  required String redirectUrl,
+  bool preferEphemeralSession,
+});
 
-typedef MacOSLoopbackAuthenticationRunner =
-    Future<String> Function({
-      required Uri redirectUri,
-      required String authorizationUrl,
-    });
+typedef MacOSLoopbackAuthenticationRunner = Future<String> Function({
+  required Uri redirectUri,
+  required String authorizationUrl,
+});
 
 DarwinAuthenticationRedirect redirectDetailsForUrl(String redirectUrl) {
   final uri = Uri.parse(redirectUrl);

@@ -17,7 +17,7 @@ You should not add `openidconnect_flutter_darwin` to Xcode manually. Add the roo
 
 ## Apple-platform configuration
 
-Interactive authentication uses the system browser/session through the in-repo Darwin bridge included in this package.
+Interactive authentication uses `ASWebAuthenticationSession` on both **iOS and macOS** through an in-plugin Dart FFI bridge. macOS `http://localhost` redirects still use a local loopback server because Apple's session API cannot bind HTTP localhost callbacks.
 
 Required host-app setup:
 

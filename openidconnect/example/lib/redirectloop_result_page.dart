@@ -3,6 +3,7 @@ import 'package:openidconnect/openidconnect.dart';
 
 import 'identity_view.dart';
 import 'credentials.dart';
+import 'idp_catalog.dart';
 
 class RedirectLoopResultPage extends StatefulWidget {
   const RedirectLoopResultPage({super.key});
@@ -13,17 +14,26 @@ class RedirectLoopResultPage extends StatefulWidget {
 
 class _RedirectLoopResultPageState extends State<RedirectLoopResultPage> {
   final _formKey = GlobalKey<FormState>();
-  String discoveryUrl = defaultDiscoveryUrl;
+  late IdpProfile profile;
+  late String discoveryUrl;
   OpenIdConfiguration? discoveryDocument;
   AuthorizationResponse? identity;
   String? errorMessage;
+  bool _loadedProfile = false;
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    if (_loadedProfile) return;
+    _loadedProfile = true;
+    profile = IdpCatalog.of(context).selected;
+    discoveryUrl = profile.discoveryUrl;
+  }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Complete startup'),
-      ),
+      appBar: AppBar(title: const Text('Complete startup')),
       body: Center(
         child: Form(
           key: _formKey,
@@ -53,8 +63,9 @@ class _RedirectLoopResultPageState extends State<RedirectLoopResultPage> {
                   _formKey.currentState!.save();
                   if (!_formKey.currentState!.validate()) return;
                   try {
-                    final configuration =
-                        await OpenIdConnect.getConfiguration(discoveryUrl);
+                    final configuration = await OpenIdConnect.getConfiguration(
+                      discoveryUrl,
+                    );
                     setState(() {
                       discoveryDocument = configuration;
                       errorMessage = null;
@@ -75,9 +86,9 @@ class _RedirectLoopResultPageState extends State<RedirectLoopResultPage> {
                   onPressed: () async {
                     try {
                       final response = await OpenIdConnect.processStartup(
-                        clientId: defaultClientId,
-                        clientSecret: defaultClientSecret,
-                        scopes: defaultscopes,
+                        clientId: profile.clientId,
+                        clientSecret: profile.clientSecret,
+                        scopes: profile.scopes,
                         configuration: discoveryDocument!,
                         redirectUrl: defaultRedirectUrl,
                         autoRefresh: true,

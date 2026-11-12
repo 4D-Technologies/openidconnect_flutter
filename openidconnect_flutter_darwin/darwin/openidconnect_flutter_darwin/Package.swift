@@ -21,7 +21,11 @@ let package = Package(
             dependencies: [
                 .product(name: "FlutterFramework", package: "FlutterFramework")
             ],
-            resources: []
+            linkerSettings: [
+                .linkedFramework("AuthenticationServices"),
+                .linkedFramework("AppKit", .when(platforms: [.macOS])),
+                .linkedFramework("UIKit", .when(platforms: [.iOS])),
+            ]
         )
     ]
 )

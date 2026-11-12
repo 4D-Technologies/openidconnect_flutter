@@ -1,13 +1,11 @@
 import 'package:flutter/services.dart';
 import 'package:flutter/widgets.dart';
 import 'package:openidconnect_flutter_darwin/src/native_authentication_support.dart';
+import 'package:openidconnect_flutter_darwin/src/web_auth_ffi.dart';
 import 'package:openidconnect_platform_interface/openidconnect_platform_interface.dart';
 
 const MethodChannel _secureStorageChannel = MethodChannel(
   'plugins.concerti.io/openidconnect_secure_storage',
-);
-const MethodChannel _darwinAuthenticationChannel = MethodChannel(
-  'plugins.concerti.io/openidconnect_darwin_auth',
 );
 
 class OpenIdConnectDarwin extends OpenIdConnectPlatform {
@@ -87,12 +85,11 @@ class OpenIdConnectDarwin extends OpenIdConnectPlatform {
     required String redirectUrl,
     bool preferEphemeralSession = false,
   }) {
-    return _darwinAuthenticationChannel
-        .invokeMethod<String>('authorizeInteractive', {
-          'authorizationUrl': authorizationUrl,
-          'redirectUrl': redirectUrl,
-          'preferEphemeralSession': preferEphemeralSession,
-        });
+    return startDarwinWebAuthSession(
+      authorizationUrl: authorizationUrl,
+      redirectUrl: redirectUrl,
+      preferEphemeralSession: preferEphemeralSession,
+    );
   }
 
   static Future<String> _defaultMacOSLoopbackAuthenticationRunner({

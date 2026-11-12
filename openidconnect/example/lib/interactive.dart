@@ -1,7 +1,9 @@
 import 'package:flutter/foundation.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:openidconnect/openidconnect.dart';
+
 import 'credentials.dart';
+import 'idp_catalog.dart';
 
 import 'identity_view.dart';
 
@@ -15,13 +17,24 @@ class InteractivePage extends StatefulWidget {
 class _InteractivePageState extends State<InteractivePage> {
   final _formKey = GlobalKey<FormState>();
 
-  String discoveryUrl = defaultDiscoveryUrl;
+  late IdpProfile profile;
+  late String discoveryUrl;
   OpenIdConfiguration? discoveryDocument;
   OpenIdConnectClient? client;
   AuthorizationResponse? identity;
   bool usePopup = true;
+  bool _loadedProfile = false;
 
   String? errorMessage;
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    if (_loadedProfile) return;
+    _loadedProfile = true;
+    profile = IdpCatalog.of(context).selected;
+    discoveryUrl = profile.discoveryUrl;
+  }
 
   Future<void> lookupSettings() async {
     _formKey.currentState!.save();
@@ -29,17 +42,7 @@ class _InteractivePageState extends State<InteractivePage> {
 
     try {
       final configuration = await OpenIdConnect.getConfiguration(discoveryUrl);
-      client = await OpenIdConnectClient.create(
-        clientId: defaultClientId,
-        discoveryDocumentUrl: discoveryUrl,
-        scopes: defaultscopes,
-        audiences: defaultAudience,
-        clientSecret: defaultClientSecret,
-        redirectUrl: defaultRedirectUrl,
-        webUseRefreshTokens: true,
-        autoRefresh: true,
-        encryptionKey: defaultEncryptionKey,
-      );
+      client = await createExampleClient(profile: profile);
       setState(() {
         discoveryDocument = configuration;
         errorMessage = null;
@@ -58,7 +61,8 @@ class _InteractivePageState extends State<InteractivePage> {
 
       final response = await client!.loginInteractive(
         context: context,
-        title: "Login",
+        title: 'Login',
+        userNameHint: profile.usernameHint,
         useWebPopup: usePopup,
       );
 
@@ -88,13 +92,13 @@ class _InteractivePageState extends State<InteractivePage> {
             children: [
               TextFormField(
                 textInputAction: TextInputAction.done,
-                decoration: InputDecoration(labelText: "Discovery Url"),
+                decoration: const InputDecoration(labelText: 'Discovery Url'),
                 keyboardType: TextInputType.url,
                 initialValue: discoveryUrl,
                 onChanged: (value) => discoveryUrl = value,
                 validator: (value) {
                   const errorMessage =
-                      "Please enter a valid openid discovery document url";
+                      'Please enter a valid openid discovery document url';
                   if (value == null || value.isEmpty) return errorMessage;
                   try {
                     Uri.parse(value);
@@ -106,14 +110,14 @@ class _InteractivePageState extends State<InteractivePage> {
               ),
               TextButton.icon(
                 onPressed: lookupSettings,
-                icon: Icon(Icons.search),
-                label: Text("Lookup OpenId Connect Configuration"),
+                icon: const Icon(Icons.search),
+                label: const Text('Lookup OpenId Connect Configuration'),
               ),
               Visibility(
                 visible: kIsWeb,
                 child: SwitchListTile.adaptive(
                   value: usePopup,
-                  title: Text("Use Web Popup"),
+                  title: const Text('Use Web Popup'),
                   onChanged: (value) {
                     setState(() {
                       usePopup = value;
@@ -125,8 +129,8 @@ class _InteractivePageState extends State<InteractivePage> {
                 visible: discoveryDocument != null,
                 child: TextButton.icon(
                   onPressed: authorize,
-                  icon: Icon(Icons.login),
-                  label: Text("Login"),
+                  icon: const Icon(Icons.login),
+                  label: const Text('Login'),
                 ),
               ),
               Visibility(
@@ -135,7 +139,7 @@ class _InteractivePageState extends State<InteractivePage> {
               ),
               Visibility(
                 visible: errorMessage != null,
-                child: SelectableText(errorMessage ?? ""),
+                child: SelectableText(errorMessage ?? ''),
               ),
               Visibility(
                 visible: identity != null,
@@ -151,8 +155,8 @@ class _InteractivePageState extends State<InteractivePage> {
                       identity = null;
                     });
                   },
-                  icon: Icon(Icons.logout),
-                  label: Text("Logout"),
+                  icon: const Icon(Icons.logout),
+                  label: const Text('Logout'),
                 ),
               ),
             ],

@@ -8,15 +8,15 @@ Because this project is endorsed by the openidconnect project, you need not add 
 
 - Dart SDK: `>=3.13.0 <4.0.0`
 - Flutter SDK: `>=3.47.0`
+- [Microsoft Edge WebView2 Runtime](https://developer.microsoft.com/microsoft-edge/webview2/) (preinstalled on Windows 11)
 
 ## Windows configuration
 
-Use an `http://localhost[:port]/path` redirect URL for Windows interactive authentication.
+Interactive authentication opens a WebView2 window and intercepts the configured redirect URI. Custom schemes, HTTPS callbacks, and `http://localhost[:port]/path` are supported.
 
 Required host-app setup:
 
-1. Register the exact loopback callback URL with your identity provider.
-2. Ensure the app can open the system browser.
-3. Ensure the local machine can receive the loopback callback on the configured port/path.
+1. Register the exact redirect URI with your identity provider.
+2. Ensure the WebView2 Runtime is installed on the machine.
 
 No plist or Android-manifest permission prompts are required by this package itself on Windows.

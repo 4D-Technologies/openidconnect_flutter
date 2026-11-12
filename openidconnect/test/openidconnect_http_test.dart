@@ -152,6 +152,11 @@ void main() {
 
       expect(response.deviceCode, 'device-code');
       expect(response.userCode, 'ABCD-EFGH');
+      expect(response.verificationUrl, baseUri.resolve('/verify').toString());
+      expect(
+        response.verificationUrlComplete,
+        baseUri.resolve('/verify-complete').toString(),
+      );
     },
   );
 

@@ -1,5 +1,10 @@
 # Changelog
 
+## [3.2.0] - November 12th, 2026
+
+- Make interactive login a WebView2 authentication window by default, called through Dart FFI.
+- Accept custom-scheme, HTTPS, and `http://localhost` redirect URIs intercepted by that window.
+
 ## [3.1.0] - October 16th, 2026
 
 - Align package version with `openidconnect` 3.1.x.

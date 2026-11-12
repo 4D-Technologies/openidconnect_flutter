@@ -1,8 +1,10 @@
 import 'package:material_ui/material_ui.dart';
 import 'package:openidconnect/openidconnect.dart';
+
 import 'identity_view.dart';
 
 import 'credentials.dart';
+import 'idp_catalog.dart';
 
 class DeviceCodePage extends StatefulWidget {
   const DeviceCodePage({super.key});
@@ -15,11 +17,22 @@ class _DeviceCodePageState extends State<DeviceCodePage> {
   final _formKey = GlobalKey<FormState>();
 
   OpenIdConnectClient? client;
-  String discoveryUrl = defaultDiscoveryUrl;
+  late IdpProfile profile;
+  late String discoveryUrl;
   OpenIdConfiguration? discoveryDocument;
   AuthorizationResponse? identity;
+  bool _loadedProfile = false;
 
   String? errorMessage;
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    if (_loadedProfile) return;
+    _loadedProfile = true;
+    profile = IdpCatalog.of(context).selected;
+    discoveryUrl = profile.discoveryUrl;
+  }
 
   Future<void> lookupSettings() async {
     _formKey.currentState!.save();
@@ -27,16 +40,10 @@ class _DeviceCodePageState extends State<DeviceCodePage> {
 
     try {
       final configuration = await OpenIdConnect.getConfiguration(discoveryUrl);
-      client = await OpenIdConnectClient.create(
-          clientId: defaultClientId,
-          discoveryDocumentUrl: discoveryUrl,
-          scopes: defaultscopes,
-          audiences: defaultAudience,
-          clientSecret: defaultClientSecret,
-          redirectUrl: defaultRedirectUrl,
-          webUseRefreshTokens: true,
-          autoRefresh: true,
-          encryptionKey: defaultEncryptionKey);
+      client = await createExampleClient(
+        profile: profile,
+        clientId: profile.resolvedDeviceClientId,
+      );
       setState(() {
         discoveryDocument = configuration;
         errorMessage = null;
@@ -69,9 +76,7 @@ class _DeviceCodePageState extends State<DeviceCodePage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Device Code Flow Example'),
-      ),
+      appBar: AppBar(title: const Text('Device Code Flow Example')),
       body: Center(
         child: Form(
           key: _formKey,
@@ -113,9 +118,7 @@ class _DeviceCodePageState extends State<DeviceCodePage> {
                 visible: errorMessage != null,
                 child: Text(
                   errorMessage ?? "",
-                  style: Theme.of(context)
-                      .textTheme
-                      .bodyLarge!
+                  style: Theme.of(context).textTheme.bodyLarge!
                       .copyWith(color: Theme.of(context).colorScheme.error),
                 ),
               ),

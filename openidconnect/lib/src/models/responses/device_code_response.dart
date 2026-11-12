@@ -21,16 +21,24 @@ class DeviceCodeResponse {
   });
 
   /// Creates a [DeviceCodeResponse] from device authorization endpoint JSON.
-  factory DeviceCodeResponse.fromJson(Map<String, dynamic> json) =>
-      DeviceCodeResponse._(
-        deviceCode: json["device_code"].toString(),
-        userCode: json["user_code"].toString(),
-        verificationUrl: json["verification_url"].toString(),
-        expiresAt: DateTime.now().add(
-          Duration(seconds: json["expires_in"] as int),
-        ),
-        pollingInterval: (json["interval"] ?? 5) as int,
-        verificationUrlComplete: json["verification_uri_complete"].toString(),
-        qrCodeUrl: json['qr_code']?.toString(),
-      );
+  factory DeviceCodeResponse.fromJson(Map<String, dynamic> json) {
+    final verificationUrl =
+        json['verification_uri'] ?? json['verification_url'];
+    final verificationUrlComplete =
+        json['verification_uri_complete'] ?? json['verification_url_complete'];
+    final expiresIn = json['expires_in'];
+    final interval = json['interval'] ?? 5;
+
+    return DeviceCodeResponse._(
+      deviceCode: json['device_code'].toString(),
+      userCode: json['user_code'].toString(),
+      verificationUrl: verificationUrl.toString(),
+      expiresAt: DateTime.now().add(
+        Duration(seconds: (expiresIn as num).toInt()),
+      ),
+      pollingInterval: (interval as num).toInt(),
+      verificationUrlComplete: verificationUrlComplete.toString(),
+      qrCodeUrl: json['qr_code']?.toString(),
+    );
+  }
 }
