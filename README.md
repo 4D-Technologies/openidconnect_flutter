@@ -59,7 +59,7 @@ Currently supports:
 
 1. Add `openidconnect` to your `pubspec.yaml` file.
 2. Import `package:openidconnect/openidconnect.dart`.
-3. Call the various methods on `OpenIdConnect`, or use `OpenIdConnectClient` and subscribe to its events.
+3. Call the various methods on `OpenIdConnect`, or use `OpenIdConnectClient` and subscribe to `changes`. That stream is broadcast (multiple listeners are supported) and does not replay past events; read `currentEvent` for the latest event, including the startup `NotLoggedIn` / `Success` from `create`.
 4. If you still call `initalizeEncryption(...)` or pass `encryptionKey` into `OpenIdConnectClient.create(...)`, you may keep doing so while upgrading. In `2.x` those APIs are compatibility no-ops because endorsed secure storage handles persistence internally.
 5. Review the platform configuration notes below before testing interactive sign-in.
 6. In 3.0.1, `logout()` / `logoutInteractive()` / `revokeTokens()` accept an optional identity snapshot so you can `clearIdentity()` first and still revoke. Revocation follows RFC 7009 (refresh token if present, otherwise access token). `unsupported_token_type` is treated as success for that token.

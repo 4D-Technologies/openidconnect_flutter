@@ -9,7 +9,7 @@ class OpenIdConnectClient {
   /// Default scopes requested when none are supplied by the caller.
   static const DEFAULT_SCOPES = ["openid", "profile", "email"];
 
-  final _eventStreamController = StreamController<AuthEvent>();
+  final _eventStreamController = StreamController<AuthEvent>.broadcast();
 
   final String discoveryDocumentUrl;
   final String clientId;
@@ -144,8 +144,12 @@ class OpenIdConnectClient {
   }
 
   /// Stream of authentication lifecycle events raised by this client.
-  Stream<AuthEvent> get changes =>
-      _eventStreamController.stream.asBroadcastStream();
+  ///
+  /// This is a broadcast stream, so multiple listeners can subscribe at the
+  /// same time. Events are not buffered: listeners only receive events emitted
+  /// after they subscribe. Read [currentEvent] for the latest event, including
+  /// the startup `NotLoggedIn` or `Success` raised during [create].
+  Stream<AuthEvent> get changes => _eventStreamController.stream;
 
   /// The currently loaded identity, if any.
   OpenIdIdentity? get identity => _identity;

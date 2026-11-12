@@ -1,5 +1,9 @@
 # Change Log
 
+## [3.1.3] - November 12th, 2026
+
+- Fixes [#94](https://github.com/4D-Technologies/openidconnect_flutter/issues/94): `OpenIdConnectClient.changes` is a broadcast stream so multiple listeners can subscribe without throwing `Bad state: Stream has already been listened to`. The stream does not replay past events; use `currentEvent` for the latest event, including startup `NotLoggedIn` / `Success`.
+
 ## [3.1.2] - October 21st, 2026
 
 - Fixes [#91](https://github.com/4D-Technologies/openidconnect_flutter/issues/91): `OpenIdConnectClient.create` no longer aborts when web secure storage rejects a persisted master key or ciphertext with a browser `DOMException`. Unreadable stored credentials are discarded and the client starts logged out.

@@ -68,6 +68,7 @@ Currently supports:
 6. If you need multiple `OpenIdConnectClient` instances to keep separate persisted credentials, provide a distinct `tenantId` to each client. When `tenantId` is null, the library uses the legacy global storage keys.
 7. Logging uses the shared `openIdConnectLogger`. Replace that instance to integrate with your app logger. The package depends on `logger` `>=1.0.0 <3.0.0` so host apps can keep either 1.x or 2.x.
 8. `logout()` and `logoutInteractive()` return a `LogoutResult`. They snapshot tokens at call time (or accept an explicit `identity`) so you can `clearIdentity()` first and still revoke. Revocation follows RFC 7009: refresh token when present, otherwise access token, and never the ID token. `unsupported_token_type` is treated as success for that token. Local identity is cleared only for the session that started logout, so a detached logout cannot wipe a newer login. If a real remote revoke fails, the status is `LogoutStatus.remoteFailure`. This is a 3.0.0 breaking change from the 2.x `Future<void>` / `Future<String?>` signatures.
+9. `OpenIdConnectClient.changes` is a broadcast stream. Multiple listeners can subscribe; it does not replay past events. Use `currentEvent` for the latest event, including the startup `NotLoggedIn` / `Success` from `create`.
 
    To route to login immediately and still revoke in the background (`unawaited` is from `dart:async`):
 
