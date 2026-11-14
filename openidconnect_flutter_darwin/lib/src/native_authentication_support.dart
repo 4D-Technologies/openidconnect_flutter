@@ -178,24 +178,32 @@ Future<String> _awaitLoopbackRedirect(
   String expectedPath,
 ) async {
   await for (final request in server) {
-    if (request.method != 'GET') {
-      request.response.statusCode = HttpStatus.methodNotAllowed;
+    try {
+      if (request.method != 'GET') {
+        request.response.statusCode = HttpStatus.methodNotAllowed;
+        await request.response.close();
+        continue;
+      }
+
+      final requestedUri = request.requestedUri;
+      if (expectedPath != '/*' && requestedUri.path != expectedPath) {
+        request.response.statusCode = HttpStatus.notFound;
+        await request.response.close();
+        continue;
+      }
+
+      request.response.statusCode = HttpStatus.ok;
+      request.response.headers.contentType = ContentType.html;
+      request.response.write(_loopbackAuthenticationCompleteHtml);
       await request.response.close();
+      return requestedUri.toString();
+    } on SocketException {
+      // The browser dropped this connection (for example a speculative
+      // preconnect). Keep waiting for the real redirect.
+      continue;
+    } on HttpException {
       continue;
     }
-
-    final requestedUri = request.requestedUri;
-    if (expectedPath != '/*' && requestedUri.path != expectedPath) {
-      request.response.statusCode = HttpStatus.notFound;
-      await request.response.close();
-      continue;
-    }
-
-    request.response.statusCode = HttpStatus.ok;
-    request.response.headers.contentType = ContentType.html;
-    request.response.write(_loopbackAuthenticationCompleteHtml);
-    await request.response.close();
-    return requestedUri.toString();
   }
 
   throw AuthenticationException(
