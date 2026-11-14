@@ -167,8 +167,10 @@ void RegisterWindowClass() {
   window_class.hCursor = LoadCursor(nullptr, IDC_ARROW);
   window_class.hbrBackground = reinterpret_cast<HBRUSH>(COLOR_WINDOW + 1);
   window_class.lpszClassName = kWindowClass;
-  RegisterClassExW(&window_class);
-  g_class_registered = true;
+  // Only remember success so a transient failure is retried by the next login.
+  if (RegisterClassExW(&window_class) != 0) {
+    g_class_registered = true;
+  }
 }
 
 HRESULT AttachWebView(AuthSession* session) {
@@ -263,7 +265,11 @@ DWORD WINAPI AuthThreadProc(LPVOID param) {
     return 0;
   }
 
-  session->hwnd = hwnd;
+  {
+    // Read under g_mutex by InvokeCompletion and the cancel entry point.
+    std::lock_guard<std::mutex> lock(g_mutex);
+    session->hwnd = hwnd;
+  }
   SetWindowLongPtr(hwnd, GWLP_USERDATA, reinterpret_cast<LONG_PTR>(session));
 
   const HRESULT hr = AttachWebView(session);

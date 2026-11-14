@@ -5,8 +5,8 @@
 // windows_webview2_driver.mjs over the WebView2 DevTools port.
 //
 //   $env:WEBVIEW2_ADDITIONAL_BROWSER_ARGUMENTS = '--remote-debugging-port=9222'
-//   $env:OIDC_E2E_DRIVER = 'login,cancel,login,login'
-//   Start-Process node integration_test/windows_webview2_driver.mjs 9222 login,cancel,login,login
+//   $env:OIDC_E2E_DRIVER = '1'
+//   Start-Process node -WindowStyle Hidden -ArgumentList 'integration_test/windows_webview2_driver.mjs','9222','login,cancel,login,login,cancel,cancel,cancel,cancel,cancel'
 //   flutter test integration_test/windows_webview2_login_test.dart -d windows
 import 'dart:io';
 

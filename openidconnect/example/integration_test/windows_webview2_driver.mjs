@@ -87,18 +87,24 @@ async function submitCredentials(page) {
   const cdp = new Cdp(page.webSocketDebuggerUrl);
   try {
     const end = Date.now() + 60000;
+    let submittedLogin = false;
+    let submittedConsent = false;
     while (Date.now() < end) {
       const state = await cdp.eval(`(() => {
+        const submittedLogin = ${submittedLogin};
+        const submittedConsent = ${submittedConsent};
         const u = document.querySelector('#Input_Username, input[name="Input.Username"]');
         const p = document.querySelector('#Input_Password, input[name="Input.Password"]');
         const login = document.querySelector('button[value="login"]');
-        if (u && p && login) {
+        if (!submittedLogin && u && p && login) {
           u.value = 'alice'; p.value = 'alice'; login.click(); return 'submitted-login';
         }
         const yes = document.querySelector('button[value="yes"]');
-        if (yes) { yes.click(); return 'submitted-consent'; }
+        if (!submittedConsent && yes) { yes.click(); return 'submitted-consent'; }
         return 'waiting:' + location.href;
       })()`);
+      if (state === 'submitted-login') submittedLogin = true;
+      if (state === 'submitted-consent') submittedConsent = true;
       if (state && !state.startsWith('waiting')) log(state);
       if (!(await targets()).some((t) => t.id === page.id)) return;
       await sleep(500);
