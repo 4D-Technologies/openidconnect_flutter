@@ -50,16 +50,70 @@ void main() {
         throwsA(isA<StateError>()),
       );
     });
+  });
 
-    test('requires an explicit port on localhost redirects', () {
-      expect(
-        () => redirectDetailsForUrl('http://localhost/callback'),
-        throwsA(isA<StateError>()),
+  group('runMacOSLoopbackAuthenticationFlow', () {
+    test('requires an explicit port', () async {
+      for (final url in [
+        'http://localhost/callback',
+        'http://localhost:0/cb',
+      ]) {
+        await expectLater(
+          runMacOSLoopbackAuthenticationFlow(
+            redirectUri: Uri.parse(url),
+            authorizationUrl: 'https://issuer.example.com/authorize',
+            launchUrl: (_) async {},
+          ),
+          throwsA(isA<StateError>()),
+        );
+      }
+    });
+
+    test('times out as user closed and releases the port', () async {
+      final probe = await ServerSocket.bind('127.0.0.1', 0);
+      final port = probe.port;
+      await probe.close();
+
+      await expectLater(
+        runMacOSLoopbackAuthenticationFlow(
+          redirectUri: Uri.parse('http://localhost:$port/callback'),
+          authorizationUrl: 'https://issuer.example.com/authorize',
+          launchUrl: (_) async {},
+          authenticationTimeout: const Duration(milliseconds: 50),
+        ),
+        throwsA(
+          isA<AuthenticationException>().having(
+            (e) => e.toString(),
+            'text',
+            contains(ERROR_USER_CLOSED),
+          ),
+        ),
       );
-      expect(
-        () => redirectDetailsForUrl('http://localhost:0/callback'),
-        throwsA(isA<StateError>()),
+
+      final server = await HttpServer.bind(InternetAddress.loopbackIPv4, port);
+      await server.close();
+    });
+
+    test('returns the redirect delivered to the loopback port', () async {
+      final probe = await ServerSocket.bind('127.0.0.1', 0);
+      final port = probe.port;
+      await probe.close();
+
+      final result = await runMacOSLoopbackAuthenticationFlow(
+        redirectUri: Uri.parse('http://localhost:$port/callback'),
+        authorizationUrl: 'https://issuer.example.com/authorize',
+        launchUrl: (_) async {
+          final client = HttpClient();
+          final request = await client.getUrl(
+            Uri.parse('http://127.0.0.1:$port/callback?code=abc'),
+          );
+          final response = await request.close();
+          await response.drain<void>();
+          client.close();
+        },
       );
+
+      expect(result, 'http://127.0.0.1:$port/callback?code=abc');
     });
   });
 

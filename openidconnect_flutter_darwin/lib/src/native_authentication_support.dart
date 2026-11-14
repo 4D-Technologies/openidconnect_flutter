@@ -26,15 +26,9 @@ DarwinAuthenticationRedirect redirectDetailsForUrl(String redirectUrl) {
       );
     }
 
-    if (!uri.hasPort || uri.port <= 0) {
-      throw StateError(
-        'Loopback redirect URLs for macOS interactive authentication must include an explicit port greater than 0. Received: $redirectUrl',
-      );
-    }
-
     return DarwinAuthenticationRedirect.localhost(
       uri: uri,
-      port: uri.port,
+      port: uri.hasPort ? uri.port : 0,
       path: path,
     );
   }
@@ -117,27 +111,47 @@ Future<String> runMacOSLoopbackAuthenticationFlow({
   required Uri redirectUri,
   required String authorizationUrl,
   Duration authenticationTimeout = _interactiveAuthenticationTimeout,
+  Future<void> Function(String url) launchUrl = _openUrlOnMacOS,
 }) async {
+  // Port 0 would bind a random port that can never match a registered
+  // redirect URI, so require the port to be spelled out.
+  if (!redirectUri.hasPort || redirectUri.port <= 0) {
+    throw StateError(
+      'Loopback redirect URLs for macOS interactive authentication must include an explicit port greater than 0. Received: $redirectUri',
+    );
+  }
+
   final server = await HttpServer.bind(
     InternetAddress.loopbackIPv4,
     redirectUri.port,
   );
 
   try {
-    final launchResult = await Process.run('open', [authorizationUrl]);
-    if (launchResult.exitCode != 0) {
-      throw AuthenticationException(
-        'Unable to launch the system browser for interactive authentication.',
-      );
-    }
-
     final expectedPath = redirectUri.path.isEmpty ? '/*' : redirectUri.path;
-    return await _awaitLoopbackRedirect(server, expectedPath).timeout(
+    final redirect = _awaitLoopbackRedirect(server, expectedPath);
+    // If the launch fails or times out, the server closes in `finally` and this
+    // future errors with nobody listening; that error is expected.
+    redirect.ignore();
+    // The browser launch counts against the timeout too, so a hung `open`
+    // cannot keep the port bound forever.
+    return await Future.sync(() async {
+      await launchUrl(authorizationUrl);
+      return redirect;
+    }).timeout(
       authenticationTimeout,
       onTimeout: () => throw AuthenticationException(ERROR_USER_CLOSED),
     );
   } finally {
     await server.close(force: true);
+  }
+}
+
+Future<void> _openUrlOnMacOS(String url) async {
+  final launchResult = await Process.run('open', [url]);
+  if (launchResult.exitCode != 0) {
+    throw AuthenticationException(
+      'Unable to launch the system browser for interactive authentication.',
+    );
   }
 }
 
