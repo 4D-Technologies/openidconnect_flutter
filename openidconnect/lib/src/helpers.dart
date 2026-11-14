@@ -17,6 +17,19 @@ Map<String, dynamic> _decodeJwtPayload(String token) {
   return payload;
 }
 
+/// An [HttpResponseException] that also remembers the HTTP status code, so
+/// callers can tell a definitive rejection (401, 400 + OAuth error) from a
+/// transient failure.
+class _HttpStatusResponseException extends HttpResponseException {
+  _HttpStatusResponseException(
+    this.statusCode,
+    super.errorMessage, [
+    super.error,
+  ]);
+
+  final int statusCode;
+}
+
 /// Executes an HTTP request with retry behavior and decodes JSON responses.
 ///
 /// Returns `null` when the response body is empty.
@@ -85,7 +98,8 @@ Future<Map<String, dynamic>?> httpRetry<T extends http.Response>(
         if (jsonResponse["error_description"] != null) {
           error += ": ${jsonResponse["error_description"]}";
         }
-        final exception = HttpResponseException(
+        final exception = _HttpStatusResponseException(
+          result.statusCode,
           ERROR_MESSAGE_FORMAT.replaceAll("%2", error),
           errorCode,
         );
@@ -101,7 +115,8 @@ Future<Map<String, dynamic>?> httpRetry<T extends http.Response>(
         }
         throw exception;
       } else {
-        final exception = HttpResponseException(
+        final exception = _HttpStatusResponseException(
+          result.statusCode,
           ERROR_MESSAGE_FORMAT.replaceAll("%2", "unknown_error"),
         );
         logOpenIdConnectError(

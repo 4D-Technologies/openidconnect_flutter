@@ -1,5 +1,14 @@
 # Change Log
 
+## [3.2.1] - November 14th, 2026
+
+- Fixes [#98](https://github.com/4D-Technologies/openidconnect_flutter/issues/98): `OpenIdConnectClient.refresh()` no longer signs the user out when the access token has expired and the refresh request fails for a transient reason (connection refused, timeout, 5xx / proxy error, 429, non-JSON or malformed token response). The identity and refresh token are kept and `AuthEventTypes.Error` is raised.
+- The identity is cleared and `AuthEventTypes.NotLoggedIn` raised only when the authorization server rejects the refresh: any `401`, or a `400` whose body carries an OAuth error code (`invalid_grant`, `invalid_client`, `invalid_scope`, `interaction_required`, ...). A `400` without an OAuth error (proxy/WAF page, plain text) or with `temporarily_unavailable` / `server_error` is treated as transient.
+- With `autoRefresh` enabled, a transient refresh failure is retried automatically up to 3 times with exponential backoff (2s, 4s, 8s). `OpenIdConnectClient.maxRefreshRetries` exposes the limit. The next explicit `refresh()` starts a fresh set of retries.
+- Startup (`create`) with an expired identity whose refresh fails now discards the expired identity and raises only `AuthEventTypes.NotLoggedIn`; it does not retry or raise `Error`.
+- The `identity` getter may return an identity whose access token has expired after a transient failure; check `hasTokenExpired`, `isLoggedIn()` or `verifyToken()` before using it.
+- A refresh that was in flight when `logout()` or a new login happened no longer touches the newer session.
+
 ## [3.2.0] - November 12th, 2026
 
 - Interactive login on iOS and macOS uses `ASWebAuthenticationSession` through in-repo Dart FFI. macOS `http://localhost` redirects remain on loopback.
