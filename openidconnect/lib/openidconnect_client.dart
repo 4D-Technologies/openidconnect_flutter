@@ -687,33 +687,20 @@ class OpenIdConnectClient {
         return false;
       }
 
-      // In case when refresh request fails but we know that identity is present
-      // and the token has not expired, we can keep the identity and raise an
-      // error event to notify the app that there is an issue while refreshing
-      // the token.
-      //
-      // There is no need to clear the identity in this case because it is still
-      // valid.
-      if (identity != null && !hasTokenExpired) {
+      // Keep the identity and raise an error event (the app decides whether to
+      // route to login) when either:
+      //  - the access token has not expired yet, so the identity is still
+      //    usable whatever the failure was; or
+      //  - the failure says nothing about the refresh token - a refused
+      //    connection, timeout, 5xx, or a body we cannot parse. Only an
+      //    authorization server rejection (an RFC 6749 §5.2 error such as
+      //    `invalid_grant`) means the user must sign in again. The next
+      //    refresh() retries.
+      if ((identity != null && !hasTokenExpired) ||
+          !_isRefreshTokenRejection(e)) {
         logOpenIdConnectWarning(
-          'Token refresh failed while the current identity is still valid',
-          e,
-          stackTrace,
-        );
-        _raiseEvent(AuthEvent(AuthEventTypes.Error, message: e.toString()));
-        return false;
-      }
-
-      // The access token has expired. Only sign the user out when the
-      // authorization server definitively rejected the refresh token (an
-      // RFC 6749 §5.2 error such as `invalid_grant`). Anything else - a
-      // refused connection, timeout, 5xx, or a body we cannot parse - says
-      // nothing about the refresh token, so keep it and let the next
-      // refresh() retry.
-      if (!_isRefreshTokenRejection(e)) {
-        logOpenIdConnectWarning(
-          'Token refresh failed and the identity has expired, but the failure '
-          'was not a refresh token rejection; keeping local identity for retry',
+          'Token refresh failed; keeping the local identity (not a refresh '
+          'token rejection, or the access token has not expired)',
           e,
           stackTrace,
         );

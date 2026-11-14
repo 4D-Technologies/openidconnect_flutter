@@ -391,7 +391,9 @@ void main() {
 
     setUp(() async {
       // The test binding installs an HttpClient that answers 400 to everything.
+      final previousOverrides = HttpOverrides.current;
       HttpOverrides.global = null;
+      addTearDown(() => HttpOverrides.global = previousOverrides);
       refreshAttempts = 0;
       server = await HttpServer.bind(InternetAddress.loopbackIPv4, 0);
       baseUri = Uri.parse('http://${server.address.address}:${server.port}');
