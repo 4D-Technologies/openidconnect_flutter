@@ -152,6 +152,11 @@ class OpenIdConnectClient {
   Stream<AuthEvent> get changes => _eventStreamController.stream;
 
   /// The currently loaded identity, if any.
+  ///
+  /// After a transient refresh failure the identity is kept even though its
+  /// access token may have expired, so a non-null value does not mean the
+  /// access token is usable. Check [hasTokenExpired], or use [isLoggedIn] /
+  /// [verifyToken], before sending the access token.
   OpenIdIdentity? get identity => _identity;
 
   /// Whether startup processing has completed.
@@ -622,10 +627,10 @@ class OpenIdConnectClient {
       await Future<void>.delayed(Duration(milliseconds: 200));
     }
 
+    final generation = _sessionGeneration;
     try {
       _refreshing = true;
       _cancelAutoRenewTimer();
-      final generation = _sessionGeneration;
       final refreshToken = _identity?.refreshToken;
       final idToken = _identity?.idToken;
       if (refreshToken == null || refreshToken.isEmpty || idToken == null) {
@@ -675,6 +680,13 @@ class OpenIdConnectClient {
 
       return true;
     } on Exception catch (e, stackTrace) {
+      // A logout or new login happened while this refresh was in flight; the
+      // failure belongs to a session that no longer exists, so leave the
+      // current one alone.
+      if (_sessionGeneration != generation) {
+        return false;
+      }
+
       // In case when refresh request fails but we know that identity is present
       // and the token has not expired, we can keep the identity and raise an
       // error event to notify the app that there is an issue while refreshing
@@ -734,6 +746,11 @@ class OpenIdConnectClient {
     'unauthorized_client',
     'unsupported_grant_type',
     'invalid_scope',
+    // OpenID Connect Core §3.1.2.6 / provider re-authentication errors.
+    'access_denied',
+    'interaction_required',
+    'login_required',
+    'consent_required',
   };
 
   static bool _isRefreshTokenRejection(Exception e) =>

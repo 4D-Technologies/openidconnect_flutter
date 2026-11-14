@@ -5,6 +5,7 @@ import 'dart:typed_data';
 
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:http/http.dart' as http;
 import 'package:openidconnect/openidconnect.dart';
 import 'package:openidconnect_platform_interface/openidconnect_platform_interface.dart';
 
@@ -420,25 +421,7 @@ void main() {
     });
 
     Future<({OpenIdConnectClient client, List<AuthEvent> events})>
-    createClient({String? tokenEndpoint}) async {
-      if (tokenEndpoint != null) {
-        // Re-point the discovery document at a different token endpoint.
-        await server.close(force: true);
-        server = await HttpServer.bind(InternetAddress.loopbackIPv4, 0);
-        baseUri = Uri.parse('http://${server.address.address}:${server.port}');
-        server.listen((request) async {
-          request.response.headers.contentType = ContentType.json;
-          request.response.write(
-            jsonEncode(
-              _discoveryDocument(
-                baseUri.toString(),
-                tokenEndpoint: tokenEndpoint,
-              ),
-            ),
-          );
-          await request.response.close();
-        });
-      }
+    createClient() async {
       final client = await OpenIdConnectClient.create(
         discoveryDocumentUrl: baseUri
             .resolve('/.well-known/openid-configuration')
@@ -454,27 +437,20 @@ void main() {
     }
 
     test('keeps the identity when the token endpoint is unreachable', () async {
-      final closed = await HttpServer.bind(InternetAddress.loopbackIPv4, 0);
-      final deadEndpoint =
-          'http://${closed.address.address}:${closed.port}/token';
-      await closed.close(force: true);
+      final (:client, :events) = await createClient();
 
-      final (:client, :events) = await createClient(
-        tokenEndpoint: deadEndpoint,
+      final refreshed = await http.runWithClient(
+        client.refresh,
+        () => _RefusingTokenClient(http.Client()),
       );
-
-      expect(await client.refresh(), isFalse);
       await pumpEventQueue();
 
+      expect(refreshed, isFalse);
       expect(client.identity, isNotNull);
       expect(client.identity!.refreshToken, 'refresh-token');
       expect(await OpenIdIdentity.load(), isNotNull);
       expect(events.map((e) => e.type), [AuthEventTypes.Error]);
-      expect(
-        events.map((e) => e.type),
-        isNot(contains(AuthEventTypes.NotLoggedIn)),
-      );
-    }, timeout: const Timeout(Duration(seconds: 60)));
+    });
 
     test('keeps the identity on a 500 with a non-JSON body', () async {
       tokenHandler = (request) {
@@ -554,7 +530,15 @@ void main() {
       },
     );
 
-    for (final code in ['invalid_grant', 'invalid_client']) {
+    for (final code in [
+      'invalid_request',
+      'invalid_client',
+      'invalid_grant',
+      'unauthorized_client',
+      'unsupported_grant_type',
+      'invalid_scope',
+      'interaction_required',
+    ]) {
       test('clears the identity when the server rejects with $code', () async {
         tokenHandler = (request) {
           request.response.statusCode = HttpStatus.badRequest;
@@ -574,14 +558,30 @@ void main() {
   });
 }
 
-Map<String, Object?> _discoveryDocument(
-  String issuer, {
-  String? tokenEndpoint,
-}) => {
+/// Delegates discovery to a real client but fails token requests the way a
+/// refused connection does.
+class _RefusingTokenClient extends http.BaseClient {
+  _RefusingTokenClient(this._inner);
+
+  final http.Client _inner;
+
+  @override
+  Future<http.StreamedResponse> send(http.BaseRequest request) {
+    if (request.url.path == '/token') {
+      throw http.ClientException(
+        'SocketException: Connection refused',
+        request.url,
+      );
+    }
+    return _inner.send(request);
+  }
+}
+
+Map<String, Object?> _discoveryDocument(String issuer) => {
   'issuer': issuer,
   'jwks_uri': '$issuer/jwks',
   'authorization_endpoint': '$issuer/authorize',
-  'token_endpoint': tokenEndpoint ?? '$issuer/token',
+  'token_endpoint': '$issuer/token',
   'userinfo_endpoint': '$issuer/userinfo',
 };
 
