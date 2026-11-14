@@ -105,6 +105,13 @@ void InvokeCompletion(AuthSession* session, const char* callback_url,
     completion = session->completion;
     session->completion = nullptr;
     hwnd = session->hwnd;
+    // Release the global slot now rather than when the window thread exits, so
+    // a caller that reacts to the completion by starting another login is not
+    // rejected while this window is still tearing down. The session object
+    // itself stays alive until its own thread finishes.
+    if (g_session == session) {
+      g_session = nullptr;
+    }
   }
   SendCompletion(completion, callback_url, error, cancelled);
   if (hwnd != nullptr) {
@@ -147,6 +154,8 @@ LRESULT CALLBACK AuthWndProc(HWND hwnd, UINT message, WPARAM wparam,
 }
 
 void RegisterWindowClass() {
+  // Sessions can now overlap while one tears down, so guard registration.
+  std::lock_guard<std::mutex> lock(g_mutex);
   if (g_class_registered) {
     return;
   }

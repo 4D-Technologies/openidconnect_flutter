@@ -1,5 +1,11 @@
 # Changelog
 
+## [3.2.1] - November 14th, 2026
+
+- Release the native WebView2 session as soon as a login completes or is cancelled, so a new login started right away is no longer rejected with "An interactive authentication session is already in progress." ([#83](https://github.com/4D-Technologies/openidconnect_flutter/issues/83)).
+- Guard window-class registration now that a finishing window can overlap the next one.
+- Verify the WebView2 login on a Windows host against the Duende demo (login, cancel, rapid re-login, concurrent request) and document the Windows decision record.
+
 ## [3.2.0] - November 12th, 2026
 
 - Make interactive login a WebView2 authentication window by default, called through Dart FFI.

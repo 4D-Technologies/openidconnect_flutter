@@ -268,6 +268,8 @@ Sandboxed macOS apps that use localhost callbacks should typically enable:
 - Interactive login uses a WebView2 window; the Evergreen WebView2 Runtime is required
 - Use a custom scheme, HTTPS callback, or `http://localhost[:port]/path`
 - Register that exact redirect URI with your identity provider
+- One sign-in window at a time; closing it ends the login with `user_closed`, and a new login can start immediately afterwards
+- WebView2 keeps a profile under `%TEMP%\openidconnect_webview2`, so the provider's session cookie can carry over; pass `prompts: ['login']` to force re-authentication
 
 ## Web
 

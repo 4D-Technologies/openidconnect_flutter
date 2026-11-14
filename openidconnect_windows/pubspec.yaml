@@ -1,6 +1,6 @@
 name: openidconnect_windows
 description: Windows implementation for OpenIdConnect.
-version: 3.2.0
+version: 3.2.1
 homepage: https://github.com/4D-Technologies/openidconnect_flutter/tree/main/openidconnect_windows
 
 resolution: workspace
