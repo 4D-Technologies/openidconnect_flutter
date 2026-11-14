@@ -6,8 +6,16 @@
 //
 // Usage: node windows_webview2_driver.mjs <port> <scenario>[,<scenario>...]
 //   login   wait for the sign-in page, submit alice/alice, accept consent
+//   login-held  like login, but waits for the test to create the release file
+//               (written once the concurrent request was rejected)
 //   cancel  wait for the sign-in page, then close the native window (WM_CLOSE)
 import { spawnSync } from 'node:child_process';
+import { existsSync, rmSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
+
+// Must match _releaseFile in windows_webview2_login_test.dart.
+const releaseFile = join(tmpdir(), 'oidc_e2e_release');
 
 const [port = '9222', sequence = 'login'] = process.argv.slice(2);
 const scenarios = sequence.split(',');
@@ -144,6 +152,13 @@ for (const [i, scenario] of scenarios.entries()) {
   const page = await waitForSignInPage();
   log(`sign-in page: ${page.url.split('?')[0]}`);
   if (scenario === 'login') {
+    await submitCredentials(page);
+  } else if (scenario === 'login-held') {
+    const end = Date.now() + 60000;
+    while (!existsSync(releaseFile) && Date.now() < end) await sleep(250);
+    if (!existsSync(releaseFile)) throw new Error('release file never appeared');
+    rmSync(releaseFile, { force: true });
+    log('released');
     await submitCredentials(page);
   } else if (scenario === 'cancel') {
     await sleep(1500);

@@ -6,7 +6,7 @@
 //
 //   $env:WEBVIEW2_ADDITIONAL_BROWSER_ARGUMENTS = '--remote-debugging-port=9222'
 //   $env:OIDC_E2E_DRIVER = '1'
-//   Start-Process node -WindowStyle Hidden -ArgumentList 'integration_test/windows_webview2_driver.mjs','9222','login,cancel,login,login,cancel,cancel,cancel,cancel,cancel'
+//   Start-Process node -WindowStyle Hidden -ArgumentList 'integration_test/windows_webview2_driver.mjs','9222','login,cancel,login,login-held,cancel,cancel,cancel,cancel,cancel'
 //   flutter test integration_test/windows_webview2_login_test.dart -d windows
 import 'dart:io';
 
@@ -39,6 +39,12 @@ Future<OpenIdIdentity> _login(
   context: context,
   title: 'Login',
   prompts: const ['login'],
+);
+
+/// Created by the test once the concurrent request was rejected; the driver's
+/// `login-held` scenario waits for it before submitting the first request.
+final _releaseFile = File(
+  '${Directory.systemTemp.path}${Platform.pathSeparator}oidc_e2e_release',
 );
 
 void main() {
@@ -110,13 +116,18 @@ void main() {
     // 4. A second request while one window is open is rejected; the first
     //    still completes.
     final result = await tester.runAsync(() async {
+      if (_releaseFile.existsSync()) _releaseFile.deleteSync();
       final a = _login(await _client(), context);
+      // The driver holds the first sign-in open until we release it, so the
+      // first request cannot finish while the second is being attempted.
       await Future<void>.delayed(const Duration(seconds: 3));
       Object? concurrentError;
       try {
         await _login(await _client(), context);
       } catch (e) {
         concurrentError = e;
+      } finally {
+        _releaseFile.writeAsStringSync('go');
       }
       return (await a, concurrentError);
     });

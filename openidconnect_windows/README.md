@@ -26,7 +26,7 @@ No plist or Android-manifest permission prompts are required by this package its
 - One interactive login at a time. A second `loginInteractive` call while a sign-in window is open fails with `An interactive authentication session is already in progress.` and does not disturb the open window. A new login can start as soon as the previous one completes or is cancelled.
 - Closing the window (or the user cancelling) completes with `user_closed`. There is no built-in timeout while the window is open; the user is looking at it.
 - A missing or broken WebView2 runtime fails with `The WebView2 runtime is missing or failed to start.`
-- The redirect is matched on the full configured redirect URI (scheme, host, port, path) followed by `?`, `#`, `/`, or end of string. A different path or host is not treated as the callback.
+- A navigation counts as the callback when it starts with the full configured redirect URI (scheme, host, port, path) and is followed by `?`, `#`, `/`, or end of string. This is a prefix match, so descendant paths such as `/callback/other` also match; a different host, port, or sibling path does not. Exact `redirect_uri` validation is the identity provider's job.
 - WebView2 keeps its profile in `%TEMP%\openidconnect_webview2`, so a provider session cookie can carry over between logins in the same Windows user profile. Use `prompts: ['login']` on `loginInteractive` to force re-authentication.
 
 ### Decision record (#83)
@@ -41,8 +41,9 @@ No plist or Android-manifest permission prompts are required by this package its
 `openidconnect/example/integration_test/windows_webview2_login_test.dart` runs real logins against the public Duende demo through the real WebView2 window. `windows_webview2_driver.mjs` fills in the sign-in form over the WebView2 DevTools port, and closes the native window for the cancel cases. Needs Visual Studio's C++ workload, Node 22+, and network access:
 
 ```powershell
+cd openidconnect/example
 $env:WEBVIEW2_ADDITIONAL_BROWSER_ARGUMENTS = '--remote-debugging-port=9222'
 $env:OIDC_E2E_DRIVER = '1'
-Start-Process node -WindowStyle Hidden -ArgumentList 'integration_test/windows_webview2_driver.mjs','9222','login,cancel,login,login,cancel,cancel,cancel,cancel,cancel'
+Start-Process node -WindowStyle Hidden -ArgumentList 'integration_test/windows_webview2_driver.mjs','9222','login,cancel,login,login-held,cancel,cancel,cancel,cancel,cancel'
 flutter test integration_test/windows_webview2_login_test.dart -d windows
 ```
