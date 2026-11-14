@@ -111,6 +111,7 @@ void main() {
           await response.drain<void>();
           client.close();
         },
+        authenticationTimeout: const Duration(seconds: 10),
       );
 
       expect(result, 'http://127.0.0.1:$port/callback?code=abc');

@@ -121,10 +121,22 @@ Future<String> runMacOSLoopbackAuthenticationFlow({
     );
   }
 
-  final server = await HttpServer.bind(
-    InternetAddress.loopbackIPv4,
-    redirectUri.port,
-  );
+  final HttpServer server;
+  try {
+    server = await HttpServer.bind(
+      InternetAddress.loopbackIPv4,
+      redirectUri.port,
+    );
+  } on SocketException catch (e, stackTrace) {
+    logOpenIdConnectError(
+      'macOS interactive authentication failed to bind localhost',
+      e,
+      stackTrace,
+    );
+    throw AuthenticationException(
+      'Failed to bind to http://localhost:${redirectUri.port}. ${e.message}',
+    );
+  }
 
   try {
     final expectedPath = redirectUri.path.isEmpty ? '/*' : redirectUri.path;
@@ -147,10 +159,16 @@ Future<String> runMacOSLoopbackAuthenticationFlow({
 }
 
 Future<void> _openUrlOnMacOS(String url) async {
-  final launchResult = await Process.run('open', [url]);
-  if (launchResult.exitCode != 0) {
+  try {
+    final launchResult = await Process.run('open', [url]);
+    if (launchResult.exitCode != 0) {
+      throw AuthenticationException(
+        'Unable to launch the system browser for interactive authentication.',
+      );
+    }
+  } on ProcessException catch (e) {
     throw AuthenticationException(
-      'Unable to launch the system browser for interactive authentication.',
+      'Unable to launch the system browser for interactive authentication. ${e.message}',
     );
   }
 }

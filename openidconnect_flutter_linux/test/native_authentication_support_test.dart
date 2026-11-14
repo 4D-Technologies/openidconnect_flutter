@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:io';
 
 import 'package:flutter_test/flutter_test.dart';
@@ -109,4 +110,30 @@ void main() {
     final server = await HttpServer.bind(InternetAddress.loopbackIPv4, port);
     await server.close();
   });
+
+  test(
+    'times out and frees the port when the browser launcher hangs',
+    () async {
+      final port = await _reserveLoopbackPort();
+
+      await expectLater(
+        startNativeAuthenticationFlow(
+          authorizationUrl: 'https://issuer.example.com/authorize',
+          redirectUrl: 'http://localhost:$port/callback.html',
+          launchUrl: (_) => Completer<void>().future,
+          authenticationTimeout: const Duration(milliseconds: 50),
+        ),
+        throwsA(
+          isA<AuthenticationException>().having(
+            (exception) => exception.toString(),
+            'error message',
+            contains(ERROR_USER_CLOSED),
+          ),
+        ),
+      );
+
+      final server = await HttpServer.bind(InternetAddress.loopbackIPv4, port);
+      await server.close();
+    },
+  );
 }
