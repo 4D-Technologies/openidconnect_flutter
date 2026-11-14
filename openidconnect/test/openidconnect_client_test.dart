@@ -393,7 +393,11 @@ void main() {
       // The test binding installs an HttpClient that answers 400 to everything.
       final previousOverrides = HttpOverrides.current;
       HttpOverrides.global = null;
-      addTearDown(() => HttpOverrides.global = previousOverrides);
+      OpenIdConnectClient.refreshRetryBaseDelay = const Duration(milliseconds: 10);
+      addTearDown(() {
+        HttpOverrides.global = previousOverrides;
+        OpenIdConnectClient.refreshRetryBaseDelay = const Duration(seconds: 2);
+      });
       refreshAttempts = 0;
       server = await HttpServer.bind(InternetAddress.loopbackIPv4, 0);
       baseUri = Uri.parse('http://${server.address.address}:${server.port}');
@@ -423,14 +427,14 @@ void main() {
     });
 
     Future<({OpenIdConnectClient client, List<AuthEvent> events})>
-    createClient() async {
+    createClient({bool autoRefresh = false}) async {
       final client = await OpenIdConnectClient.create(
         discoveryDocumentUrl: baseUri
             .resolve('/.well-known/openid-configuration')
             .toString(),
         clientId: 'client-id',
         encryptionKey: 'unused',
-        autoRefresh: false,
+        autoRefresh: autoRefresh,
       );
       addTearDown(client.dispose);
       final events = <AuthEvent>[];
@@ -531,6 +535,223 @@ void main() {
         expect(client.hasTokenExpired, isFalse);
       },
     );
+
+
+    // 401 is "not authorized": never transient, whatever the body is.
+    for (final body in ['<html>unauthorized</html>', '', '{"error":"invalid_token"}']) {
+      test('clears the identity on a 401 with body "$body"', () async {
+        tokenHandler = (request) {
+          request.response.statusCode = HttpStatus.unauthorized;
+          request.response.write(body);
+        };
+        final (:client, :events) = await createClient();
+
+        expect(await client.refresh(), isFalse);
+        await pumpEventQueue();
+
+        expect(client.identity, isNull);
+        expect(events.map((e) => e.type), [AuthEventTypes.NotLoggedIn]);
+      });
+    }
+
+    // A 400 is a rejection only when it carries an OAuth error code.
+    for (final body in ['<html>bad request</html>', 'Bad Request', '']) {
+      test('keeps the identity on a 400 with body "$body"', () async {
+        tokenHandler = (request) {
+          request.response.statusCode = HttpStatus.badRequest;
+          request.response.write(body);
+        };
+        final (:client, :events) = await createClient();
+
+        expect(await client.refresh(), isFalse);
+        await pumpEventQueue();
+
+        expect(client.identity, isNotNull);
+        expect(events.map((e) => e.type), [AuthEventTypes.Error]);
+      });
+    }
+
+    for (final error in ['temporarily_unavailable', 'server_error']) {
+      test('keeps the identity on a 400 $error', () async {
+        tokenHandler = (request) {
+          request.response.statusCode = HttpStatus.badRequest;
+          request.response.headers.contentType = ContentType.json;
+          request.response.write(jsonEncode({'error': error}));
+        };
+        final (:client, :events) = await createClient();
+
+        expect(await client.refresh(), isFalse);
+        await pumpEventQueue();
+
+        expect(client.identity, isNotNull);
+        expect(events.map((e) => e.type), [AuthEventTypes.Error]);
+      });
+    }
+
+    for (final status in [HttpStatus.forbidden, HttpStatus.tooManyRequests, HttpStatus.requestTimeout]) {
+      test('keeps the identity on a $status with an OAuth error body', () async {
+        tokenHandler = (request) {
+          request.response.statusCode = status;
+          request.response.headers.contentType = ContentType.json;
+          request.response.write(jsonEncode({'error': 'invalid_grant'}));
+        };
+        final (:client, :events) = await createClient();
+
+        expect(await client.refresh(), isFalse);
+        await pumpEventQueue();
+
+        expect(client.identity, isNotNull);
+        expect(events.map((e) => e.type), [AuthEventTypes.Error]);
+      });
+    }
+
+    test('keeps the identity on a 500 even if the body says invalid_grant', () async {
+      tokenHandler = (request) {
+        request.response.statusCode = HttpStatus.internalServerError;
+        request.response.headers.contentType = ContentType.json;
+        request.response.write(jsonEncode({'error': 'invalid_grant'}));
+      };
+      final (:client, :events) = await createClient();
+
+      expect(await client.refresh(), isFalse);
+      await pumpEventQueue();
+
+      expect(client.identity, isNotNull);
+      expect(events.map((e) => e.type), [AuthEventTypes.Error]);
+    });
+
+    test('a refresh failure after logout does not touch the newer state', () async {
+      final release = Completer<void>();
+      tokenHandler = (request) async {
+        await release.future;
+        request.response.statusCode = HttpStatus.badRequest;
+        request.response.headers.contentType = ContentType.json;
+        request.response.write(jsonEncode({'error': 'invalid_grant'}));
+      };
+      final (:client, :events) = await createClient();
+
+      final pending = client.refresh();
+      await Future<void>.delayed(const Duration(milliseconds: 50));
+      await client.clearIdentity();
+      release.complete();
+
+      expect(await pending, isFalse);
+      await pumpEventQueue();
+      expect(events.map((e) => e.type), isNot(contains(AuthEventTypes.NotLoggedIn)));
+    });
+
+    group('automatic retry (autoRefresh)', () {
+      // Access token valid for 30s: inside the 1 minute "about to expire"
+      // window (so startup refreshes) but not expired.
+      Future<void> saveAboutToExpire() => _saveIdentity(
+        expiresAt: DateTime.now().toUtc().add(const Duration(seconds: 30)),
+      );
+
+      Future<void> until(bool Function() condition) async {
+        final deadline = DateTime.now().add(const Duration(seconds: 5));
+        while (!condition()) {
+          if (DateTime.now().isAfter(deadline)) fail('condition not met in time');
+          await Future<void>.delayed(const Duration(milliseconds: 10));
+        }
+      }
+
+      test('retries with backoff after a transient failure and recovers', () async {
+        await saveAboutToExpire();
+        tokenHandler = (request) {
+          request.response.headers.contentType = ContentType.json;
+          if (refreshAttempts < 3) {
+            request.response.statusCode = HttpStatus.internalServerError;
+            request.response.write('<!DOCTYPE html><html>boom</html>');
+            return;
+          }
+          request.response.write(
+            jsonEncode({
+              'access_token': 'recovered-access-token',
+              'token_type': 'Bearer',
+              'expires_in': 3600,
+              'id_token': _testIdToken,
+              'refresh_token': 'recovered-refresh-token',
+            }),
+          );
+        };
+        final (:client, :events) = await createClient(autoRefresh: true);
+
+        // Startup attempt + 2 failed retries, then the 3rd attempt succeeds.
+        await until(() => client.identity?.accessToken == 'recovered-access-token');
+        expect(refreshAttempts, 3);
+        expect(events.map((e) => e.type), contains(AuthEventTypes.Refresh));
+      });
+
+      test('gives up after three retries and keeps the identity', () async {
+        await saveAboutToExpire();
+        tokenHandler = (request) {
+          request.response.statusCode = HttpStatus.internalServerError;
+          request.response.write('<!DOCTYPE html><html>boom</html>');
+        };
+        final (:client, :events) = await createClient(autoRefresh: true);
+
+        await until(() => refreshAttempts >= 4);
+        await Future<void>.delayed(const Duration(milliseconds: 300));
+
+        // 1 startup attempt + exactly 3 retries.
+        expect(refreshAttempts, 4);
+        expect(client.identity, isNotNull);
+        expect(events.where((e) => e.type == AuthEventTypes.Error), hasLength(3));
+      });
+
+      test('does not retry a rejected refresh token', () async {
+        await saveAboutToExpire();
+        tokenHandler = (request) {
+          request.response.statusCode = HttpStatus.badRequest;
+          request.response.headers.contentType = ContentType.json;
+          request.response.write(jsonEncode({'error': 'invalid_grant'}));
+        };
+        await createClient(autoRefresh: true);
+
+        await Future<void>.delayed(const Duration(milliseconds: 300));
+        expect(refreshAttempts, 1);
+      });
+
+      test('does not retry when autoRefresh is off', () async {
+        tokenHandler = (request) {
+          request.response.statusCode = HttpStatus.internalServerError;
+          request.response.write('<!DOCTYPE html><html>boom</html>');
+        };
+        final (:client, :events) = await createClient();
+
+        expect(await client.refresh(), isFalse);
+        await Future<void>.delayed(const Duration(milliseconds: 300));
+        expect(refreshAttempts, 1);
+      });
+    });
+
+    group('startup with an expired token', () {
+      test('clears the identity and only reports NotLoggedIn on a transient failure', () async {
+        tokenHandler = (request) {
+          request.response.statusCode = HttpStatus.internalServerError;
+          request.response.write('<!DOCTYPE html><html>boom</html>');
+        };
+        final (:client, :events) = await createClient(autoRefresh: true);
+        await Future<void>.delayed(const Duration(milliseconds: 300));
+
+        expect(client.currentEvent, const AuthEvent(AuthEventTypes.NotLoggedIn));
+        expect(client.identity, isNull);
+        expect(await OpenIdIdentity.load(), isNull);
+        expect(refreshAttempts, 1, reason: 'no retry once the identity is gone');
+        expect(events, isEmpty);
+      });
+
+      test('clears the identity on a rejection', () async {
+        tokenHandler = (request) {
+          request.response.statusCode = HttpStatus.unauthorized;
+        };
+        final (:client, :events) = await createClient(autoRefresh: true);
+
+        expect(client.currentEvent, const AuthEvent(AuthEventTypes.NotLoggedIn));
+        expect(client.identity, isNull);
+        expect(await OpenIdIdentity.load(), isNull);
+      });
+    });
 
     for (final code in [
       'invalid_request',

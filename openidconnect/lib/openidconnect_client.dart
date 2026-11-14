@@ -3,6 +3,15 @@ part of 'openidconnect.dart';
 /// High-level client wrapper that manages discovery, persisted identity,
 /// refresh handling, and auth lifecycle events.
 class OpenIdConnectClient {
+  /// How many times a transiently failed token refresh is retried
+  /// automatically (when [autoRefresh] is enabled) before giving up.
+  static const int maxRefreshRetries = 3;
+
+  /// Delay before the first automatic refresh retry. It doubles on every
+  /// further retry (2s, 4s, 8s by default).
+  @visibleForTesting
+  static Duration refreshRetryBaseDelay = const Duration(seconds: 2);
+
   /// Scope automatically added when refresh-token based renewal is enabled.
   static const OFFLINE_ACCESS_SCOPE = "offline_access";
 
@@ -26,6 +35,7 @@ class OpenIdConnectClient {
   OpenIdIdentity? _identity;
   int _sessionGeneration = 0;
   bool _refreshing = false;
+  int _refreshRetryAttempt = 0;
   String? _inFlightRefreshToken;
   OpenIdIdentity? _rotatedTokensForRevocation;
   String? _rotatedFromRefreshToken;
@@ -102,7 +112,13 @@ class OpenIdConnectClient {
     _isInitializationComplete = true;
 
     if (_identity != null) {
-      if (autoRefresh && !await _setupAutoRenew()) {
+      if (autoRefresh && !await _setupAutoRenew(startup: true)) {
+        // The refresh failed. An expired identity is discarded so the app
+        // starts cleanly logged out; a still-valid one is kept (a retry is
+        // already scheduled if the failure was transient).
+        if (_identity == null || hasTokenExpired) {
+          await _clearIdentityIgnoringErrors();
+        }
         _raiseEvent(AuthEvent(AuthEventTypes.NotLoggedIn));
         return;
       } else if (hasTokenExpired) {
@@ -111,8 +127,9 @@ class OpenIdConnectClient {
       } else {
         if (isTokenAboutToExpire) {
           try {
-            final isRefreshed = await refresh(
+            final isRefreshed = await _refresh(
               raiseEvents: false,
+              startup: true,
             ).timeout(Duration(seconds: 15));
 
             isRefreshed
@@ -611,11 +628,20 @@ class OpenIdConnectClient {
   ///
   /// The stored identity is cleared (raising [AuthEventTypes.NotLoggedIn]) only
   /// when the access token has expired and the authorization server rejects the
-  /// refresh token with an OAuth error such as `invalid_grant`. Transient
-  /// failures (network errors, timeouts, 5xx responses, unparseable bodies)
-  /// keep the identity and refresh token, raise [AuthEventTypes.Error], and
-  /// the next [refresh] retries.
-  Future<bool> refresh({bool raiseEvents = true}) async {
+  /// refresh token: a 401, or a 400 carrying an OAuth error such as
+  /// `invalid_grant`. Any other failure (network errors, timeouts, 5xx, 429,
+  /// unparseable bodies, a 400 without an OAuth error) keeps the identity and
+  /// refresh token and raises [AuthEventTypes.Error]. When [autoRefresh] is
+  /// enabled, such transient failures are retried automatically up to
+  /// [maxRefreshRetries] times with exponential backoff (2s, 4s, 8s).
+  Future<bool> refresh({bool raiseEvents = true}) =>
+      _refresh(raiseEvents: raiseEvents);
+
+  Future<bool> _refresh({
+    bool raiseEvents = true,
+    bool startup = false,
+    bool retry = false,
+  }) async {
     if (!webUseRefreshTokens) {
       //Web has a special case where it will use a hidden iframe. This just returns true because the iframe does it.
       //In this case we simply load from storage because the web implementation just stores the new values in storage for us.
@@ -631,6 +657,7 @@ class OpenIdConnectClient {
     try {
       _refreshing = true;
       _cancelAutoRenewTimer();
+      if (!retry && !startup) _refreshRetryAttempt = 0;
       final refreshToken = _identity?.refreshToken;
       final idToken = _identity?.idToken;
       if (refreshToken == null || refreshToken.isEmpty || idToken == null) {
@@ -667,6 +694,8 @@ class OpenIdConnectClient {
         return false;
       }
 
+      _refreshRetryAttempt = 0;
+
       if (autoRefresh) {
         var refreshTime = _identity!.expiresAt.difference(
           DateTime.now().toUtc(),
@@ -687,17 +716,36 @@ class OpenIdConnectClient {
         return false;
       }
 
+      final rejected = _isRefreshTokenRejection(e);
+      final expired = identity == null || hasTokenExpired;
+
+      if (startup) {
+        // Startup raises its own single NotLoggedIn event. An expired identity
+        // is discarded whatever the failure was; a still-valid one is kept and,
+        // for transient failures, retried.
+        logOpenIdConnectWarning(
+          'Token refresh failed during startup',
+          e,
+          stackTrace,
+        );
+        if (expired) {
+          await _clearIdentityIgnoringErrors();
+        } else if (!rejected) {
+          _scheduleRefreshRetry();
+        }
+        return false;
+      }
+
       // Keep the identity and raise an error event (the app decides whether to
       // route to login) when either:
       //  - the access token has not expired yet, so the identity is still
       //    usable whatever the failure was; or
       //  - the failure says nothing about the refresh token - a refused
-      //    connection, timeout, 5xx, or a body we cannot parse. Only an
-      //    authorization server rejection (an RFC 6749 §5.2 error such as
-      //    `invalid_grant`) means the user must sign in again. The next
-      //    refresh() retries.
-      if ((identity != null && !hasTokenExpired) ||
-          !_isRefreshTokenRejection(e)) {
+      //    connection, timeout, 5xx, 429, or a body we cannot interpret. Only
+      //    an authorization server rejection (see _isRefreshTokenRejection)
+      //    means the user must sign in again. Transient failures are retried
+      //    with exponential backoff.
+      if (!expired || !rejected) {
         logOpenIdConnectWarning(
           'Token refresh failed; keeping the local identity (not a refresh '
           'token rejection, or the access token has not expired)',
@@ -705,6 +753,7 @@ class OpenIdConnectClient {
           stackTrace,
         );
         _raiseEvent(AuthEvent(AuthEventTypes.Error, message: e.toString()));
+        if (!rejected) _scheduleRefreshRetry();
         return false;
       }
 
@@ -723,25 +772,58 @@ class OpenIdConnectClient {
     }
   }
 
-  /// OAuth 2.0 token endpoint error codes (RFC 6749 §5.2) that mean the server
-  /// refused the refresh request itself rather than being temporarily
-  /// unavailable.
-  static const _refreshRejectionErrors = <String>{
-    'invalid_request',
-    'invalid_client',
-    'invalid_grant',
-    'unauthorized_client',
-    'unsupported_grant_type',
-    'invalid_scope',
-    // OpenID Connect Core §3.1.2.6 / provider re-authentication errors.
-    'access_denied',
-    'interaction_required',
-    'login_required',
-    'consent_required',
+  static final _oauthErrorCode = RegExp(r'^[a-z][a-z0-9_]*$');
+
+  /// OAuth error codes a server may return with a 400 to say "try again
+  /// later" rather than "this request is wrong".
+  static const _transientOAuthErrors = <String>{
+    'temporarily_unavailable',
+    'server_error',
   };
 
-  static bool _isRefreshTokenRejection(Exception e) =>
-      e is HttpResponseException && _refreshRejectionErrors.contains(e.error);
+  /// Whether the authorization server definitively refused the refresh request
+  /// (as opposed to being unreachable or failing).
+  ///
+  /// - 401 is always a rejection: the credentials are not authorized.
+  /// - 400 is a rejection only when the body carries an OAuth error code
+  ///   (RFC 6749 §5.2: `invalid_grant`, `invalid_client`, `invalid_scope`, ...
+  ///   or OIDC codes such as `interaction_required`), because that means the
+  ///   server understood the request and refused it. A 400 without one (a
+  ///   proxy or WAF page, plain text) cannot be attributed to the refresh
+  ///   token, and `temporarily_unavailable` / `server_error` are explicitly
+  ///   "try again".
+  /// - Everything else (5xx, 429, 408, network and parse errors) is transient.
+  static bool _isRefreshTokenRejection(Exception e) {
+    if (e is! _HttpStatusResponseException) return false;
+    switch (e.statusCode) {
+      case 401:
+        return true;
+      case 400:
+        final error = e.error;
+        return error != null &&
+            _oauthErrorCode.hasMatch(error) &&
+            !_transientOAuthErrors.contains(error);
+      default:
+        return false;
+    }
+  }
+
+  /// Schedules the next automatic refresh attempt after a transient failure,
+  /// with exponential backoff, until [maxRefreshRetries] is exhausted.
+  void _scheduleRefreshRetry() {
+    if (!autoRefresh || _identity == null) return;
+    if (_refreshRetryAttempt >= maxRefreshRetries) {
+      logOpenIdConnectWarning(
+        'Giving up automatic token refresh retries after $maxRefreshRetries '
+        'attempts; the next refresh() call will try again',
+      );
+      return;
+    }
+    final delay = refreshRetryBaseDelay * (1 << _refreshRetryAttempt);
+    _refreshRetryAttempt++;
+    _cancelAutoRenewTimer();
+    _autoRenewTimer = Timer(delay, () => _refresh(retry: true));
+  }
 
   /// Clears the persisted identity from storage and memory.
   ///
@@ -889,12 +971,13 @@ class OpenIdConnectClient {
     return null;
   }
 
-  Future<bool> _setupAutoRenew() async {
+  Future<bool> _setupAutoRenew({bool startup = false}) async {
     _cancelAutoRenewTimer();
 
     if (isTokenAboutToExpire) {
-      return await refresh(
+      return await _refresh(
         raiseEvents: false,
+        startup: startup,
       ); //This will set the timer itself.
     } else {
       var refreshTime = _identity!.expiresAt.difference(DateTime.now().toUtc());
