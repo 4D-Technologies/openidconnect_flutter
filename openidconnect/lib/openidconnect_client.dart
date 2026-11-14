@@ -35,6 +35,7 @@ class OpenIdConnectClient {
   OpenIdIdentity? _identity;
   int _sessionGeneration = 0;
   bool _refreshing = false;
+  bool _disposed = false;
   int _refreshRetryAttempt = 0;
   String? _inFlightRefreshToken;
   OpenIdIdentity? _rotatedTokensForRevocation;
@@ -119,7 +120,13 @@ class OpenIdConnectClient {
         if (_identity == null || hasTokenExpired) {
           await _clearIdentityIgnoringErrors();
         }
-        _raiseEvent(AuthEvent(AuthEventTypes.NotLoggedIn));
+        _raiseEvent(
+          AuthEvent(
+            _identity == null
+                ? AuthEventTypes.NotLoggedIn
+                : AuthEventTypes.Success,
+          ),
+        );
         return;
       } else if (hasTokenExpired) {
         _raiseEvent(AuthEvent(AuthEventTypes.NotLoggedIn));
@@ -132,9 +139,13 @@ class OpenIdConnectClient {
               startup: true,
             ).timeout(Duration(seconds: 15));
 
-            isRefreshed
-                ? _raiseEvent(AuthEvent(AuthEventTypes.Success))
-                : _raiseEvent(AuthEvent(AuthEventTypes.NotLoggedIn));
+            _raiseEvent(
+              AuthEvent(
+                isRefreshed || (_identity != null && !hasTokenExpired)
+                    ? AuthEventTypes.Success
+                    : AuthEventTypes.NotLoggedIn,
+              ),
+            );
             return;
           } on TimeoutException {
             _raiseEvent(AuthEvent(AuthEventTypes.NotLoggedIn));
@@ -156,6 +167,7 @@ class OpenIdConnectClient {
 
   /// Releases timers and closes the auth event stream.
   void dispose() {
+    _disposed = true;
     _cancelAutoRenewTimer();
     _eventStreamController.close();
   }
@@ -592,7 +604,8 @@ class OpenIdConnectClient {
 
     if (autoRefresh) await refresh();
 
-    return !hasTokenExpired;
+    // refresh() may have cleared the identity (rejected refresh token).
+    return _identity != null && !hasTokenExpired;
   }
 
   /// Raises an explicit error event on the auth event stream.
@@ -811,7 +824,7 @@ class OpenIdConnectClient {
   /// Schedules the next automatic refresh attempt after a transient failure,
   /// with exponential backoff, until [maxRefreshRetries] is exhausted.
   void _scheduleRefreshRetry() {
-    if (!autoRefresh || _identity == null) return;
+    if (_disposed || !autoRefresh || _identity == null) return;
     if (_refreshRetryAttempt >= maxRefreshRetries) {
       logOpenIdConnectWarning(
         'Giving up automatic token refresh retries after $maxRefreshRetries '

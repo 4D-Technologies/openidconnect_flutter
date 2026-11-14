@@ -741,6 +741,20 @@ void main() {
         expect(events, isEmpty);
       });
 
+      test('stays logged in when the token is still valid and refresh fails transiently', () async {
+        await _saveIdentity(
+          expiresAt: DateTime.now().toUtc().add(const Duration(seconds: 30)),
+        );
+        tokenHandler = (request) {
+          request.response.statusCode = HttpStatus.internalServerError;
+          request.response.write('<!DOCTYPE html><html>boom</html>');
+        };
+        final (:client, :events) = await createClient(autoRefresh: true);
+
+        expect(client.currentEvent, const AuthEvent(AuthEventTypes.Success));
+        expect(client.identity, isNotNull);
+      });
+
       test('clears the identity on a rejection', () async {
         tokenHandler = (request) {
           request.response.statusCode = HttpStatus.unauthorized;
