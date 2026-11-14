@@ -29,6 +29,18 @@ Future<OpenIdConnectClient> _client() => OpenIdConnectClient.create(
   autoRefresh: false,
 );
 
+/// Always forces re-authentication: WebView2 keeps its profile between logins,
+/// so without `prompt=login` a retained provider session could complete a
+/// "cancel" or "concurrent" step before the driver acts.
+Future<OpenIdIdentity> _login(
+  OpenIdConnectClient client,
+  BuildContext context,
+) => client.loginInteractive(
+  context: context,
+  title: 'Login',
+  prompts: const ['login'],
+);
+
 void main() {
   IntegrationTestWidgetsFlutterBinding.ensureInitialized();
 
@@ -61,9 +73,7 @@ void main() {
 
     // 1. Happy path: real window, real IdP, tokens returned.
     final client = await _client();
-    final identity = await tester.runAsync(
-      () => client.loginInteractive(context: context, title: 'Login'),
-    );
+    final identity = await tester.runAsync(() => _login(client, context));
     expect(identity!.accessToken, isNotEmpty);
     expect(identity.idToken, isNotEmpty);
     expect(identity.refreshToken, isNotNull);
@@ -77,10 +87,7 @@ void main() {
     // 2. Closing the window maps to user_closed.
     final cancelError = await tester.runAsync<Object?>(() async {
       try {
-        await (await _client()).loginInteractive(
-          context: context,
-          title: 'Login',
-        );
+        await _login(await _client(), context);
         return null;
       } catch (e) {
         return e;
@@ -94,9 +101,7 @@ void main() {
     // 3. Immediately starting another login after the cancel must work
     //    (native session must be fully released).
     final again = await tester.runAsync(
-      () => (_client()).then(
-        (c) => c.loginInteractive(context: context, title: 'Login'),
-      ),
+      () => (_client()).then((c) => _login(c, context)),
     );
     expect(again!.accessToken, isNotEmpty);
     // ignore: avoid_print
@@ -105,17 +110,11 @@ void main() {
     // 4. A second request while one window is open is rejected; the first
     //    still completes.
     final result = await tester.runAsync(() async {
-      final a = (await _client()).loginInteractive(
-        context: context,
-        title: 'Login',
-      );
+      final a = _login(await _client(), context);
       await Future<void>.delayed(const Duration(seconds: 3));
       Object? concurrentError;
       try {
-        await (await _client()).loginInteractive(
-          context: context,
-          title: 'Login',
-        );
+        await _login(await _client(), context);
       } catch (e) {
         concurrentError = e;
       }
@@ -157,5 +156,12 @@ void main() {
     // ignore: avoid_print
     print('E2E 5 back-to-back results: $errors');
     expect(errors, everyElement(contains(ERROR_USER_CLOSED)));
+
+    // Closing the last native window hands focus back to the Flutter window
+    // asynchronously; let that land before the binding is torn down.
+    await tester.runAsync(
+      () => Future<void>.delayed(const Duration(seconds: 1)),
+    );
+    await tester.pump();
   }, skip: skip != false);
 }
