@@ -1,5 +1,11 @@
 # Changelog
 
+## 3.1.1 - November 14th 2026
+
+- Verified interactive login on Linux (system browser + loopback, authorization code + PKCE) against the Duende demo, plus `flutter build linux` for the example app ([#96](https://github.com/4D-Technologies/openidconnect_flutter/issues/96)).
+- Document the explicit-port requirement for loopback redirect URLs, the 5-minute timeout, and the libsecret build dependency.
+- Add a test that a timed-out login releases the loopback port.
+
 ## 3.1.0 - October 16th 2026
 
 - Align package version with `openidconnect` 3.1.x.

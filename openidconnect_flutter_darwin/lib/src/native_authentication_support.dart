@@ -26,9 +26,15 @@ DarwinAuthenticationRedirect redirectDetailsForUrl(String redirectUrl) {
       );
     }
 
+    if (!uri.hasPort || uri.port <= 0) {
+      throw StateError(
+        'Loopback redirect URLs for macOS interactive authentication must include an explicit port greater than 0. Received: $redirectUrl',
+      );
+    }
+
     return DarwinAuthenticationRedirect.localhost(
       uri: uri,
-      port: uri.hasPort ? uri.port : 0,
+      port: uri.port,
       path: path,
     );
   }
@@ -110,10 +116,11 @@ Future<String> startNativeAuthenticationFlow({
 Future<String> runMacOSLoopbackAuthenticationFlow({
   required Uri redirectUri,
   required String authorizationUrl,
+  Duration authenticationTimeout = _interactiveAuthenticationTimeout,
 }) async {
   final server = await HttpServer.bind(
     InternetAddress.loopbackIPv4,
-    redirectUri.hasPort ? redirectUri.port : 0,
+    redirectUri.port,
   );
 
   try {
@@ -125,33 +132,43 @@ Future<String> runMacOSLoopbackAuthenticationFlow({
     }
 
     final expectedPath = redirectUri.path.isEmpty ? '/*' : redirectUri.path;
-    await for (final request in server) {
-      if (request.method != 'GET') {
-        request.response.statusCode = HttpStatus.methodNotAllowed;
-        await request.response.close();
-        continue;
-      }
-
-      final requestedUri = request.requestedUri;
-      if (expectedPath != '/*' && requestedUri.path != expectedPath) {
-        request.response.statusCode = HttpStatus.notFound;
-        await request.response.close();
-        continue;
-      }
-
-      request.response.statusCode = HttpStatus.ok;
-      request.response.headers.contentType = ContentType.html;
-      request.response.write(_loopbackAuthenticationCompleteHtml);
-      await request.response.close();
-      return requestedUri.toString();
-    }
-
-    throw AuthenticationException(
-      'The browser authentication flow ended before a localhost redirect was received.',
+    return await _awaitLoopbackRedirect(server, expectedPath).timeout(
+      authenticationTimeout,
+      onTimeout: () => throw AuthenticationException(ERROR_USER_CLOSED),
     );
   } finally {
     await server.close(force: true);
   }
+}
+
+Future<String> _awaitLoopbackRedirect(
+  HttpServer server,
+  String expectedPath,
+) async {
+  await for (final request in server) {
+    if (request.method != 'GET') {
+      request.response.statusCode = HttpStatus.methodNotAllowed;
+      await request.response.close();
+      continue;
+    }
+
+    final requestedUri = request.requestedUri;
+    if (expectedPath != '/*' && requestedUri.path != expectedPath) {
+      request.response.statusCode = HttpStatus.notFound;
+      await request.response.close();
+      continue;
+    }
+
+    request.response.statusCode = HttpStatus.ok;
+    request.response.headers.contentType = ContentType.html;
+    request.response.write(_loopbackAuthenticationCompleteHtml);
+    await request.response.close();
+    return requestedUri.toString();
+  }
+
+  throw AuthenticationException(
+    'The browser authentication flow ended before a localhost redirect was received.',
+  );
 }
 
 class DarwinAuthenticationRedirect {
@@ -208,6 +225,8 @@ class DarwinAuthenticationRedirect {
 }
 
 enum DarwinAuthenticationRedirectKind { localhost, https, custom }
+
+const _interactiveAuthenticationTimeout = Duration(minutes: 5);
 
 const _loopbackAuthenticationCompleteHtml = '''
 <!DOCTYPE html>

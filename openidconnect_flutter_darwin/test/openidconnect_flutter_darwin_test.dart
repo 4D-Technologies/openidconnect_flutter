@@ -50,6 +50,17 @@ void main() {
         throwsA(isA<StateError>()),
       );
     });
+
+    test('requires an explicit port on localhost redirects', () {
+      expect(
+        () => redirectDetailsForUrl('http://localhost/callback'),
+        throwsA(isA<StateError>()),
+      );
+      expect(
+        () => redirectDetailsForUrl('http://localhost:0/callback'),
+        throwsA(isA<StateError>()),
+      );
+    });
   });
 
   group('startNativeAuthenticationFlow', () {

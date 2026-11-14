@@ -91,4 +91,22 @@ void main() {
       ),
     );
   });
+
+  test('releases the loopback port after a timed-out login', () async {
+    final port = await _reserveLoopbackPort();
+
+    await expectLater(
+      startNativeAuthenticationFlow(
+        authorizationUrl: 'https://issuer.example.com/authorize',
+        redirectUrl: 'http://localhost:$port/callback.html',
+        launchUrl: (_) async {},
+        authenticationTimeout: const Duration(milliseconds: 1),
+      ),
+      throwsA(isA<AuthenticationException>()),
+    );
+
+    // A leaked listener would make this bind fail.
+    final server = await HttpServer.bind(InternetAddress.loopbackIPv4, port);
+    await server.close();
+  });
 }

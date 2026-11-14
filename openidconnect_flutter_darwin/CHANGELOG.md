@@ -1,5 +1,10 @@
 # Changelog
 
+## 3.2.1 - November 14th 2026
+
+- macOS loopback login now requires an explicit port in `http://localhost:port/path` redirect URLs instead of binding port 0, which could never match a registered redirect URI ([#96](https://github.com/4D-Technologies/openidconnect_flutter/issues/96)).
+- macOS loopback login times out after 5 minutes and reports `user_closed`, instead of waiting forever.
+
 ## 3.2.0 - November 12th 2026
 
 - Drive `ASWebAuthenticationSession` from Dart FFI on both iOS and macOS instead of a Swift method channel.
