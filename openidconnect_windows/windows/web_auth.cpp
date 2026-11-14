@@ -105,6 +105,13 @@ void InvokeCompletion(AuthSession* session, const char* callback_url,
     completion = session->completion;
     session->completion = nullptr;
     hwnd = session->hwnd;
+    // Release the global slot now rather than when the window thread exits, so
+    // a caller that reacts to the completion by starting another login is not
+    // rejected while this window is still tearing down. The session object
+    // itself stays alive until its own thread finishes.
+    if (g_session == session) {
+      g_session = nullptr;
+    }
   }
   SendCompletion(completion, callback_url, error, cancelled);
   if (hwnd != nullptr) {
@@ -147,6 +154,8 @@ LRESULT CALLBACK AuthWndProc(HWND hwnd, UINT message, WPARAM wparam,
 }
 
 void RegisterWindowClass() {
+  // Sessions can now overlap while one tears down, so guard registration.
+  std::lock_guard<std::mutex> lock(g_mutex);
   if (g_class_registered) {
     return;
   }
@@ -158,8 +167,10 @@ void RegisterWindowClass() {
   window_class.hCursor = LoadCursor(nullptr, IDC_ARROW);
   window_class.hbrBackground = reinterpret_cast<HBRUSH>(COLOR_WINDOW + 1);
   window_class.lpszClassName = kWindowClass;
-  RegisterClassExW(&window_class);
-  g_class_registered = true;
+  // Only remember success so a transient failure is retried by the next login.
+  if (RegisterClassExW(&window_class) != 0) {
+    g_class_registered = true;
+  }
 }
 
 HRESULT AttachWebView(AuthSession* session) {
@@ -254,7 +265,11 @@ DWORD WINAPI AuthThreadProc(LPVOID param) {
     return 0;
   }
 
-  session->hwnd = hwnd;
+  {
+    // Read under g_mutex by InvokeCompletion and the cancel entry point.
+    std::lock_guard<std::mutex> lock(g_mutex);
+    session->hwnd = hwnd;
+  }
   SetWindowLongPtr(hwnd, GWLP_USERDATA, reinterpret_cast<LONG_PTR>(session));
 
   const HRESULT hr = AttachWebView(session);

@@ -322,6 +322,8 @@ Required setup:
 2. Register that exact redirect URI with your identity provider.
 3. Install the [WebView2 Runtime](https://developer.microsoft.com/microsoft-edge/webview2/) on Windows 10 machines that do not already include it.
 
+Only one sign-in window can be open at a time; closing it completes the login with `user_closed`, after which a new login can start immediately. WebView2 keeps a profile under `%TEMP%\openidconnect_webview2`, so the provider's session cookie can carry over between logins; pass `prompts: ['login']` to force re-authentication. See [openidconnect_windows](https://github.com/4D-Technologies/openidconnect_flutter/tree/main/openidconnect_windows) for the decision record and the live end-to-end test.
+
 No Android/iOS-style manifest permission prompts are required by this package on Windows.
 
 ## Web
