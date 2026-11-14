@@ -110,22 +110,75 @@ Future<String> startNativeAuthenticationFlow({
 Future<String> runMacOSLoopbackAuthenticationFlow({
   required Uri redirectUri,
   required String authorizationUrl,
+  Duration authenticationTimeout = _interactiveAuthenticationTimeout,
+  Future<void> Function(String url) launchUrl = _openUrlOnMacOS,
 }) async {
-  final server = await HttpServer.bind(
-    InternetAddress.loopbackIPv4,
-    redirectUri.hasPort ? redirectUri.port : 0,
-  );
+  // Port 0 would bind a random port that can never match a registered
+  // redirect URI, so require the port to be spelled out.
+  if (!redirectUri.hasPort || redirectUri.port <= 0) {
+    throw StateError(
+      'Loopback redirect URLs for macOS interactive authentication must include an explicit port greater than 0. Received: $redirectUri',
+    );
+  }
+
+  final HttpServer server;
+  try {
+    server = await HttpServer.bind(
+      InternetAddress.loopbackIPv4,
+      redirectUri.port,
+    );
+  } on SocketException catch (e, stackTrace) {
+    logOpenIdConnectError(
+      'macOS interactive authentication failed to bind localhost',
+      e,
+      stackTrace,
+    );
+    throw AuthenticationException(
+      'Failed to bind to http://localhost:${redirectUri.port}. ${e.message}',
+    );
+  }
 
   try {
-    final launchResult = await Process.run('open', [authorizationUrl]);
+    final expectedPath = redirectUri.path.isEmpty ? '/*' : redirectUri.path;
+    final redirect = _awaitLoopbackRedirect(server, expectedPath);
+    // If the launch fails or times out, the server closes in `finally` and this
+    // future errors with nobody listening; that error is expected.
+    redirect.ignore();
+    // The browser launch counts against the timeout too, so a hung `open`
+    // cannot keep the port bound forever.
+    return await Future.sync(() async {
+      await launchUrl(authorizationUrl);
+      return redirect;
+    }).timeout(
+      authenticationTimeout,
+      onTimeout: () => throw AuthenticationException(ERROR_USER_CLOSED),
+    );
+  } finally {
+    await server.close(force: true);
+  }
+}
+
+Future<void> _openUrlOnMacOS(String url) async {
+  try {
+    final launchResult = await Process.run('open', [url]);
     if (launchResult.exitCode != 0) {
       throw AuthenticationException(
         'Unable to launch the system browser for interactive authentication.',
       );
     }
+  } on ProcessException catch (e) {
+    throw AuthenticationException(
+      'Unable to launch the system browser for interactive authentication. ${e.message}',
+    );
+  }
+}
 
-    final expectedPath = redirectUri.path.isEmpty ? '/*' : redirectUri.path;
-    await for (final request in server) {
+Future<String> _awaitLoopbackRedirect(
+  HttpServer server,
+  String expectedPath,
+) async {
+  await for (final request in server) {
+    try {
       if (request.method != 'GET') {
         request.response.statusCode = HttpStatus.methodNotAllowed;
         await request.response.close();
@@ -144,14 +197,18 @@ Future<String> runMacOSLoopbackAuthenticationFlow({
       request.response.write(_loopbackAuthenticationCompleteHtml);
       await request.response.close();
       return requestedUri.toString();
+    } on SocketException {
+      // The browser dropped this connection (for example a speculative
+      // preconnect). Keep waiting for the real redirect.
+      continue;
+    } on HttpException {
+      continue;
     }
-
-    throw AuthenticationException(
-      'The browser authentication flow ended before a localhost redirect was received.',
-    );
-  } finally {
-    await server.close(force: true);
   }
+
+  throw AuthenticationException(
+    'The browser authentication flow ended before a localhost redirect was received.',
+  );
 }
 
 class DarwinAuthenticationRedirect {
@@ -208,6 +265,8 @@ class DarwinAuthenticationRedirect {
 }
 
 enum DarwinAuthenticationRedirectKind { localhost, https, custom }
+
+const _interactiveAuthenticationTimeout = Duration(minutes: 5);
 
 const _loopbackAuthenticationCompleteHtml = '''
 <!DOCTYPE html>

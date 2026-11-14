@@ -33,7 +33,7 @@ Currently supports:
     This aligns the mobile/desktop interactive flow with the current OAuth 2.0 for Native Apps guidance in RFC 8252 by avoiding embedded user-agents for native platforms.
 
 2. Your `redirectUrl` must be compatible with the target platform:
-    - `http://localhost[:port]/path` for Linux / Windows (and optionally macOS)
+    - `http://localhost:port/path` (explicit port required) for Linux and macOS loopback, or `http://localhost[:port]/path` for Windows
     - a custom scheme such as `my.app://callback` for Android / iOS / macOS
     - an HTTPS callback you own and have configured for App Links / Universal Links where supported
 
@@ -73,8 +73,8 @@ The example app in `openidconnect/example` defaults to the public [Duende Identi
 ### Redirect URI rules
 
 - Android / iOS / macOS: usually a custom scheme such as `my.app://callback`, or HTTPS App Links / Universal Links
-- macOS: `http://localhost[:port]/path` also works via loopback because `ASWebAuthenticationSession` cannot bind HTTP localhost
-- Linux: a loopback URL such as `http://localhost:14100/callback`
+- macOS: `http://localhost:port/path` also works via loopback because `ASWebAuthenticationSession` cannot bind HTTP localhost. The port is required.
+- Linux: a loopback URL with an explicit port, such as `http://localhost:14100/callback`. Interactive login opens the system browser and waits up to 5 minutes for the redirect.
 - Windows: a custom scheme, HTTPS callback, or `http://localhost[:port]/path` intercepted by the WebView2 session
 - Web: an HTTPS callback page you host, typically `/callback.html`
 
@@ -258,7 +258,10 @@ Sandboxed macOS apps that use localhost callbacks should typically enable:
 
 - Use a loopback redirect URI such as `http://localhost:14100/callback`
 - Register that exact redirect URI with your identity provider
-- Linux has no platform secure-session API, so interactive login opens the system browser
+- Linux has no platform secure-session API, so interactive login opens the system browser (`xdg-open`) and listens on the loopback port for the redirect
+- The loopback URL must include an explicit port; `http://localhost/callback` is rejected
+- If the user never completes the login, the flow ends after 5 minutes with the same `user_closed` error as a cancelled login and releases the port
+- Building the Linux plugin needs the libsecret development headers (for example `sudo apt install libsecret-1-dev`)
 
 ### Windows
 

@@ -33,7 +33,7 @@ Currently supports:
    This aligns the mobile/desktop interactive flow with the current OAuth 2.0 for Native Apps guidance in RFC 8252 by avoiding embedded user-agents for native platforms.
 
 2. Your `redirectUrl` must be compatible with the target platform:
-   - `http://localhost[:port]/path` for Linux (and optionally macOS)
+   - `http://localhost:port/path` (explicit port required) for Linux (and optionally macOS)
    - a custom scheme such as `my.app://callback` for Android / iOS / macOS / Windows
    - an HTTPS callback you own and have configured for App Links / Universal Links where supported
    - Windows also accepts `http://localhost[:port]/path` inside the WebView2 session
@@ -94,8 +94,8 @@ Live e2e tests in `test/openidconnect_live_duende_test.dart` hit Duende for disc
 Use a redirect URI that matches the platform authentication model:
 
 - Android / iOS / macOS: usually a custom scheme such as `my.app://callback`, or HTTPS App Links / Universal Links
-- macOS: `http://localhost[:port]/path` also works via loopback because `ASWebAuthenticationSession` cannot bind HTTP localhost
-- Linux: a loopback URL such as `http://localhost:14100/callback`
+- macOS: `http://localhost:port/path` also works via loopback because `ASWebAuthenticationSession` cannot bind HTTP localhost. The port is required.
+- Linux: a loopback URL with an explicit port, such as `http://localhost:14100/callback`. Login ends after 5 minutes without a redirect.
 - Windows: a custom scheme, HTTPS callback, or `http://localhost[:port]/path` intercepted by the WebView2 session
 - Web: an HTTPS callback page you host, usually `/callback.html`
 

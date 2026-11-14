@@ -81,8 +81,15 @@ Future<String> startNativeAuthenticationFlow({
       cancelOnError: true,
     );
 
-    await launchUrl(authorizationUrl);
-    return await redirectCompleter.future.timeout(
+    // Errors can complete the redirect before the launch returns, when nothing
+    // is awaiting it yet; they are re-raised by the await below.
+    redirectCompleter.future.ignore();
+    // The browser launch counts against the timeout too, so a hung `xdg-open`
+    // cannot keep the loopback port bound forever.
+    return await Future.sync(() async {
+      await launchUrl(authorizationUrl);
+      return redirectCompleter.future;
+    }).timeout(
       authenticationTimeout,
       onTimeout: () => throw AuthenticationException(ERROR_USER_CLOSED),
     );
