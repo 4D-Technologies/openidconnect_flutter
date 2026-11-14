@@ -603,6 +603,13 @@ class OpenIdConnectClient {
   /// Refreshes the current identity using the stored refresh token.
   ///
   /// Returns `false` when refresh is not possible or fails.
+  ///
+  /// The stored identity is cleared (raising [AuthEventTypes.NotLoggedIn]) only
+  /// when the access token has expired and the authorization server rejects the
+  /// refresh token with an OAuth error such as `invalid_grant`. Transient
+  /// failures (network errors, timeouts, 5xx responses, unparseable bodies)
+  /// keep the identity and refresh token, raise [AuthEventTypes.Error], and
+  /// the next [refresh] retries.
   Future<bool> refresh({bool raiseEvents = true}) async {
     if (!webUseRefreshTokens) {
       //Web has a special case where it will use a hidden iframe. This just returns true because the iframe does it.
@@ -685,11 +692,26 @@ class OpenIdConnectClient {
         return false;
       }
 
-      // Otherwise, if the identity has already expired, then we clear it and
-      // raise the AuthEventTypes.NotLoggedIn to notify the app that the user
-      // should log in again.
+      // The access token has expired. Only sign the user out when the
+      // authorization server definitively rejected the refresh token (an
+      // RFC 6749 §5.2 error such as `invalid_grant`). Anything else - a
+      // refused connection, timeout, 5xx, or a body we cannot parse - says
+      // nothing about the refresh token, so keep it and let the next
+      // refresh() retry.
+      if (!_isRefreshTokenRejection(e)) {
+        logOpenIdConnectWarning(
+          'Token refresh failed and the identity has expired, but the failure '
+          'was not a refresh token rejection; keeping local identity for retry',
+          e,
+          stackTrace,
+        );
+        _raiseEvent(AuthEvent(AuthEventTypes.Error, message: e.toString()));
+        return false;
+      }
+
+      // The server rejected the refresh token, so the user must log in again.
       logOpenIdConnectError(
-        'Token refresh failed and the identity has expired; clearing local identity',
+        'Token refresh was rejected and the identity has expired; clearing local identity',
         e,
         stackTrace,
       );
@@ -701,6 +723,21 @@ class OpenIdConnectClient {
       _refreshing = false;
     }
   }
+
+  /// OAuth 2.0 token endpoint error codes (RFC 6749 §5.2) that mean the server
+  /// refused the refresh request itself rather than being temporarily
+  /// unavailable.
+  static const _refreshRejectionErrors = <String>{
+    'invalid_request',
+    'invalid_client',
+    'invalid_grant',
+    'unauthorized_client',
+    'unsupported_grant_type',
+    'invalid_scope',
+  };
+
+  static bool _isRefreshTokenRejection(Exception e) =>
+      e is HttpResponseException && _refreshRejectionErrors.contains(e.error);
 
   /// Clears the persisted identity from storage and memory.
   ///

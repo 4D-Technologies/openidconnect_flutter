@@ -1,5 +1,9 @@
 # Change Log
 
+## [3.2.1] - November 14th, 2026
+
+- Fixes [#98](https://github.com/4D-Technologies/openidconnect_flutter/issues/98): `OpenIdConnectClient.refresh()` no longer signs the user out when the access token has expired and the refresh request fails for a transient reason (connection refused, timeout, 5xx / proxy error, non-JSON or malformed token response). The identity and refresh token are kept, `AuthEventTypes.Error` is raised, and the next `refresh()` retries. The identity is cleared and `AuthEventTypes.NotLoggedIn` raised only when the authorization server rejects the refresh request with an RFC 6749 §5.2 error (`invalid_grant`, `invalid_client`, `invalid_request`, `unauthorized_client`, `unsupported_grant_type`, `invalid_scope`).
+
 ## [3.2.0] - November 12th, 2026
 
 - Interactive login on iOS and macOS uses `ASWebAuthenticationSession` through in-repo Dart FFI. macOS `http://localhost` redirects remain on loopback.

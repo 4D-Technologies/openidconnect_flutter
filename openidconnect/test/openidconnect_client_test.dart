@@ -381,7 +381,209 @@ void main() {
       },
     );
   });
+
+  group('refresh failures after the access token expired', () {
+    late HttpServer server;
+    late Uri baseUri;
+    late int refreshAttempts;
+    late FutureOr<void> Function(HttpRequest) tokenHandler;
+
+    setUp(() async {
+      // The test binding installs an HttpClient that answers 400 to everything.
+      HttpOverrides.global = null;
+      refreshAttempts = 0;
+      server = await HttpServer.bind(InternetAddress.loopbackIPv4, 0);
+      baseUri = Uri.parse('http://${server.address.address}:${server.port}');
+      server.listen((request) async {
+        if (request.uri.path == '/.well-known/openid-configuration') {
+          request.response.headers.contentType = ContentType.json;
+          request.response.write(
+            jsonEncode(_discoveryDocument(baseUri.toString())),
+          );
+          await request.response.close();
+        } else if (request.uri.path == '/token') {
+          refreshAttempts++;
+          await tokenHandler(request);
+          await request.response.close();
+        } else {
+          request.response.statusCode = HttpStatus.notFound;
+          await request.response.close();
+        }
+      });
+      await _saveIdentity(
+        expiresAt: DateTime.now().toUtc().subtract(const Duration(minutes: 5)),
+      );
+    });
+
+    tearDown(() async {
+      await server.close(force: true);
+    });
+
+    Future<({OpenIdConnectClient client, List<AuthEvent> events})>
+    createClient({String? tokenEndpoint}) async {
+      if (tokenEndpoint != null) {
+        // Re-point the discovery document at a different token endpoint.
+        await server.close(force: true);
+        server = await HttpServer.bind(InternetAddress.loopbackIPv4, 0);
+        baseUri = Uri.parse('http://${server.address.address}:${server.port}');
+        server.listen((request) async {
+          request.response.headers.contentType = ContentType.json;
+          request.response.write(
+            jsonEncode(
+              _discoveryDocument(
+                baseUri.toString(),
+                tokenEndpoint: tokenEndpoint,
+              ),
+            ),
+          );
+          await request.response.close();
+        });
+      }
+      final client = await OpenIdConnectClient.create(
+        discoveryDocumentUrl: baseUri
+            .resolve('/.well-known/openid-configuration')
+            .toString(),
+        clientId: 'client-id',
+        encryptionKey: 'unused',
+        autoRefresh: false,
+      );
+      addTearDown(client.dispose);
+      final events = <AuthEvent>[];
+      client.changes.listen(events.add);
+      return (client: client, events: events);
+    }
+
+    test('keeps the identity when the token endpoint is unreachable', () async {
+      final closed = await HttpServer.bind(InternetAddress.loopbackIPv4, 0);
+      final deadEndpoint =
+          'http://${closed.address.address}:${closed.port}/token';
+      await closed.close(force: true);
+
+      final (:client, :events) = await createClient(
+        tokenEndpoint: deadEndpoint,
+      );
+
+      expect(await client.refresh(), isFalse);
+      await pumpEventQueue();
+
+      expect(client.identity, isNotNull);
+      expect(client.identity!.refreshToken, 'refresh-token');
+      expect(await OpenIdIdentity.load(), isNotNull);
+      expect(events.map((e) => e.type), [AuthEventTypes.Error]);
+      expect(
+        events.map((e) => e.type),
+        isNot(contains(AuthEventTypes.NotLoggedIn)),
+      );
+    }, timeout: const Timeout(Duration(seconds: 60)));
+
+    test('keeps the identity on a 500 with a non-JSON body', () async {
+      tokenHandler = (request) {
+        request.response.statusCode = HttpStatus.internalServerError;
+        request.response.headers.contentType = ContentType.html;
+        request.response.write('<!DOCTYPE html><html>boom</html>');
+      };
+      final (:client, :events) = await createClient();
+
+      expect(await client.refresh(), isFalse);
+      await pumpEventQueue();
+
+      expect(client.identity, isNotNull);
+      expect(events.map((e) => e.type), [AuthEventTypes.Error]);
+    });
+
+    test('keeps the identity on a 200 with a malformed token body', () async {
+      tokenHandler = (request) {
+        request.response.headers.contentType = ContentType.json;
+        request.response.write('{"unexpected": true}');
+      };
+      final (:client, :events) = await createClient();
+
+      expect(await client.refresh(), isFalse);
+      await pumpEventQueue();
+
+      expect(client.identity, isNotNull);
+      expect(events.map((e) => e.type), [AuthEventTypes.Error]);
+    });
+
+    test('keeps the identity on an OAuth server_error response', () async {
+      tokenHandler = (request) {
+        request.response.statusCode = HttpStatus.internalServerError;
+        request.response.headers.contentType = ContentType.json;
+        request.response.write(jsonEncode({'error': 'server_error'}));
+      };
+      final (:client, :events) = await createClient();
+
+      expect(await client.refresh(), isFalse);
+      await pumpEventQueue();
+
+      expect(client.identity, isNotNull);
+      expect(events.map((e) => e.type), [AuthEventTypes.Error]);
+    });
+
+    test(
+      'a later refresh retries and succeeds after a transient failure',
+      () async {
+        var failing = true;
+        tokenHandler = (request) {
+          request.response.headers.contentType = ContentType.json;
+          if (failing) {
+            request.response.statusCode = HttpStatus.internalServerError;
+            request.response.write('<!DOCTYPE html><html>boom</html>');
+            return;
+          }
+          request.response.write(
+            jsonEncode({
+              'access_token': 'new-access-token',
+              'token_type': 'Bearer',
+              'expires_in': 3600,
+              'id_token': _testIdToken,
+              'refresh_token': 'new-refresh-token',
+            }),
+          );
+        };
+        final (:client, :events) = await createClient();
+
+        expect(await client.refresh(), isFalse);
+        expect(client.identity, isNotNull);
+
+        failing = false;
+        expect(await client.refresh(), isTrue);
+        expect(refreshAttempts, 2);
+        expect(client.identity!.accessToken, 'new-access-token');
+        expect(client.hasTokenExpired, isFalse);
+      },
+    );
+
+    for (final code in ['invalid_grant', 'invalid_client']) {
+      test('clears the identity when the server rejects with $code', () async {
+        tokenHandler = (request) {
+          request.response.statusCode = HttpStatus.badRequest;
+          request.response.headers.contentType = ContentType.json;
+          request.response.write(jsonEncode({'error': code}));
+        };
+        final (:client, :events) = await createClient();
+
+        expect(await client.refresh(), isFalse);
+        await pumpEventQueue();
+
+        expect(client.identity, isNull);
+        expect(await OpenIdIdentity.load(), isNull);
+        expect(events.map((e) => e.type), [AuthEventTypes.NotLoggedIn]);
+      });
+    }
+  });
 }
+
+Map<String, Object?> _discoveryDocument(
+  String issuer, {
+  String? tokenEndpoint,
+}) => {
+  'issuer': issuer,
+  'jwks_uri': '$issuer/jwks',
+  'authorization_endpoint': '$issuer/authorize',
+  'token_endpoint': tokenEndpoint ?? '$issuer/token',
+  'userinfo_endpoint': '$issuer/userinfo',
+};
 
 Future<void> _saveIdentity({
   required DateTime expiresAt,
